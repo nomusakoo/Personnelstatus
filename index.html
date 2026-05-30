@@ -2,6 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>인원현황 대시보드</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -60,9 +61,13 @@ body{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;font-size:12px
 
 .snap-bar{background:white;border-radius:8px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;box-shadow:0 1px 4px rgba(0,0,0,.07);}
 .snap-bar .title{font-weight:700;color:#444;font-size:12px;flex-shrink:0;}
-.snap-chip{padding:3px 10px;border-radius:12px;font-size:11px;background:#e8ecf0;cursor:pointer;border:2px solid transparent;}
+.snap-chip{position:relative;display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:12px;font-size:11px;background:#e8ecf0;cursor:pointer;border:2px solid transparent;}
 .snap-chip.active{background:#1e3a5f;color:white;}
 .snap-chip:hover:not(.active){background:#d0d8e4;}
+.snap-chip .chip-del{display:none;font-size:11px;font-weight:700;color:#b12c2c;line-height:1;padding:0 1px;border-radius:50%;}
+.snap-chip:hover .chip-del{display:inline;}
+.snap-chip.active .chip-del{color:#ffaaaa;}
+.snap-chip .chip-del:hover{background:rgba(177,44,44,.15);}
 
 .matrix-wrap{background:white;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.07);overflow:hidden;}
 .matrix-scroll{overflow-x:auto;}
@@ -71,10 +76,18 @@ table.org td,table.org th{border:1px solid #bdc8d8;padding:0;vertical-align:top;
 .grade-hdr{background:#dce6f1;font-weight:700;color:#1e3a5f;padding:4px 6px;text-align:center;min-width:60px;vertical-align:middle;white-space:nowrap;font-size:11px;}
 .div-hdr{background:#1e3a5f;color:white;font-weight:700;text-align:center;padding:5px 4px;font-size:11px;vertical-align:middle;}
 .team-hdr{background:#dce6f1;color:#1e3a5f;font-weight:700;text-align:center;padding:3px 2px;font-size:11px;vertical-align:middle;}
-.role-hdr{background:#eaf0f8;font-weight:700;color:#555;padding:3px 6px;text-align:center;font-size:10px;vertical-align:middle;}
+.role-hdr{background:#eaf0f8;font-weight:700;color:#555;padding:3px 6px;text-align:center;font-size:12px;vertical-align:middle;}
 .count-hdr{background:#f5f0d8;font-weight:700;color:#555;text-align:center;padding:3px 6px;font-size:11px;vertical-align:middle;white-space:nowrap;}
+/* ── 바로 입력하기 ── */
+#bulkTable{width:100%;border-collapse:collapse;font-size:12px;}
+#bulkTable th{background:#1e3a5f;color:white;padding:6px 8px;text-align:center;white-space:nowrap;font-size:11px;}
+#bulkTable td{padding:2px 3px;border:1px solid #e0e0e0;}
+#bulkTable input,#bulkTable select{width:100%;padding:5px 6px;border:1px solid #ccc;border-radius:3px;font-size:12px;font-family:inherit;box-sizing:border-box;}
+#bulkTable input:focus,#bulkTable select:focus{border-color:#1e3a5f;outline:none;}
+#bulkTable tr:hover td{background:#f8fafc;}
+.bulk-row-num{color:#aaa;font-size:11px;text-align:center;width:24px;}
 .count-cell{background:#fffbe6;text-align:center;font-weight:700;color:#856404;font-size:12px;vertical-align:middle;}
-.head-hdr{background:#d4e3f7;font-weight:700;color:#1e3a5f;text-align:center;padding:4px 6px;font-size:11px;vertical-align:middle;cursor:pointer;border:1px solid #bdc8d8;}
+.head-hdr{background:#d4e3f7;font-weight:700;color:#1e3a5f;text-align:center;padding:4px 6px;font-size:12px;vertical-align:middle;cursor:pointer;border:1px solid #bdc8d8;}
 .head-hdr:hover{background:#bdd4ef;}
 .head2-hdr{background:#e3edf8;font-weight:600;color:#2a4a7f;text-align:center;padding:4px 6px;font-size:11px;vertical-align:middle;cursor:pointer;border:1px solid #bdc8d8;}
 .head2-hdr:hover{background:#ccdcef;}
@@ -122,7 +135,9 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
 .struct-item span{flex:1;font-size:12px;}
 .struct-item button{padding:2px 7px;font-size:11px;border:none;border-radius:3px;cursor:pointer;background:#f8d7da;color:#721c24;}
 
-@media print{.toolbar,.tabs,.snap-bar,.add-btn,.tbl-toolbar,.realtime-toast{display:none!important;}body{background:white;}.page.active{display:block;}}
+/* @media print → 아래 통합 버전 사용 */
+#printTables{display:none;}
+.print-page{margin-bottom:0;}
 .frozen-col .grade-hdr{position:sticky;left:0;z-index:3;background-color:#dce6f1;}
 .frozen-row tr:nth-child(1) td,.frozen-row tr:nth-child(2) td,.frozen-row tr:nth-child(3) td,.frozen-row tr:nth-child(4) td{position:sticky;z-index:2;}
 .frozen-row tr:nth-child(1) .div-hdr{background-color:#1e3a5f;}
@@ -133,45 +148,239 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
 .frozen-row.frozen-col tr:nth-child(1) td:first-child,.frozen-row.frozen-col tr:nth-child(2) td:first-child,.frozen-row.frozen-col tr:nth-child(3) td:first-child,.frozen-row.frozen-col tr:nth-child(4) td:first-child{z-index:4;background-color:#dce6f1;}
 /* 인쇄 */
 @media print{
-  @page{size:A4 landscape;margin:8mm;}
-  .toolbar,.tabs,.snap-bar,.add-btn,.tbl-toolbar,.realtime-toast{display:none!important;}
-  body{background:white;font-size:10px;}
-  .page.active{display:block;padding:0;}
-  .matrix-wrap{box-shadow:none;border-radius:0;overflow:visible;}
-  .matrix-scroll{overflow:visible !important;max-height:none !important;}
-  table.org{width:100%;table-layout:auto;border-collapse:collapse;}
+  /* ── 페이지 설정 ── */
+  @page{size:A4 landscape;margin:12mm 10mm;}
+
+  /* ── 배경색 유지 ── */
+  *{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;}
+
+  /* ── 숨김 처리: 작업용 UI ── */
+  .toolbar,.tabs,.snap-bar,.tbl-toolbar,
+  #syncBadge,.realtime-toast,
+  .add-btn,.tbtn,.btn,
+  #filterDiv,#filterText,
+  input[type=checkbox],label:has(#freezeToggle),
+  .overlay,.modal,
+  .charts-row,.charts-row2,
+  .summary-cards,
+  #tab-dashboard,#tab-exec{display:none !important;}
+
+  /* ── body/layout ── */
+  html,body{background:white !important;font-size:10px;margin:0;padding:0;}
+  .page{padding:0 !important;}
+  .page.active{display:block !important;}
+  /* 인쇄 전용 페이지별 테이블 */
+  #printTables{display:block !important;}
+  .print-page{page-break-after:always;padding:0;}
+  .print-page:last-child{page-break-after:auto;}
+  .print-page .print-page-label{font-size:9pt;font-weight:700;color:#1e3a5f;margin-bottom:3mm;}
+  /* 인쇄 시 원본 매트릭스 숨김 */  .matrix-wrap,.matrix-scroll,#tab-matrix>.snap-bar{display:none !important;}
+
+  /* ── 인쇄 타이틀 표시 ── */
+  #printTitle{
+    display:block !important;
+    text-align:center;
+    margin-bottom:8mm;
+    page-break-after:avoid;
+  }
+  .print-title-main{
+    font-size:16pt;font-weight:700;color:#1e3a5f;
+    letter-spacing:1px;margin-bottom:3mm;
+  }
+  .print-title-sub{font-size:9pt;color:#666;margin-bottom:4mm;}
+  .print-title-hr{border:none;border-top:2px solid #1e3a5f;margin:0 0 6mm;}
+
+  /* ── 매트릭스 컨테이너: 스크롤/고정 해제 ── */
+  .matrix-wrap{
+    box-shadow:none !important;border-radius:0 !important;
+    overflow:visible !important;
+  }
+  .matrix-scroll{
+    overflow:visible !important;
+    max-height:none !important;
+    max-width:none !important;
+  }
+  #tab-matrix{padding:0 !important;}
+
+  /* ── 표 스타일 ── */
+  table.org{
+    width:100% !important;
+    table-layout:auto !important;
+    border-collapse:collapse !important;
+    page-break-inside:auto;
+  }
   table.org thead{display:table-header-group;}
   table.org tbody{display:table-row-group;}
-  table.org td{font-size:9px;padding:2px 3px;border:0.5px solid #999;}
-  .grade-hdr{font-size:9px !important;min-width:40px !important;}
-  .emp-name{font-size:8px;white-space:nowrap;}
-  .emp-sub{font-size:7px;}
+  table.org td{
+    font-size:8px !important;
+    padding:2px 3px !important;
+    border:0.5px solid #bbb !important;
+    white-space:nowrap;
+  }
+  .grade-hdr{font-size:8px !important;min-width:36px !important;}
+  .div-hdr{font-size:9px !important;background:#1e3a5f !important;color:white !important;}
+  .head-hdr{font-size:8px !important;background:#d4e3f7 !important;}
+  .head2-hdr,.center-grp-hdr{font-size:8px !important;}
+  .team-hdr{font-size:8px !important;}
+  .role-hdr{font-size:8px !important;}
+  .emp-name{font-size:7.5px !important;white-space:nowrap;}
+  .emp-sub{font-size:6.5px !important;}
   .add-btn{display:none !important;}
+  .count-hdr,.count-cell{font-size:8px !important;}
+
+  /* ── 페이지 끊김 제어 ── */
+  thead{page-break-inside:avoid;}
   tr{page-break-inside:avoid;}
+  .matrix-wrap{page-break-inside:auto;}
+
+  /* ── sticky 해제 (인쇄에서 position:sticky 제거) ── */
+  table.org td{position:static !important;}
 }
+/* ══════════════════════════════════
+   모바일 최적화 (@media max-width)
+══════════════════════════════════ */
+@media (max-width:768px){
+  /* ── 공통 터치 반응 ── */
+  button,a,.tbtn,.tab,.snap-chip{touch-action:manipulation;}
+
+  /* ── 툴바: 가로 스크롤 ── */
+  .toolbar{
+    padding:8px 10px;gap:5px;
+    overflow-x:auto;flex-wrap:nowrap;
+    -webkit-overflow-scrolling:touch;
+  }
+  .toolbar::-webkit-scrollbar{height:0;}
+  .toolbar h1{font-size:13px;white-space:nowrap;}
+  .toolbar input[type=month]{font-size:12px;padding:3px 6px;flex-shrink:0;}
+  .tbtn{padding:5px 9px;font-size:11px;white-space:nowrap;flex-shrink:0;}
+  .sep{flex-shrink:0;}
+  #resetStatusBtn{padding:4px 8px;font-size:13px;}
+  .conn-badge{font-size:10px;padding:3px 7px;flex-shrink:0;}
+
+  /* ── 탭 ── */
+  .tabs{padding:0 6px;}
+  .tab{padding:8px 11px;font-size:12px;}
+
+  /* ── 페이지 여백 ── */
+  .page{padding:8px;}
+
+  /* ── 대시보드 요약 카드 ── */
+  .summary-cards{grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:12px;}
+  .scard{padding:10px 12px;}
+  .scard .val{font-size:20px;}
+  .scard .lbl{font-size:10px;}
+
+  /* ── 차트 영역: 세로 배치 ── */
+  .charts-row{grid-template-columns:1fr;gap:10px;margin-bottom:12px;}
+  .charts-row2{grid-template-columns:1fr;gap:10px;margin-bottom:12px;}
+  .chart-box{padding:12px;}
+  .chart-box h3{font-size:12px;margin-bottom:8px;}
+
+  /* ── 스냅바 ── */
+  .snap-bar{padding:8px 10px;gap:6px;}
+  .snap-bar .title{font-size:11px;}
+  .snap-chip{font-size:10px;padding:2px 8px;}
+
+  /* ── 매트릭스 툴바 ── */
+  .tbl-toolbar{padding:8px 10px;flex-wrap:wrap;gap:6px;}
+  .tbl-toolbar select,.tbl-toolbar input{font-size:12px;}
+  #filterDiv{flex:1;min-width:0;}
+  #filterText{flex:1;min-width:0;width:auto;}
+  #tableTitle{font-size:11px;width:100%;}
+
+  /* ── 매트릭스 표: 가로 스크롤 ── */
+  .matrix-wrap{border-radius:6px;}
+  .matrix-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  table.org td{font-size:10px;padding:2px 3px;}
+  .emp-name{font-size:10px;}
+  .emp-sub{font-size:8px;}
+  .grade-hdr{font-size:10px !important;min-width:44px !important;}
+  .div-hdr{font-size:10px !important;}
+  .team-hdr{font-size:10px !important;}
+  .head-hdr,.head2-hdr{font-size:10px !important;}
+  .role-hdr{font-size:11px !important;}
+
+  /* ── 모달: 전체 너비 ── */
+  .overlay{padding:10px;}
+  .modal,.setup-modal{
+    width:95vw !important;max-width:95vw !important;
+    padding:16px !important;
+    max-height:88vh;overflow-y:auto;
+    margin:0;
+  }
+  .modal h2{font-size:14px;}
+  .row2{grid-template-columns:1fr;}
+  .fr input,.fr select,.fr textarea{font-size:14px;}  /* iOS 폰트 줌 방지 */
+  .mact{flex-wrap:wrap;gap:6px;}
+  .btn{padding:9px 16px;font-size:13px;}
+
+  /* ── 대량 추가 팝업 ── */
+  #bulkTableWrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  #bulkTable td,#bulkTable th{padding:3px 4px;}
+  #bulkTable input,#bulkTable select{font-size:13px;padding:4px 5px;}
+
+  /* ── 임원 탭 ── */
+  #execTbody td{font-size:11px;padding:6px 8px;}
+
+  /* ── 인쇄 타이틀 ── */
+  #printTitle{display:none;}
+
+  /* ── 본부장·센터장·팀장 서브라인 강제 표시 ── */
+  .head-hdr .emp-sub,
+  .head2-hdr .emp-sub,
+  .role-hdr .emp-sub{
+    display:block !important;
+    visibility:visible !important;
+    opacity:1 !important;
+    font-size:9px !important;
+    color:#555 !important;
+    white-space:nowrap;
+    line-height:1.3;
+  }
+  .head-hdr,.head2-hdr,.role-hdr{
+    height:auto !important;
+    overflow:visible !important;
+    white-space:normal;
+    vertical-align:middle;
+  }
+}
+
+@media (max-width:480px){
+  .summary-cards{grid-template-columns:1fr 1fr;gap:6px;}
+  .scard .val{font-size:18px;}
+  .tab{padding:7px 9px;font-size:11px;}
+  .tbtn{padding:4px 8px;font-size:10px;}
+}
+
 </style>
 </head>
 <body>
 
 <div id="syncBadge"><i class="spin">↻</i> 업데이트 중...</div>
+<div id="printTitle" style="display:none;">
+  <div class="print-title-main" id="printTitleText">인원현황 보고서</div>
+  <div class="print-title-sub" id="printTitleSub"></div>
+  <hr class="print-title-hr">
+</div>
 
 <!-- 툴바 -->
 <div class="toolbar">
   <h1>📊 인원현황 대시보드</h1>
   <div class="conn-badge" id="connBadge"><div class="conn-dot" id="connDot"></div><span id="connText">연결 중...</span></div>
   <input type="month" id="curMonth" onchange="onMonthChange()">
+  <button class="tbtn" id="resetStatusBtn" onclick="resetMonthlyStatuses()" title="입사→재직 / 인사이동→재직 / 퇴사→삭제 처리" style="background:rgba(255,180,0,.25);border-color:rgba(255,180,0,.6);font-size:14px;padding:4px 10px;" >↺</button>
   <div class="sep"></div>
   <button class="tbtn green" onclick="openAddEmpModal()">+ 직원 추가</button>
+  <button class="tbtn" onclick="openBulkModal()" style="background:#c2410c;border-color:#c2410c;color:white;">+ 대량 추가</button>
   <button class="tbtn" onclick="openStructModal()">⚙ 조직 관리</button>
-  <button class="tbtn accent" onclick="openSnapModal()">📸 월별인원 저장</button>
+  <button class="tbtn accent" onclick="openSnapModal()">💾 월별인원 저장</button>
   <div class="sep"></div>
   <button class="tbtn" onclick="exportExcel()">📥 엑셀 내보내기</button>
   <button class="tbtn" onclick="document.getElementById('xlsxInput').click()">📤 엑셀 불러오기</button>
   <input type="file" id="xlsxInput" accept=".xlsx,.xls" style="display:none" onchange="importExcel(event)">
   <div class="sep"></div>
   <button class="tbtn" style="background:rgba(255,180,0,.2);border-color:rgba(255,180,0,.5);" onclick="openSetupModal()">⚙ DB 설정</button>
-  <button class="tbtn" style="background:rgba(255,180,0,.2);border-color:rgba(255,180,0,.5);" onclick="uploadDefaultData()">☁ 초기 데이터 업로드</button>
-  <button class="tbtn ml" onclick="window.print()">🖨 인쇄</button>
+  <button class="tbtn ml" onclick="doPrint()">🖨 인쇄</button>
 </div>
 
 <div class="tabs">
@@ -188,6 +397,8 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
     <div class="scard leave"><div class="lbl">이번달 퇴사</div><div class="val" id="s-leave">-</div></div>
     <div class="scard transfer"><div class="lbl">인사이동</div><div class="val" id="s-transfer">-</div></div>
     <div class="scard prev"><div class="lbl">전월 인원</div><div class="val" id="s-prev">-</div></div>
+    <div class="scard" style="border-color:#1d4ed8;"><div class="lbl">휴직</div><div class="val" style="color:#1d4ed8;" id="s-leave-abs">0</div></div>
+    <div class="scard" style="border-color:#7c3aed;"><div class="lbl">파견</div><div class="val" style="color:#7c3aed;" id="s-dispatch">0</div></div>
   </div>
   <div class="charts-row">
     <div class="chart-box"><h3>월별 인원 추이</h3><canvas id="trendChart" height="200"></canvas></div>
@@ -332,6 +543,41 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
 </div>
 </div>
 
+<!-- 바로 입력하기 모달 -->
+<div class="overlay" id="bulkInputOverlay">
+<div class="modal" style="width:min(960px,97vw);max-height:90vh;display:flex;flex-direction:column;">
+  <h2>✏ 바로 입력하기</h2>
+  <p style="font-size:12px;color:#666;margin-bottom:10px;">이름이 기존 직원과 일치하면 정보가 <strong>업데이트</strong>됩니다. 빈 행은 무시됩니다.</p>
+  <div id="bulkTableWrap" style="overflow:auto;flex:1;">
+    <table id="bulkTable">
+      <thead>
+        <tr>
+          <th style="width:24px;">#</th>
+          <th style="min-width:70px;">이름</th>
+          <th style="min-width:110px;">본부</th>
+          <th style="min-width:110px;">팀</th>
+          <th style="min-width:90px;">직급</th>
+          <th style="min-width:80px;">직책</th>
+          <th style="min-width:90px;">상태</th>
+          <th style="min-width:80px;">입사일</th>
+          <th style="min-width:120px;">비고</th>
+        </tr>
+      </thead>
+      <tbody id="bulkBody"></tbody>
+    </table>
+  </div>
+  <div style="margin-top:8px;display:flex;align-items:center;gap:8px;">
+    <button class="btn btn-g" onclick="addBulkRows(5)" style="font-size:12px;">+ 5행 추가</button>
+    <span style="font-size:11px;color:#888;" id="bulkCount"></span>
+  </div>
+  <div class="mact" style="margin-top:10px;">
+    <span style="font-size:11px;color:#aaa;align-self:center;">Ctrl+Enter 저장</span>
+    <button class="btn btn-g" onclick="closeBulkModal()">취소</button>
+    <button class="btn btn-p" onclick="saveBulkInput()">저장</button>
+  </div>
+</div>
+</div>
+
 <!-- 직원 모달 -->
 <div class="overlay" id="empOverlay">
 <div class="modal">
@@ -347,7 +593,7 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
   </div>
   <div class="fr"><label>상태</label>
     <select id="f_status">
-      <option value="normal">재직</option><option value="join">입사(이번달)</option>
+      <option value="normal">재직</option><option value="leave_abs">휴직</option><option value="dispatch">파견</option><option value="join">입사(이번달)</option>
       <option value="leave">퇴사(이번달)</option><option value="transfer">인사이동(이번달)</option>
     </select>
   </div>
@@ -412,7 +658,7 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
 <!-- 월별인원 모달 -->
 <div class="overlay" id="snapOverlay">
 <div class="modal" style="width:360px;">
-  <h2>📸 월별인원 저장</h2>
+  <h2>💾 월별인원 저장</h2>
   <p style="font-size:13px;color:#666;margin-bottom:14px;">현재 데이터를 서버에 저장합니다. 팀 전체가 조회할 수 있습니다.</p>
   <div class="fr"><label>저장 월</label><input type="month" id="snapMonthInput"></div>
   <div class="mact">
@@ -465,11 +711,41 @@ const hrBarLabels={
   }
 };
 
+// 출생년도·연령·근속 서브라인 생성
+function _calcSubParts(e){
+  var p=[];
+  if(e&&e.birth_year){
+    var by=e.birth_year>100?e.birth_year:e.birth_year+1900;
+    p.push((e.birth_year>100?e.birth_year-1900:e.birth_year)+'년');
+    p.push((new Date().getFullYear()-by+1)+'세');
+  }
+  if(e&&e.join_date){
+    var jd=new Date(normalizeDate(e.join_date));
+    if(!isNaN(jd)&&jd.getFullYear()>1970){
+      var t=Math.floor((Date.now()-jd)/(365.25*864e5));
+      if(t>=0)p.push(t+'년');
+    }
+  }
+  return p;
+}
+// 일반 직원 셀용 (span.emp-sub)
+function makeSubLine(e){
+  if(!e)return'';
+  var p=_calcSubParts(e);
+  return p.length?'<span class="emp-sub">'+p.join('·')+'</span>':'';
+}
+// 헤더 셀용 — div + 인라인 스타일 (모바일 display:block 보장)
+function makeHeadSub(e){
+  if(!e)return'';
+  var p=_calcSubParts(e);
+  return p.length?'<div style="display:block;font-size:9px;color:#555;line-height:1.4;margin-top:2px;">'+p.join('·')+'</div>':'';
+}
+
 const LEADER_POSITIONS=['팀장','법인장','지점장','실장','본부장','센터장','단장','부문장','소장','연구소장','대표이사','지회장'];
 const isLeaderPos=e=>e.position&&LEADER_POSITIONS.some(p=>e.position.includes(p));
 const GRADES=['상무보이상','수석급','부장급','차장급','과장급','대리급','주임급','사원급','기능감급','책임기사급','선임기사급','기사급','영양보조','기타'];
 const GRADE_COLORS={'상무보이상':'#fdecea','수석급':'#fef3e2','부장급':'#e8f4fd','차장급':'#f0f7ee','과장급':'#f5f0ff','대리급':'#fff9e6','주임급':'#fce4ec','사원급':'#e8f5e9','기능감급':'#e3f2fd','책임기사급':'#e8eaf6','선임기사급':'#f3e5f5','기사급':'#e0f7fa','영양보조':'#f9fbe7','기타':'#f5f5f5'};
-const STATUS_COLOR={join:'#d4edda',leave:'#f8d7da',transfer:'#fff3cd',normal:''};
+const STATUS_COLOR={join:'#d4edda',leave:'#f8d7da',transfer:'#fff3cd',leave_abs:'#dbeafe',dispatch:'#ede9fe',normal:''};
 
 let sb=null; // supabase client
 let employees=[],executives=[],divisions=[],snapshots={};
@@ -707,6 +983,8 @@ function renderDashboard(){
   document.getElementById('s-join').textContent=employees.filter(e=>e.status==='join').length;
   document.getElementById('s-leave').textContent=employees.filter(e=>e.status==='leave').length;
   document.getElementById('s-transfer').textContent=employees.filter(e=>e.status==='transfer').length;
+  document.getElementById('s-leave-abs').textContent=employees.filter(e=>e.status==='leave_abs').length;
+  document.getElementById('s-dispatch').textContent=employees.filter(e=>e.status==='dispatch').length;
   const snapKeys=Object.keys(snapshots).sort();
   const prevKey=snapKeys[snapKeys.length-1];
   if(prevKey){
@@ -722,7 +1000,12 @@ function renderTrendChart(){
   if(chartTrend)chartTrend.destroy();
   const keys=Object.keys(snapshots).sort();
   const labels=[...keys,'현재'];
-  const totals=[...keys.map(k=>(snapshots[k].employees||[]).filter(e=>e.status!=='leave').length),getActive().length];
+  const totals=[...keys.map(function(k){
+    var emps=snapshots[k].employees||[];
+    var seen=new Set();
+    emps.filter(function(e){return e.status!=='leave';}).forEach(function(e){seen.add(e.name);});
+    return seen.size;
+  }),getTotalCount()];
   const joins=[...keys.map(k=>(snapshots[k].employees||[]).filter(e=>e.status==='join').length),employees.filter(e=>e.status==='join').length];
   const leaves=[...keys.map(k=>(snapshots[k].employees||[]).filter(e=>e.status==='leave').length),employees.filter(e=>e.status==='leave').length];
   chartTrend=new Chart(ctx,{type:'line',data:{labels,datasets:[{label:'총인원',data:totals,borderColor:'#1e3a5f',backgroundColor:'rgba(30,58,95,.08)',tension:.3,fill:true,pointRadius:4},{label:'입사',data:joins,borderColor:'#2d7a3a',tension:.3,borderDash:[4,3],pointRadius:4},{label:'퇴사',data:leaves,borderColor:'#b12c2c',tension:.3,borderDash:[4,3],pointRadius:4}]},options:{responsive:true,plugins:{legend:{position:'bottom',labels:{font:{size:11}}}},scales:{y:{beginAtZero:false,ticks:{font:{size:11}}},x:{ticks:{font:{size:11}}}}}});
@@ -746,7 +1029,7 @@ function renderDivChart(){
 function renderStatusChart(){
   const ctx=document.getElementById('statusChart').getContext('2d');
   if(chartStatus)chartStatus.destroy();
-  chartStatus=new Chart(ctx,{type:'doughnut',data:{labels:['재직','입사','퇴사','인사이동'],datasets:[{data:[employees.filter(e=>e.status==='normal').length,employees.filter(e=>e.status==='join').length,employees.filter(e=>e.status==='leave').length,employees.filter(e=>e.status==='transfer').length],backgroundColor:['#dce6f1','#d4edda','#f8d7da','#fff3cd'],borderColor:['#1e3a5f','#2d7a3a','#b12c2c','#c17d11'],borderWidth:2}]},options:{responsive:true,plugins:{legend:{position:'bottom',labels:{font:{size:11}}}}}});
+  chartStatus=new Chart(ctx,{type:'doughnut',data:{labels:['재직','입사','퇴사','인사이동','휴직','파견'],datasets:[{data:[employees.filter(e=>e.status==='normal').length,employees.filter(e=>e.status==='join').length,employees.filter(e=>e.status==='leave').length,employees.filter(e=>e.status==='transfer').length,employees.filter(e=>e.status==='leave_abs').length,employees.filter(e=>e.status==='dispatch').length],backgroundColor:['#dce6f1','#d4edda','#f8d7da','#fff3cd','#dbeafe','#ede9fe'],borderColor:['#1e3a5f','#2d7a3a','#b12c2c','#c17d11','#1d4ed8','#7c3aed'],borderWidth:2}]},options:{responsive:true,plugins:{legend:{position:'bottom',labels:{font:{size:11}}}}}});
 }
 
 // ── 매트릭스 ──
@@ -776,8 +1059,10 @@ function renderMatrix(){
   html+='<tr>';
   divs.forEach(d=>{
     var ht=d.head_title||'본부장',hn=d.head_name||'';
-    var hl=hn?ht+': <strong>'+hn+'</strong>':'<span style="color:#aaa;">'+ht+' 미입력 (클릭하여 추가)</span>';
-    html+='<td class="head-hdr" colspan="'+(d.teams?d.teams.length:1)+'" onclick="openDivHeadModal(\''+d.id+'\')">'+(viewSnap?hn||'-':hl)+'</td>';
+    var hdEmp=hn?emps.find(function(e){return e.name===hn;}):null;
+    var hdSub=makeHeadSub(hdEmp);
+    var hl=hn?ht+': <strong>'+hn+'</strong>'+hdSub:'<span style="color:#aaa;">'+ht+' 미입력 (클릭하여 추가)</span>';
+    html+='<td class="head-hdr" colspan="'+(d.teams?d.teams.length:1)+'" onclick="openDivHeadModal(\''+d.id+'\')">'+(viewSnap?(hn||'-')+hdSub:hl)+'</td>';
   });
   html+='</tr>';
   if(hasCenters){
@@ -818,7 +1103,9 @@ function renderMatrix(){
         var chl=chn?(cht+': <strong>'+chn+'</strong>'):('<span style="color:#aaa;">'+cht+' 미입력 (클릭하여 추가)</span>');
         var safeId=d.id.replace(/'/g,"\\'");
         var safeCn=cn.replace(/'/g,"\\'");
-        html+='<td class="head2-hdr" colspan="'+(j-i)+'" onclick="openCenterHeadModal(\''+safeId+'\',\''+safeCn+'\')">'+(viewSnap?chn||'-':chl)+'</td>';
+        var chEmpR=chn?emps.find(function(e){return e.name===chn;}):null;
+        var chSubR=makeHeadSub(chEmpR);
+        html+='<td class="head2-hdr" colspan="'+(j-i)+'" onclick="openCenterHeadModal(\''+safeId+'\',\''+safeCn+'\')">'+(viewSnap?(chn||'-')+chSubR:chl+chSubR)+'</td>';
         i=j;
       }
     });
@@ -839,7 +1126,8 @@ function renderMatrix(){
   html+='<tr>';
   allTeams.forEach(({div,team})=>{
     var ldr=emps.find(e=>e.team_id===team.id&&isLeaderPos(e));
-    var ll=ldr?ldr.name:'<span style="color:#bbb;font-size:10px;">+ 추가</span>';
+    var lSub=ldr?makeHeadSub(ldr):'';
+    var ll=ldr?ldr.name+lSub:'<span style="color:#bbb;font-size:10px;">+ 추가</span>';
     var ca=viewSnap?'':`onclick="openLeaderCell('${div.id}','${team.id}')"`;
     html+=`<td class="role-hdr clickable" ${ca}>${ll}</td>`;
   });
@@ -856,6 +1144,7 @@ function renderMatrix(){
       let c='';
       members.forEach(e=>{
       const bg=STATUS_COLOR[e.status]||'';
+      const fc=e.status==='leave_abs'?'color:#1d4ed8;font-style:italic;':'';
       const _jdStr=e.join_date?normalizeDate(e.join_date):'';
       const _jd=_jdStr?new Date(_jdStr):null;
       const tenure=(_jd&&!isNaN(_jd)&&_jd.getFullYear()>1970)?Math.floor((Date.now()-_jd)/(365.25*864e5)):'';
@@ -868,7 +1157,7 @@ function renderMatrix(){
       }
       if(tenure!=='')if(tenure>=0)subParts.push(tenure+'년');
       const subLine=subParts.length?`<span class="emp-sub">${subParts.join('·')}</span>`:'';
-      c+=`<span class="emp-name" style="background:${bg};" onclick="openEditEmpModal('${e.id}')">${e.name}${subLine}</span>`;
+      c+=`<span class="emp-name" style="background:${bg};${fc}" onclick="openEditEmpModal('${e.id}')">${e.name}${subLine}</span>`;
     });
       leavers.forEach(e=>{c+=`<span class="emp-name" style="background:#f8d7da;text-decoration:line-through;color:#999;" onclick="openEditEmpModal('${e.id}')">${e.name}</span>`;});
       const addAct=viewSnap?'':`<span class="add-btn" onclick="openAddEmpInCell('${div.id}','${team.id}','${grade}')">+추가</span>`;
@@ -893,7 +1182,47 @@ function renderMatrix(){
 }
 function renderSnapBar(){
   const keys=Object.keys(snapshots).sort().reverse();
-  document.getElementById('snapList').innerHTML=keys.length===0?'<span style="color:#aaa;font-size:11px;">저장된 월별인원 없음</span>':keys.map(k=>`<span class="snap-chip ${viewSnap===k?'active':''}" onclick="setSnap('${k}')">${k}</span>`).join('');
+  document.getElementById('snapList').innerHTML=keys.length===0
+    ?'<span style="color:#aaa;font-size:11px;">저장된 월별인원 없음</span>'
+    :keys.map(k=>{
+      var isActive=viewSnap===k;
+      return '<span class="snap-chip '+(isActive?'active':'')+'" onclick="setSnap(\''+k+'\')">'+ k
+        +'<span class="chip-del" onclick="event.stopPropagation();deleteSnap(\''+k+'\')" title="삭제">✕</span>'
+        +'</span>';
+    }).join('');
+}
+async function deleteSnap(month){
+  if(!sb){alert('Supabase에 연결하세요.');return;}
+  if(!confirm(month+' 월별인원을 삭제합니다.\n\n'
+    +'※ 가장 최근 월별인원 삭제 시: 저장 당시 상태(입사·퇴사·인사이동)로 직원 데이터가 복원됩니다.'))
+    return;
+  // 가장 최근 월인지 확인
+  var keys=Object.keys(snapshots).sort();
+  var isLatest=keys[keys.length-1]===month;
+  // 최근 월 삭제 시: 스냅샷 데이터로 직원 복원 (저장 전 상태)
+  if(isLatest&&snapshots[month]){
+    var snapEmps=snapshots[month].employees||[];
+    if(snapEmps.length>0){
+      // 현재 직원 전체 삭제 후 스냅샷 데이터로 복원
+      await sb.from('employees').delete().not('id','is',null);
+      for(var i=0;i<snapEmps.length;i+=100){
+        var batch=snapEmps.slice(i,i+100).map(function(e){
+          return{id:e.id,name:e.name,grade:e.grade||'',div_id:e.div_id||'',
+            team_id:e.team_id||'',position:e.position||'',join_date:e.join_date||'',
+            birth_year:e.birth_year||null,status:e.status||'normal',note:e.note||''};
+        });
+        await sb.from('employees').insert(batch);
+      }
+    }
+  }
+  // 스냅샷 삭제
+  await sb.from('snapshots').delete().eq('month',month);
+  delete snapshots[month];
+  // 현재 보고 있던 스냅샷이 삭제된 경우 초기화
+  if(viewSnap===month)viewSnap=null;
+  await loadAll();
+  renderAll();
+  alert(month+' 월별인원이 삭제되었습니다.'+(isLatest?' (직원 데이터 복원 완료)':''));
 }
 function setSnap(k){viewSnap=viewSnap===k?null:k;renderMatrix();}
 function clearSnap(){viewSnap=null;renderMatrix();}
@@ -1161,35 +1490,174 @@ async function saveCenterHead(){
 document.getElementById('centerHeadOverlay').addEventListener('click',function(e){if(e.target===this)closeCenterHeadModal();});
 
 // Ctrl+Enter 저장 단축키
+// Ctrl+Enter 저장 — 캡처 단계 + 가시성 체크
 document.addEventListener('keydown',function(e){
-  if(!(e.ctrlKey&&e.key==='Enter'))return;
-  var overlays=[
-    {id:'empOverlay',     fn:saveEmp},
-    {id:'execOverlay',    fn:saveExec},
-    {id:'divHeadOverlay', fn:saveDivHead},
-    {id:'divHead2Overlay',fn:saveDivHead2},
-    {id:'centerHeadOverlay',fn:saveCenterHead},
-    {id:'snapOverlay',    fn:saveSnap},
+  if(!e.ctrlKey||e.key!=='Enter')return;
+  var map=[
+    {id:'empOverlay',        fn:saveEmp},
+    {id:'execOverlay',       fn:saveExec},
+    {id:'divHeadOverlay',    fn:saveDivHead},
+    {id:'divHead2Overlay',   fn:saveDivHead2},
+    {id:'centerHeadOverlay', fn:saveCenterHead},
+    {id:'snapOverlay',       fn:saveSnap},
+    {id:'bulkInputOverlay',  fn:saveBulkInput},
   ];
-  for(var i=0;i<overlays.length;i++){
-    var el=document.getElementById(overlays[i].id);
-    if(el&&el.classList.contains('show')){
+  for(var i=0;i<map.length;i++){
+    var el=document.getElementById(map[i].id);
+    if(el&&window.getComputedStyle(el).display!=='none'){
       e.preventDefault();
-      overlays[i].fn();
-      break;
+      e.stopPropagation();
+      map[i].fn();
+      return;
     }
   }
-});
+},true);
+
+// 월 상태 초기화: 입사→재직, 인사이동→재직, 퇴사→삭제
+async function resetMonthlyStatuses(){
+  if(!sb){alert('Supabase에 연결하세요.');return;}
+  var toNormal=employees.filter(function(e){return e.status==='join'||e.status==='transfer';});
+  var toDelete=employees.filter(function(e){return e.status==='leave';});
+  if(toNormal.length===0&&toDelete.length===0){
+    alert('처리할 대상이 없습니다.\n(입사·인사이동·퇴사 상태의 직원이 없습니다)');return;
+  }
+  var msg='[월 상태 초기화]\n'
+    +'• 입사/인사이동 → 재직 변경: '+toNormal.length+'명\n'
+    +'• 퇴사 → 명단 삭제: '+toDelete.length+'명\n\n실행하시겠습니까?';
+  if(!confirm(msg))return;
+  showSync();
+  for(var i=0;i<toNormal.length;i++){
+    await sb.from('employees').update({status:'normal'}).eq('id',toNormal[i].id);
+  }
+  if(toDelete.length){
+    var delIds=toDelete.map(function(e){return e.id;});
+    await sb.from('employees').delete().in('id',delIds);
+  }
+  await loadAll();renderAll();hideSync();
+  alert('✅ 처리 완료\n• 재직 전환: '+toNormal.length+'명\n• 삭제: '+toDelete.length+'명');
+}
+
+// ── 바로 입력하기 ──
+var BULK_STATUSES={normal:'재직',leave_abs:'휴직',dispatch:'파견',join:'입사(이번달)',leave:'퇴사(이번달)',transfer:'인사이동(이번달)'};
+
+function makeBulkRow(n){
+  var divOpts='<option value=""></option>'+divisions.map(function(d){return'<option value="'+d.name+'">'+d.name+'</option>';}).join('');
+  var gradeOpts='<option value=""></option>'+GRADES.map(function(g){return'<option value="'+g+'">'+g+'</option>';}).join('');
+  var statusOpts=Object.entries(BULK_STATUSES).map(function(kv){return'<option value="'+kv[0]+'">'+kv[1]+'</option>';}).join('');
+  var tr=document.createElement('tr');
+  tr.innerHTML='<td class="bulk-row-num">'+n+'</td>'
+    +'<td><input type="text" placeholder="홍길동"></td>'
+    +'<td><input type="text" list="bulkDivList" placeholder="본부"></td>'
+    +'<td><input type="text" list="bulkTeamList" placeholder="팀"></td>'
+    +'<td><select>'+gradeOpts+'</select></td>'
+    +'<td><input type="text" placeholder="팀장"></td>'
+    +'<td><select>'+statusOpts+'</select></td>'
+    +'<td><input type="date"></td>'
+    +'<td><input type="text" placeholder="비고"></td>';
+  return tr;
+}
+
+function openBulkModal(){
+  // datalist 생성
+  var dl1=document.getElementById('bulkDivList');
+  if(!dl1){dl1=document.createElement('datalist');dl1.id='bulkDivList';document.body.appendChild(dl1);}
+  dl1.innerHTML=divisions.map(function(d){return'<option value="'+d.name+'">';}).join('');
+  var dl2=document.getElementById('bulkTeamList');
+  if(!dl2){dl2=document.createElement('datalist');dl2.id='bulkTeamList';document.body.appendChild(dl2);}
+  dl2.innerHTML=divisions.reduce(function(a,d){return a+(d.teams||[]).map(function(t){return'<option value="'+t.name+'">';}).join('');}, '');
+  // 초기 5행
+  var tbody=document.getElementById('bulkBody');
+  tbody.innerHTML='';
+  for(var i=1;i<=5;i++)tbody.appendChild(makeBulkRow(i));
+  updateBulkCount();
+  document.getElementById('bulkInputOverlay').classList.add('show');
+}
+
+function closeBulkModal(){document.getElementById('bulkInputOverlay').classList.remove('show');}
+
+function addBulkRows(n){
+  var tbody=document.getElementById('bulkBody');
+  var cur=tbody.rows.length;
+  for(var i=1;i<=n;i++)tbody.appendChild(makeBulkRow(cur+i));
+  updateBulkCount();
+}
+
+function updateBulkCount(){
+  document.getElementById('bulkCount').textContent='총 '+document.getElementById('bulkBody').rows.length+'행';
+}
+
+async function saveBulkInput(){
+  if(!sb){alert('Supabase에 연결하세요.');return;}
+  var rows=document.querySelectorAll('#bulkBody tr');
+  var items=[];
+  rows.forEach(function(row){
+    var cells=row.querySelectorAll('input,select');
+    var name=cells[0].value.trim();
+    if(!name)return;
+    items.push({
+      name:name,
+      dname:cells[1].value.trim(),
+      tname:cells[2].value.trim(),
+      grade:cells[3].value,
+      position:cells[4].value.trim(),
+      status:cells[5].value||'normal',
+      join_date:cells[6].value||'',
+      note:cells[7].value.trim()
+    });
+  });
+  if(!items.length){alert('입력된 데이터가 없습니다.');return;}
+  var divByName={};divisions.forEach(function(d){divByName[d.name.trim()]=d;});
+  var teamByName={};divisions.forEach(function(d){(d.teams||[]).forEach(function(t){teamByName[t.name.trim()]=t;});});
+  var empByName={};
+  employees.forEach(function(e){if(!empByName[e.name])empByName[e.name]=e;});
+  var toUpdate=[],toCreate=[];
+  items.forEach(function(item){
+    var d=divByName[item.dname]||null;
+    var tm=teamByName[item.tname]||null;
+    var payload={
+      grade:item.grade,
+      div_id:d?d.id:'',
+      team_id:tm?tm.id:'',
+      position:item.position,
+      status:item.status,
+      note:item.note
+    };
+    if(item.join_date)payload.join_date=item.join_date;
+    var existing=empByName[item.name];
+    if(existing){
+      toUpdate.push({id:existing.id,name:item.name,...payload});
+    }else{
+      toCreate.push({id:'e_'+uid(),name:item.name,join_date:item.join_date||'',birth_year:null,...payload});
+    }
+  });
+  showSync();
+  for(var i=0;i<toUpdate.length;i++){
+    var u=toUpdate[i];
+    var upd={grade:u.grade,div_id:u.div_id,team_id:u.team_id,position:u.position,status:u.status,note:u.note};
+    if(u.join_date!==undefined)upd.join_date=u.join_date;
+    await sb.from('employees').update(upd).eq('id',u.id);
+  }
+  for(var i=0;i<toCreate.length;i+=50){
+    await sb.from('employees').insert(toCreate.slice(i,i+50));
+  }
+  await loadAll();renderAll();hideSync();
+  closeBulkModal();
+  alert('✅ 처리 완료\n• 업데이트: '+toUpdate.length+'명\n• 신규 추가: '+toCreate.length+'명');
+}
+document.getElementById('bulkInputOverlay').addEventListener('click',function(e){if(e.target===this)closeBulkModal();});
 
 function openSnapModal(){document.getElementById('snapOverlay').classList.add('show');}
 function closeSnapModal(){document.getElementById('snapOverlay').classList.remove('show');}
 async function saveSnap(){
   if(!sb){alert('Supabase에 연결하세요.');return;}
-  const m=document.getElementById('snapMonthInput').value;if(!m){alert('월을 선택하세요.');return;}
-  if(snapshots[m]&&!confirm(`${m} 월별인원이 있습니다. 덮어쓸까요?`))return;
+  const m=document.getElementById('snapMonthInput').value;
+  if(!m){alert('월을 선택하세요.');return;}
+  if(snapshots[m]&&!confirm(m+' 월별인원이 있습니다. 덮어쓸까요?'))return;
   const snapData={employees:JSON.parse(JSON.stringify(employees)),executives:JSON.parse(JSON.stringify(executives))};
   await sb.from('snapshots').upsert({month:m,data:snapData});
-  snapshots[m]=snapData;closeSnapModal();renderAll();alert(`✅ ${m} 월별인원 저장 완료`);
+  snapshots[m]=snapData;
+  closeSnapModal();renderAll();
+  alert('✅ '+m+' 월별인원 저장 완료');
 }
 
 // ── 엑셀 내보내기 ──
@@ -1199,7 +1667,7 @@ function exportExcel(){
   const teamMap={};const teamCenterMap={};
   divisions.forEach(d=>(d.teams||[]).forEach(t=>{teamMap[t.id]=t.name;teamCenterMap[t.id]=(t.center_name||'');}));
   const empRows=[['이름','본부','센터/단/소','팀','직급','직책','입사일','출생연도','상태','비고']];
-  employees.forEach(e=>empRows.push([e.name||'',divMap[e.div_id]||'',teamCenterMap[e.team_id]||'',teamMap[e.team_id]||'',e.grade||'',e.position||'',e.join_date||'',e.birth_year||'',{normal:'재직',join:'입사',leave:'퇴사',transfer:'인사이동'}[e.status]||'재직',e.note||'']));
+  employees.forEach(e=>empRows.push([e.name||'',divMap[e.div_id]||'',teamCenterMap[e.team_id]||'',teamMap[e.team_id]||'',e.grade||'',e.position||'',e.join_date||'',e.birth_year||'',({normal:'재직',join:'입사',leave:'퇴사',transfer:'인사이동',leave_abs:'휴직',dispatch:'파견'}[e.status]||'재직'),e.note||'']));
   const ws1=XLSX.utils.aoa_to_sheet(empRows);ws1['!cols']=[{wch:10},{wch:14},{wch:14},{wch:14},{wch:10},{wch:10},{wch:12},{wch:8},{wch:20}];
   XLSX.utils.book_append_sheet(wb,ws1,'인원현황');
   const execRows=[['직함','이름','직급','근속(년)']];executives.forEach(e=>execRows.push([e.title||'',e.name||'',e.grade||'',e.years!=null?e.years:'']));
@@ -1229,7 +1697,7 @@ async function importExcel(event){
     try{
       var teamCenterUpdates={};
       const wb=XLSX.read(ev.target.result,{type:'array',cellDates:true});
-      const statusMap={'재직':'normal','입사':'join','퇴사':'leave','인사이동':'transfer'};
+      const statusMap={'재직':'normal','입사':'join','퇴사':'leave','인사이동':'transfer','휴직':'leave_abs','파견':'dispatch'};
       if(!wb.SheetNames.includes('인원현황')){alert('인원현황 시트가 없습니다.');return;}
       const ws=wb.Sheets['인원현황'];
       const rawAll=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:''});
@@ -1383,6 +1851,139 @@ async function importExcel(event){
 
 ['empOverlay','execOverlay','structOverlay','snapOverlay','setupOverlay','divHead2Overlay','centerHeadOverlay'].forEach(id=>{document.getElementById(id).addEventListener('click',function(e){if(e.target===this)this.classList.remove('show');});});
 
+// ── 인쇄용 분할 테이블 생성 ──
+var MAX_PRINT_TEAMS=9; // 페이지당 최대 팀 컬럼 수
+
+function buildOrgTableHTML(groupDivs,emps,hasCenters){
+  var allT=[];groupDivs.forEach(function(d){(d.teams||[]).forEach(function(t){allT.push({div:d,team:t});});});
+  if(!allT.length)return'';
+  var hr=hasCenters?6:4;
+  var h='<thead><tr><td class="grade-hdr" rowspan="'+hr+'" style="min-width:44px;">직급</td>';
+  groupDivs.forEach(function(d){h+='<td class="div-hdr" colspan="'+(d.teams?d.teams.length:1)+'">'+d.name+'</td>';});
+  h+='</tr><tr>';
+  groupDivs.forEach(function(d){
+    var ht=d.head_title||'본부장',hn=d.head_name||'';
+    h+='<td class="head-hdr" colspan="'+(d.teams?d.teams.length:1)+'">'+(hn?ht+': '+hn:'-')+'</td>';
+  });
+  h+='</tr>';
+  if(hasCenters){
+    var sk={};
+    h+='<tr>';
+    groupDivs.forEach(function(d){
+      var td=allT.filter(function(x){return x.div.id===d.id;});
+      var i=0;
+      while(i<td.length){
+        var cn=(td[i].team.center_name||'').trim();
+        if(!cn){sk[td[i].team.id]=true;h+='<td class="team-hdr" rowspan="3" style="vertical-align:middle;">'+td[i].team.name+'</td>';i++;}
+        else{
+          var j=i;while(j<td.length&&(td[j].team.center_name||'').trim()===cn)j++;
+          h+='<td class="center-grp-hdr" colspan="'+(j-i)+'">'+cn+'</td>';i=j;
+        }
+      }
+    });
+    h+='</tr><tr>';
+    groupDivs.forEach(function(d){
+      var td=allT.filter(function(x){return x.div.id===d.id;});
+      var h2n=d.head2_name||'';var h2t=d.head2_title||'센터장';
+      var i=0;
+      while(i<td.length){
+        if(sk[td[i].team.id]){i++;continue;}
+        var j=i;while(j<td.length&&!sk[td[j].team.id])j++;
+        // 센터별 직책자 (첫 번째 팀 기준)
+        var rt=td[i].team;
+        var chn=rt.center_head_name||h2n||'';
+        var cht=rt.center_head_title||h2t||'센터장';
+        var chEmp=chn?emps.find(function(e){return e.name===chn;}):null;
+        var chSub=makeHeadSub(chEmp);
+        h+='<td class="head2-hdr" colspan="'+(j-i)+'">'+(chn?cht+': '+chn+chSub:'-')+'</td>';i=j;
+      }
+    });
+    h+='</tr><tr>';
+    allT.forEach(function(x){if(!sk[x.team.id])h+='<td class="team-hdr">'+x.team.name+'</td>';});
+    h+='</tr><tr>';
+  }else{
+    h+='<tr>';
+    allT.forEach(function(x){h+='<td class="team-hdr">'+x.team.name+'</td>';});
+    h+='</tr><tr>';
+  }
+  allT.forEach(function(x){
+    var ldr=emps.find(function(e){return e.team_id===x.team.id&&isLeaderPos(e);});
+    h+='<td class="role-hdr">'+(ldr?ldr.name:'-')+'</td>';
+  });
+  h+='</tr></thead><tbody>';
+  GRADES.forEach(function(grade){
+    var hasAny=allT.some(function(x){return emps.some(function(e){return e.grade===grade&&e.team_id===x.team.id&&e.status!=='leave'&&!isLeaderPos(e);});});
+    if(!hasAny)return;
+    h+='<tr><td class="grade-hdr" style="background:'+(GRADE_COLORS[grade]||'#f5f5f5')+';">'+grade+'</td>';
+    allT.forEach(function(x){
+      var mem=emps.filter(function(e){return e.grade===grade&&e.team_id===x.team.id&&e.status!=='leave'&&!isLeaderPos(e);});
+      h+='<td class="emp-cell">'+(mem.map(function(e){
+        var sub='';
+        if(e.birth_year){
+          var by=e.birth_year>100?e.birth_year:e.birth_year+1900;
+          sub='<span class="emp-sub">'+(e.birth_year>100?e.birth_year-1900:e.birth_year)+'·'+(new Date().getFullYear()-by+1)+'세</span>';
+        }
+        return'<span class="emp-name">'+e.name+sub+'</span>';
+      }).join(''))+'</td>';
+    });
+    h+='</tr>';
+  });
+  h+='<tr><td class="count-hdr">팀 인원</td>';
+  allT.forEach(function(x){
+    h+='<td class="count-cell">'+emps.filter(function(e){return e.team_id===x.team.id&&e.status!=='leave';}).length+'</td>';
+  });
+  h+='</tr><tr><td class="count-hdr">본부 인원</td>';
+  groupDivs.forEach(function(d){
+    h+='<td class="count-cell" colspan="'+(d.teams?d.teams.length:1)+'">'+emps.filter(function(e){return e.div_id===d.id&&e.status!=='leave';}).length+'</td>';
+  });
+  return h+'</tr></tbody>';
+}
+
+function preparePrintTables(){
+  var old=document.getElementById('printTables');if(old)old.remove();
+  var _d=getData();var emps=_d.employees||employees;
+  var hasCenters=divisions.some(function(d){return(d.teams||[]).some(function(t){return t.center_name&&t.center_name.trim();});});
+  // 본부별 팀 수 확인 → 페이지 그룹 구성
+  var pageGroups=[],cur=[],curCnt=0;
+  divisions.forEach(function(d){
+    var tc=(d.teams||[]).length||1;
+    if(curCnt>0&&curCnt+tc>MAX_PRINT_TEAMS){pageGroups.push(cur);cur=[];curCnt=0;}
+    cur.push(d);curCnt+=tc;
+  });
+  if(cur.length)pageGroups.push(cur);
+  var wrap=document.createElement('div');
+  wrap.id='printTables';
+  pageGroups.forEach(function(grp,idx){
+    var pg=document.createElement('div');
+    pg.className='print-page';
+    var lbl=document.createElement('div');
+    lbl.className='print-page-label';
+    lbl.textContent=grp.map(function(d){return d.name;}).join(' / ');
+    var tbl=document.createElement('table');
+    tbl.className='org';
+    tbl.style.width='100%';
+    tbl.innerHTML=buildOrgTableHTML(grp,emps,hasCenters);
+    pg.appendChild(lbl);
+    pg.appendChild(tbl);
+    wrap.appendChild(pg);
+  });
+  document.body.appendChild(wrap);
+}
+
+function cleanupPrintTables(){
+  var el=document.getElementById('printTables');if(el)el.remove();
+}
+window.onafterprint=cleanupPrintTables;
+
+function doPrint(){
+  var m=document.getElementById('curMonth').value||new Date().toISOString().slice(0,7);
+  var parts=m.split('-');
+  var label=parts[0]+'년 '+parseInt(parts[1])+'월 기준 조직 인원현황 보고서';
+  document.getElementById('printTitleText').textContent=label;
+  document.getElementById('printTitleSub').textContent='작성일: '+new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'});
+  preparePrintTables();
+  window.print();
+}
 async function init(){
   const now=new Date();
   const m=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
