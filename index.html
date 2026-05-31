@@ -408,7 +408,13 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
   </div>
   <div class="charts-row">
     <div class="chart-box"><h3>월별 인원 추이</h3><canvas id="trendChart" height="200"></canvas></div>
-    <div class="chart-box"><h3>직급별 인원 <span class="chart-total" id="total-grade"></span></h3><canvas id="gradeChart" height="200"></canvas></div>
+    <div class="chart-box">
+    <h3>직급별 인원 <span class="chart-total" id="total-grade"></span></h3>
+    <canvas id="gradeChart" height="200"></canvas>
+    <hr style="border:none;border-top:1px solid #eee;margin:14px 0 10px;">
+    <h3 style="font-size:13px;font-weight:700;color:#1e3a5f;margin-bottom:12px;">직책별 인원 <span class="chart-total" id="total-position"></span></h3>
+    <canvas id="positionChart" height="160"></canvas>
+   </div>
   </div>
   <div class="charts-row2">
     <div class="chart-box"><h3>본부별 인원 <span class="chart-total" id="total-div"></span></h3><canvas id="divChart" height="220"></canvas></div>
@@ -824,7 +830,7 @@ const STATUS_COLOR={join:'#d4edda',leave:'#f8d7da',transfer:'#fff3cd',leave_abs:
 let sb=null; // supabase client
 let employees=[],executives=[],divisions=[],snapshots={};
 let editingEmpId=null,editingExecId=null,viewSnap=null;
-let chartTrend=null,chartGrade=null,chartDiv=null,chartStatus=null;
+let chartTrend=null,chartGrade=null,chartDiv=null,chartStatus=null,chartPosition=null;
 let chartWorkplace=null,chartEmpType=null,chartGender=null,chartEdu=null;
 const WORKPLACES=['본사','지점','여주','밀양','김제','정읍','해외','지주파견'];
 const EMP_TYPES=['정규직','임원계약직','계약직','촉탁직'];
@@ -1072,22 +1078,59 @@ function renderDashboard(){
     const diff=active.length-prev;
     document.getElementById('s-total-sub').textContent=(diff>=0?'▲'+diff:'▼'+Math.abs(diff))+' 전월대비';
   }else{document.getElementById('s-prev').textContent='-';document.getElementById('s-total-sub').textContent='';}
-  renderTrendChart();renderGradeChart();renderDivChart();renderStatusChart();renderWorkplaceChart();renderEmpTypeChart();renderGenderChart();renderEduChart();
+  renderTrendChart();renderGradeChart();renderDivChart();renderStatusChart();renderPositionChart();renderWorkplaceChart();renderEmpTypeChart();renderGenderChart();renderEduChart();
 }
 function renderTrendChart(){
   const ctx=document.getElementById('trendChart').getContext('2d');
   if(chartTrend)chartTrend.destroy();
   const keys=Object.keys(snapshots).sort();
-  const labels=[...keys,'현재'];
-  const totals=[...keys.map(function(k){
+  // 저장된 월별인원 데이터만 기반으로 산출
+  if(!keys.length){
+    chartTrend=new Chart(ctx,{type:'line',data:{labels:['(저장된 월별인원 없음)'],datasets:[{label:'총인원',data:[0],borderColor:'#ccc'}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{display:false},x:{ticks:{font:{size:11}}}}}});
+    return;
+  }
+  const labels=keys;
+  const totals=keys.map(function(k){
     var emps=snapshots[k].employees||[];
     var seen=new Set();
     emps.filter(function(e){return e.status!=='leave';}).forEach(function(e){seen.add(e.name);});
     return seen.size;
-  }),getTotalCount()];
-  const joins=[...keys.map(k=>(snapshots[k].employees||[]).filter(e=>e.status==='join').length),employees.filter(e=>e.status==='join').length];
-  const leaves=[...keys.map(k=>(snapshots[k].employees||[]).filter(e=>e.status==='leave').length),employees.filter(e=>e.status==='leave').length];
-  chartTrend=new Chart(ctx,{type:'line',data:{labels,datasets:[{label:'총인원',data:totals,borderColor:'#1e3a5f',backgroundColor:'rgba(30,58,95,.08)',tension:.3,fill:true,pointRadius:4},{label:'입사',data:joins,borderColor:'#2d7a3a',tension:.3,borderDash:[4,3],pointRadius:4},{label:'퇴사',data:leaves,borderColor:'#b12c2c',tension:.3,borderDash:[4,3],pointRadius:4}]},options:{responsive:true,plugins:{legend:{position:'bottom',labels:{font:{size:11}}}},scales:{y:{beginAtZero:false,ticks:{font:{size:11}}},x:{ticks:{font:{size:11}}}}}});
+  });
+  const joins=keys.map(function(k){
+    return (snapshots[k].employees||[]).filter(function(e){return e.status==='join';}).length;
+  });
+  const leaves=keys.map(function(k){
+    return (snapshots[k].employees||[]).filter(function(e){return e.status==='leave';}).length;
+  });
+  chartTrend=new Chart(ctx,{type:'line',data:{labels,datasets:[
+    {label:'총인원',data:totals,
+     borderColor:'#1e3a5f',backgroundColor:'rgba(30,58,95,.1)',
+     tension:.3,fill:true,pointRadius:5,pointHoverRadius:7,
+     yAxisID:'yLeft',order:2},
+    {label:'입사',data:joins,
+     borderColor:'#2d7a3a',backgroundColor:'rgba(45,122,58,.15)',
+     tension:.3,borderDash:[5,3],pointRadius:4,pointStyle:'triangle',
+     yAxisID:'yRight',order:1},
+    {label:'퇴사',data:leaves,
+     borderColor:'#b12c2c',backgroundColor:'rgba(177,44,44,.15)',
+     tension:.3,borderDash:[5,3],pointRadius:4,pointStyle:'rectRot',
+     yAxisID:'yRight',order:1}
+  ]},options:{responsive:true,interaction:{mode:'index',intersect:false},
+    plugins:{legend:{position:'bottom',labels:{font:{size:11}}},
+      tooltip:{callbacks:{label:function(c){return c.dataset.label+': '+c.parsed.y+'명';}}}},
+    scales:{
+      x:{ticks:{font:{size:11}}},
+      yLeft:{type:'linear',position:'left',
+        title:{display:true,text:'총인원(명)',font:{size:10},color:'#1e3a5f'},
+        ticks:{font:{size:10},color:'#1e3a5f'},
+        grid:{color:'rgba(30,58,95,.08)'},
+        beginAtZero:false},
+      yRight:{type:'linear',position:'right',
+        title:{display:true,text:'입/퇴사(명)',font:{size:10},color:'#555'},
+        ticks:{font:{size:10},color:'#555',stepSize:1},
+        grid:{drawOnChartArea:false},
+        beginAtZero:true,min:0}
+    }}});
 }
 function renderGradeChart(){
   const ctx=document.getElementById('gradeChart').getContext('2d');
@@ -1121,6 +1164,50 @@ function getData(){
   return{employees,executives};
 }
 // ── 카테고리 차트 공통 렌더 ──
+function renderPositionChart(){
+  var ctx=document.getElementById('positionChart');
+  if(!ctx)return;
+  ctx=ctx.getContext('2d');
+  if(chartPosition)chartPosition.destroy();
+  var active=getActive();
+  // 직원 테이블의 position 필드 집계
+  var posMap={};
+  active.forEach(function(e){
+    var p=(e.position||'').trim();
+    if(p){posMap[p]=(posMap[p]||0)+1;}
+  });
+  // 클릭 모달 직책자 (head_name 등) 추가
+  divisions.forEach(function(d){
+    if(d.head_name&&!active.some(function(e){return e.name===d.head_name;})){
+      var t=d.head_title||'본부장';
+      posMap[t]=(posMap[t]||0)+1;
+    }
+    (d.teams||[]).forEach(function(tm){
+      if(tm.center_head_name&&!active.some(function(e){return e.name===tm.center_head_name;})){
+        var t=tm.center_head_title||'센터장';
+        posMap[t]=(posMap[t]||0)+1;
+      }
+    });
+  });
+  // 인원 많은 순 정렬
+  var entries=Object.entries(posMap).filter(function(kv){return kv[1]>0;})
+    .sort(function(a,b){return b[1]-a[1];});
+  if(!entries.length){chartPosition=null;return;}
+  var labels=entries.map(function(kv){return kv[0];});
+  var data=entries.map(function(kv){return kv[1];});
+  var total=data.reduce(function(a,b){return a+b;},0);
+  var el=document.getElementById('total-position');
+  if(el)el.textContent='합계: '+total+'명';
+  chartPosition=new Chart(ctx,{type:'bar',plugins:[hrBarLabels],
+    data:{labels:labels,datasets:[{label:'인원',data:data,
+      backgroundColor:'#6d28d9',borderRadius:4}]},
+    options:{responsive:true,indexAxis:'y',
+      layout:{padding:{right:36}},
+      plugins:{legend:{display:false}},
+      scales:{x:{beginAtZero:true,ticks:{font:{size:10},stepSize:1},grid:{display:false}},
+              y:{ticks:{font:{size:10}}}}}});
+}
+
 function renderCatChart(canvasId,chartRef,field,categories,color,totalId){
   var ctx=document.getElementById(canvasId);
   if(!ctx)return null;
