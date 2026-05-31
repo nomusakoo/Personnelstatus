@@ -141,6 +141,14 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
 /* @media print → 아래 통합 버전 사용 */
 #printTables{display:none;}
 .print-page{margin-bottom:0;}
+/* ── 메모 툴팁 ── */
+#memoTooltip{
+  display:none;position:fixed;background:#1e3a5f;color:white;
+  padding:7px 11px;border-radius:7px;font-size:12px;line-height:1.5;
+  z-index:9000;max-width:240px;white-space:pre-wrap;
+  box-shadow:0 3px 10px rgba(0,0,0,.3);pointer-events:none;
+  border:1px solid rgba(255,255,255,.2);
+}
 .frozen-col .grade-hdr{position:sticky;left:0;z-index:3;background-color:#dce6f1;}
 .frozen-row tr:nth-child(1) td,.frozen-row tr:nth-child(2) td,.frozen-row tr:nth-child(3) td,.frozen-row tr:nth-child(4) td{position:sticky;z-index:2;}
 .frozen-row tr:nth-child(1) .div-hdr{background-color:#1e3a5f;}
@@ -455,6 +463,7 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
       <select id="filterDiv" onchange="renderMatrix()"><option value="">본부 전체</option></select>
       <input id="filterText" placeholder="이름 검색..." style="width:150px;" oninput="renderMatrix()">
       <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;user-select:none;margin-left:8px;"><input type="checkbox" id="freezeToggle" onchange="toggleFreeze(this.checked)"> 틀고정</label>
+      <label id="memoLabel" style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;user-select:none;margin-left:8px;"><input type="checkbox" id="memoToggle" onchange="toggleMemo(this.checked)"> 메모보기</label>
     </div>
     <div class="matrix-scroll"><table class="org" id="orgTable"><tr><td class="loading"><div class="spinner"></div> 데이터 로딩 중...</td></tr></table></div>
   </div>
@@ -496,7 +505,7 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
   <div id="sbError" style="display:none;background:#fef2f2;border:1px solid #fca5a5;border-radius:6px;padding:10px 12px;font-size:12px;color:#991b1b;margin-bottom:12px;white-space:pre-wrap;line-height:1.6;"></div>
   <div class="mact">
     <button class="btn btn-g" onclick="skipSetup()">나중에</button>
-    <button class="btn btn-p" id="connectBtn" onclick="connectSupabase()">연결하기</button>
+    <button class="btn btn-p" id="connectBtn" onclick="try{connectSupabase();}catch(e){document.getElementById('sbError').style.display='block';document.getElementById('sbError').textContent='JS 오류: '+e.message;}">연결하기</button>
   </div>
 </div>
 </div>
@@ -823,6 +832,11 @@ var hrDoughnutLabels={
 
 const LEADER_POSITIONS=['팀장','법인장','지점장','실장','본부장','센터장','단장','부문장','소장','연구소장','대표이사','지회장'];
 const isLeaderPos=e=>e.position&&LEADER_POSITIONS.some(p=>e.position.includes(p));
+// 전역 오류 캐처 (디버그용)
+window.addEventListener('error',function(e){
+  console.error('전역 오류:',e.message,'줄:',e.lineno);
+});
+
 const GRADES=['상무보이상','수석급','부장급','차장급','과장급','대리급','주임급','사원급','기능감급','책임기사급','선임기사급','기사급','영양보조','기타'];
 const GRADE_COLORS={'상무보이상':'#fdecea','수석급':'#fef3e2','부장급':'#e8f4fd','차장급':'#f0f7ee','과장급':'#f5f0ff','대리급':'#fff9e6','주임급':'#fce4ec','사원급':'#e8f5e9','기능감급':'#e3f2fd','책임기사급':'#e8eaf6','선임기사급':'#f3e5f5','기사급':'#e0f7fa','영양보조':'#f9fbe7','기타':'#f5f5f5'};
 const STATUS_COLOR={join:'#d4edda',leave:'#f8d7da',transfer:'#fff3cd',leave_abs:'#dbeafe',dispatch:'#ede9fe',normal:''};
@@ -852,73 +866,54 @@ function sbClearError(){
 }
 
 async function connectSupabase(){
-  sbClearError();
-  console.log('[HR] connectSupabase 시작');
+  // 즉시 피드백
+  var btn=document.getElementById('connectBtn');
+  var errDiv=document.getElementById('sbError');
+  if(btn){btn.textContent='⟳ 연결 중...';btn.disabled=true;}
+  if(errDiv)errDiv.style.display='none';
 
-  const urlEl=document.getElementById('sb_url');
-  const keyEl=document.getElementById('sb_key');
-  const btn=document.getElementById('connectBtn');
-  const errEl=document.getElementById('sbError');
+  var url=(document.getElementById('sb_url')||{}).value||'';
+  var key=(document.getElementById('sb_key')||{}).value||'';
+  url=url.trim();key=key.trim();
 
-  if(!urlEl||!keyEl){
-    if(errEl){errEl.style.display='block';errEl.textContent='❌ 입력 필드를 찾을 수 없습니다. 페이지를 새로고침하세요.';}
-    return;
+  function showErr(msg){
+    if(errDiv){errDiv.style.display='block';errDiv.textContent=msg;}
+    if(btn){btn.textContent='연결하기';btn.disabled=false;}
   }
 
-  const url=urlEl.value.trim();
-  const key=keyEl.value.trim();
+  if(!url||!key){showErr('❌ URL과 Key를 모두 입력하세요.');return;}
 
-  if(!url||!key){sbShowError('❌ URL과 Anon Key를 모두 입력해주세요.');return;}
-  if(!url.startsWith('https://')){sbShowError('❌ URL은 https://로 시작해야 합니다.');return;}
-
-  // Supabase 라이브러리 로드 확인
-  const SB=window.supabase||(typeof supabase!=='undefined'?supabase:null);
-  if(!SB||typeof SB.createClient!=='function'){
-    sbShowError('❌ Supabase 라이브러리 로드 실패\n\n원인: CDN(cdn.jsdelivr.net) 접근 불가\n해결: 광고차단 확장 프로그램을 끄고 새로고침');
+  // Supabase 라이브러리 확인
+  var SBLib=window.supabase||(typeof supabase!=='undefined'?supabase:null);
+  if(!SBLib||!SBLib.createClient){
+    showErr('❌ Supabase 라이브러리 로드 실패\n\n인터넷 연결 확인 후 새로고침하세요.\n광고차단 프로그램이 있으면 일시 해제하세요.');
     return;
   }
-
-  if(btn){btn.textContent='연결 중...';btn.disabled=true;}
 
   try{
-    console.log('[HR] createClient 시도:', url);
-    sb=SB.createClient(url,key);
-
-    // 연결 테스트
-    const{data,error}=await sb.from('employees').select('id').limit(1);
-    console.log('[HR] 테스트 결과:', {data,error});
-
-    if(error){
+    sb=SBLib.createClient(url,key);
+    var testRes=await sb.from('employees').select('id').limit(1);
+    if(testRes.error){
       sb=null;
-      const msg=error.message||'알 수 없는 오류';
-      if(msg.includes('does not exist')||error.code==='42P01'){
-        sbShowError('❌ 테이블 없음\n→ Supabase SQL Editor에서 setup SQL을 실행하세요.');
-      } else if(msg.includes('Invalid API')||msg.includes('apikey')||msg.includes('JWT')){
-        sbShowError('❌ Anon Key 오류\n→ Project Settings → API → anon public 키를 확인하세요.');
-      } else if(msg.includes('fetch')||msg.includes('network')){
-        sbShowError('❌ 네트워크 오류\n→ Supabase 프로젝트가 일시정지(Paused) 상태일 수 있습니다.\n  supabase.com 대시보드에서 Restore 버튼을 누르세요.');
-      } else {
-        sbShowError('❌ 연결 실패: '+msg+'\n\ncode: '+(error.code||'-'));
+      var m=testRes.error.message||'';
+      if(m.includes('does not exist')||testRes.error.code==='42P01'){
+        showErr('❌ 테이블 없음\nSQL Editor에서 setup SQL을 실행하세요.');
+      }else{
+        showErr('❌ 연결 실패: '+m);
       }
       return;
     }
-
     // 성공
     localStorage.setItem('sb_url',url);
     localStorage.setItem('sb_key',key);
     document.getElementById('setupOverlay').classList.remove('show');
     setConnected(true);
-    console.log('[HR] 연결 성공');
     await loadAll();
     renderAll();
     subscribeRealtime();
-
-  }catch(err){
+  }catch(e){
     sb=null;
-    console.error('[HR] catch:', err);
-    sbShowError('❌ 예외 발생: '+err.message+'\n\n가능한 원인:\n• Supabase 프로젝트 일시정지 → 대시보드에서 Restore\n• URL/Key 복사 오류 → 다시 복사하여 붙여넣기\n• 네트워크 문제');
-  }finally{
-    if(btn){btn.textContent='연결하기';btn.disabled=false;}
+    showErr('❌ 예외: '+e.message+'\n\nSupabase 프로젝트가 일시정지(Paused)되었거나\nURL/Key가 잘못되었을 수 있습니다.');
   }
 }
 
@@ -1332,7 +1327,9 @@ function renderMatrix(){
   allTeams.forEach(({div,team})=>{
     var ldr=emps.find(e=>e.team_id===team.id&&isLeaderPos(e));
     var lSub=ldr?makeHeadSub(ldr):'';
-    var ll=ldr?ldr.name+lSub:'<span style="color:#bbb;font-size:10px;">+ 추가</span>';
+    var lNote=ldr&&ldr.note?(' data-note="'+ldr.note.replace(/"/g,'&quot;')+'"'):'';
+    var lName=ldr?('<span'+lNote+'>'+ldr.name+lSub+'</span>'):'<span style="color:#bbb;font-size:10px;">+ 추가</span>';
+    var ll=lName;
     var ca=viewSnap?'':`onclick="openLeaderCell('${div.id}','${team.id}')"`;
     html+=`<td class="role-hdr clickable" ${ca}>${ll}</td>`;
   });
@@ -1362,7 +1359,7 @@ function renderMatrix(){
       }
       if(tenure!=='')if(tenure>=0)subParts.push(tenure+'년');
       const subLine=subParts.length?`<span class="emp-sub">${subParts.join('·')}</span>`:'';
-      c+=`<span class="emp-name" style="background:${bg};${fc}" onclick="openEditEmpModal('${e.id}')">${e.name}${subLine}</span>`;
+      c+=`<span class="emp-name" style="background:${bg};${fc}" onclick="openEditEmpModal('${e.id}')"${e.note?' data-note="'+e.note.replace(/"/g,'&quot;')+ '"':''} >${e.name}${subLine}</span>`;
     });
       leavers.forEach(e=>{c+=`<span class="emp-name" style="background:#f8d7da;text-decoration:line-through;color:#999;" onclick="openEditEmpModal('${e.id}')">${e.name}</span>`;});
       const addAct=viewSnap?'':`<span class="add-btn" onclick="openAddEmpInCell('${div.id}','${team.id}','${grade}')">+추가</span>`;
@@ -2189,6 +2186,56 @@ function cleanupPrintTables(){
 }
 window.onafterprint=cleanupPrintTables;
 
+// ── 메모 툴팁 ──
+var _memoTip=null;
+var showMemo=false;
+function _initMemoTip(){
+  if(_memoTip)return;
+  _memoTip=document.createElement('div');
+  _memoTip.id='memoTooltip';
+  document.body.appendChild(_memoTip);
+  var tbl=document.getElementById('orgTable');
+  tbl.addEventListener('mouseover',function(ev){
+    if(!showMemo||window.innerWidth<=768)return;
+    var t=ev.target.closest('[data-note]');
+    if(!t)return;
+    _memoTip.textContent=t.getAttribute('data-note');
+    _memoTip.style.display='block';
+  });
+  tbl.addEventListener('mousemove',function(ev){
+    if(!showMemo||_memoTip.style.display==='none')return;
+    _memoTip.style.left=(ev.clientX+14)+'px';
+    _memoTip.style.top=Math.max(10,ev.clientY-44)+'px';
+  });
+  tbl.addEventListener('mouseleave',function(){
+    if(_memoTip)_memoTip.style.display='none';
+  });
+  tbl.addEventListener('mouseout',function(ev){
+    var t=ev.target.closest('[data-note]');
+    if(!t)return;
+    if(!ev.relatedTarget||!t.contains(ev.relatedTarget)){
+      if(_memoTip)_memoTip.style.display='none';
+    }
+  });
+}
+function toggleMemo(enabled){
+  // 모바일에서는 비활성화
+  if(window.innerWidth<=768){
+    document.getElementById('memoToggle').checked=false;
+    return;
+  }
+  showMemo=enabled;
+  if(!enabled&&_memoTip)_memoTip.style.display='none';
+  _initMemoTip();
+}
+// 모바일에서 메모보기 라벨 숨김
+(function(){
+  if(window.innerWidth<=768){
+    var ml=document.getElementById('memoLabel');
+    if(ml)ml.style.display='none';
+  }
+})();
+
 function doPrint(){
   var m=document.getElementById('curMonth').value||new Date().toISOString().slice(0,7);
   var parts=m.split('-');
@@ -2198,28 +2245,52 @@ function doPrint(){
   preparePrintTables();
   window.print();
 }
+
+
+
+// ── 페이지 초기화 ──
 async function init(){
   const now=new Date();
-  const m=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-  document.getElementById('curMonth').value=m;
-  document.getElementById('snapMonthInput').value=m;
-  const url=localStorage.getItem('sb_url');
-  const key=localStorage.getItem('sb_key');
-  if(url&&key){
-    document.getElementById('sb_url').value=url;
-    document.getElementById('sb_key').value=key;
-    document.getElementById('setupOverlay').classList.remove('show');
+  const m=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  const mEl=document.getElementById('curMonth');
+  const snapEl=document.getElementById('snapMonthInput');
+  if(mEl)mEl.value=m;
+  if(snapEl)snapEl.value=m;
+
+  const savedUrl=localStorage.getItem('sb_url');
+  const savedKey=localStorage.getItem('sb_key');
+
+  if(savedUrl&&savedKey){
+    // 저장된 자격증명으로 자동 연결
     try{
-      const _sb2=window.supabase||(typeof supabase!=='undefined'?supabase:null);
-    sb=_sb2.createClient(url,key);
-      setConnected(true);
-      await loadAll();
-      renderAll();
-      subscribeRealtime();
-    }catch(e){setConnected(false);}
+      const SBLib=window.supabase||(typeof supabase!=='undefined'?supabase:null);
+      if(SBLib&&SBLib.createClient){
+        sb=SBLib.createClient(savedUrl,savedKey);
+        const test=await sb.from('employees').select('id').limit(1);
+        if(!test.error){
+          document.getElementById('setupOverlay').classList.remove('show');
+          if(document.getElementById('sb_url'))document.getElementById('sb_url').value=savedUrl;
+          if(document.getElementById('sb_key'))document.getElementById('sb_key').value=savedKey;
+          setConnected(true);
+          await loadAll();
+          renderAll();
+          subscribeRealtime();
+          return;
+        }
+      }
+    }catch(e){
+      sb=null;
+      console.warn('자동 연결 실패:', e.message);
+    }
   }
+  // 자동 연결 실패 또는 저장 없음 → 설정 화면 표시
+  document.getElementById('setupOverlay').classList.add('show');
+  if(savedUrl&&document.getElementById('sb_url'))document.getElementById('sb_url').value=savedUrl;
+  if(savedKey&&document.getElementById('sb_key'))document.getElementById('sb_key').value=savedKey;
 }
-init();
+
+document.addEventListener('DOMContentLoaded', init);
+
 </script>
 </body>
 </html>
