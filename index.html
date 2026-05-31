@@ -99,7 +99,7 @@ table.org td,table.org th{border:1px solid #bdc8d8;padding:0;vertical-align:top;
 .emp-cell:hover{background:#f0f7ff;}
 .emp-name{display:block;padding:2px 4px;border-radius:3px;margin:1px 0;font-size:11px;white-space:nowrap;cursor:pointer;}
 .emp-name:hover{background:#d6eaff;}
-.emp-sub{display:block;font-size:9px;color:#aaa;padding:0 4px 2px;line-height:1.2;}
+.emp-sub{display:block;font-size:9px;color:#666;padding:0 4px 2px;line-height:1.2;}
 .role-hdr.clickable{cursor:pointer;}
 .role-hdr.clickable:hover{background:#d4e3f7;}
 .emp-years{font-size:9px;color:#aaa;margin-left:2px;}
@@ -298,7 +298,7 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
   .emp-name{font-size:10px;}
   .emp-sub{font-size:8px;}
   .grade-hdr{font-size:10px !important;min-width:44px !important;}
-  .div-hdr{font-size:10px !important;}
+  .div-hdr{font-size:10px !important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .team-hdr{font-size:10px !important;}
   .head-hdr,.head2-hdr{font-size:10px !important;}
   .role-hdr{font-size:11px !important;}
@@ -785,7 +785,7 @@ function makeSubLine(e){
 function makeHeadSub(e){
   if(!e)return'';
   var p=_calcSubParts(e);
-  return p.length?'<div style="display:block;font-size:9px;color:#555;line-height:1.4;margin-top:2px;">'+p.join('·')+'</div>':'';
+  return p.length?'<div style="display:block;font-size:9px;color:#444;line-height:1.4;margin-top:2px;">'+p.join('·')+'</div>':'';
 }
 
 const LEADER_POSITIONS=['팀장','법인장','지점장','실장','본부장','센터장','단장','부문장','소장','연구소장','대표이사','지회장'];
