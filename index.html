@@ -1341,6 +1341,21 @@ function renderMatrix(){
     html+=`<tr><td class="grade-hdr" style="background:${GRADE_COLORS[grade]||'#f5f5f5'};">${grade}</td>`;
     allTeams.forEach(({div,team})=>{
       let members=emps.filter(e=>e.grade===grade&&e.team_id===team.id&&e.status!=='leave'&&!isLeaderPos(e));
+      // 근속연수 내림차순 → 나이 내림차순(출생연도 오름차순) 정렬
+      members.sort(function(a,b){
+        function tenure(e){
+          if(!e.join_date)return -1;
+          var jd=new Date(normalizeDate(e.join_date));
+          return(!isNaN(jd)&&jd.getFullYear()>1970)?Math.floor((Date.now()-jd)/(365.25*864e5)):-1;
+        }
+        function byear(e){
+          if(!e.birth_year)return 9999;
+          return e.birth_year>100?e.birth_year:e.birth_year+1900;
+        }
+        var ta=tenure(a),tb=tenure(b);
+        if(tb!==ta)return tb-ta;         // 근속 높은 순
+        return byear(a)-byear(b);        // 나이 많은 순(출생연도 낮을수록 연장자)
+      });
       let leavers=emps.filter(e=>e.grade===grade&&e.team_id===team.id&&e.status==='leave');
       if(filterText){members=members.filter(e=>e.name.toLowerCase().includes(filterText));leavers=leavers.filter(e=>e.name.toLowerCase().includes(filterText));}
       let c='';
