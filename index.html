@@ -1337,7 +1337,8 @@ function renderMatrix(){
     var lNote=ldr&&ldr.note?(' data-note="'+ldr.note.replace(/"/g,'&quot;')+'"'):'';
     var lMatch=filterText&&ldr&&ldr.name.toLowerCase().includes(filterText);
     var lStyle=lMatch?'background:#dbeafe;color:#1d4ed8;font-weight:700;':'';
-    var lName=ldr?('<span class="emp-name" style="'+lStyle+'"'+lNote+'>'+ldr.name+lSub+'</span>'):'<span style="color:#bbb;font-size:10px;">+ 추가</span>';
+    var lClass=lMatch?' class="emp-name"':'';
+    var lName=ldr?('<span'+lClass+' style="'+lStyle+'"'+lNote+'>'+ldr.name+lSub+'</span>'):'<span style="color:#bbb;font-size:10px;">+ 추가</span>';
     var ll=lName;
     var ca=viewSnap?'':`onclick="openLeaderCell('${div.id}','${team.id}')"`;
     html+=`<td class="role-hdr clickable" ${ca}>${ll}</td>`;
@@ -1345,7 +1346,10 @@ function renderMatrix(){
   html+='</tr>';
   html+='</thead><tbody>';
   GRADES.forEach(grade=>{
-    const hasAny=allTeams.some(({team})=>emps.some(e=>e.grade===grade&&e.team_id===team.id));
+    const hasAny=allTeams.some(({team})=>emps.some(e=>
+      e.grade===grade&&e.team_id===team.id&&e.status!=='leave'&&!isLeaderPos(e)&&
+      (!filterText||e.name.toLowerCase().includes(filterText))
+    ));
     if(!hasAny)return;
     html+=`<tr><td class="grade-hdr" style="background:${GRADE_COLORS[grade]||'#f5f5f5'};">${grade}</td>`;
     allTeams.forEach(({div,team})=>{
@@ -1405,11 +1409,12 @@ function renderMatrix(){
   html+='</tr>';
   table.innerHTML=html;
   if(isFrozen)setTimeout(applyFreeze,30);
-  // 검색어가 있으면 첫 번째 결과를 화면 중앙으로 스크롤
-  var _ft=filterText;
-  if(_ft){
+  // 검색어가 있으면 매칭된 첫 번째 결과를 화면 중앙으로 스크롤
+  if(filterText){
     setTimeout(function(){
-      var first=document.querySelector('#orgTable .emp-name');
+      // 하이라이트된 span(매칭 요소)만 대상
+      var first=document.querySelector('#orgTable span[style*="dbeafe"]');
+      if(!first)first=document.querySelector('#orgTable .emp-name');
       if(first){
         first.scrollIntoView({behavior:'smooth',block:'center',inline:'center'});
       }
