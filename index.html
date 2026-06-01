@@ -1589,6 +1589,111 @@ async function saveDivHead(){
 }
 document.getElementById('divHeadOverlay').addEventListener('click',function(e){if(e.target===this)closeDivHeadModal();});
 
+// ── 직원 CRUD ──
+function buildGradeOptions(sel){
+  var el=document.getElementById('f_grade');
+  if(!el)return;
+  el.innerHTML=GRADES.map(function(g){return'<option value="'+g+'"'+(g===sel?' selected':'')+'>'+g+'</option>';}).join('');
+}
+function buildDivOptions(selId){
+  var el=document.getElementById('f_div');
+  if(!el)return;
+  el.innerHTML='<option value="">-- 본부 선택 --</option>'+divisions.map(function(d){return'<option value="'+d.id+'"'+(d.id===selId?' selected':'')+'>'+d.name+'</option>';}).join('');
+  buildTeamOptions(selId,'');
+}
+function onDivChange(){buildTeamOptions(document.getElementById('f_div').value,'');}
+function buildTeamOptions(divId,selId){
+  var el=document.getElementById('f_team');
+  if(!el)return;
+  var div=divisions.find(function(d){return d.id===divId;});
+  el.innerHTML='<option value="">-- 팀 선택 --</option>'+(div?(div.teams||[]).map(function(t){return'<option value="'+t.id+'"'+(t.id===selId?' selected':'')+'>'+t.name+'</option>';}).join(''):'');
+}
+
+function openAddEmpModal(){
+  editingEmpId=null;
+  document.getElementById('empModalTitle').textContent='직원 추가';
+  document.getElementById('delEmpBtn').style.display='none';
+  ['f_name','f_position','f_note','f_birth_year','f_workplace','f_emp_type','f_gender','f_education'].forEach(function(i){
+    var el=document.getElementById(i);if(el)el.value='';
+  });
+  var fs=document.getElementById('f_status');if(fs)fs.value='normal';
+  var fj=document.getElementById('f_joinDate');if(fj)fj.value='';
+  buildGradeOptions('부장급');
+  buildDivOptions('');
+  document.getElementById('empOverlay').classList.add('show');
+}
+function openAddEmpInCell(divId,teamId,grade){
+  openAddEmpModal();
+  buildGradeOptions(grade);
+  buildDivOptions(divId);
+  buildTeamOptions(divId,teamId);
+}
+function openEditEmpModal(id){
+  if(viewSnap)return;
+  var e=employees.find(function(x){return x.id===id;});
+  if(!e)return;
+  editingEmpId=id;
+  document.getElementById('empModalTitle').textContent='직원 수정';
+  document.getElementById('delEmpBtn').style.display='block';
+  var set=function(elId,val){var el=document.getElementById(elId);if(el)el.value=val||'';};
+  set('f_name',e.name);set('f_position',e.position);set('f_joinDate',e.join_date);
+  set('f_note',e.note);set('f_birth_year',e.birth_year);
+  set('f_workplace',e.workplace);set('f_emp_type',e.emp_type);
+  set('f_gender',e.gender);set('f_education',e.education);
+  var fs=document.getElementById('f_status');if(fs)fs.value=e.status||'normal';
+  buildGradeOptions(e.grade||'부장급');
+  buildDivOptions(e.div_id||'');
+  buildTeamOptions(e.div_id||'',e.team_id||'');
+  document.getElementById('empOverlay').classList.add('show');
+}
+function closeEmpModal(){
+  document.getElementById('empOverlay').classList.remove('show');
+  editingEmpId=null;
+}
+async function saveEmp(){
+  if(!sb){alert('Supabase에 연결하세요.');return;}
+  var name=(document.getElementById('f_name')||{}).value||'';
+  name=name.trim();
+  if(!name){alert('이름을 입력하세요.');return;}
+  var byRaw=document.getElementById('f_birth_year');
+  var birthYear=byRaw&&byRaw.value?parseInt(byRaw.value):null;
+  var data={
+    name:name,
+    grade:(document.getElementById('f_grade')||{}).value||'',
+    div_id:(document.getElementById('f_div')||{}).value||'',
+    team_id:(document.getElementById('f_team')||{}).value||'',
+    position:(document.getElementById('f_position')||{}).value||'',
+    join_date:(document.getElementById('f_joinDate')||{}).value||'',
+    status:(document.getElementById('f_status')||{}).value||'normal',
+    note:(document.getElementById('f_note')||{}).value||'',
+    birth_year:birthYear,
+    workplace:(document.getElementById('f_workplace')||{}).value||'',
+    emp_type:(document.getElementById('f_emp_type')||{}).value||'',
+    gender:(document.getElementById('f_gender')||{}).value||'',
+    education:(document.getElementById('f_education')||{}).value||''
+  };
+  if(editingEmpId){
+    var r=await sb.from('employees').update(data).eq('id',editingEmpId);
+    if(r.error){alert('수정 오류: '+r.error.message);return;}
+  }else{
+    var r2=await sb.from('employees').insert({...data,id:'e_'+uid()});
+    if(r2.error){alert('추가 오류: '+r2.error.message);return;}
+  }
+  closeEmpModal();
+  var d=await sb.from('employees').select('*');
+  employees=d.data||[];
+  renderAll();
+}
+async function deleteEmp(){
+  if(!editingEmpId||!confirm('삭제하시겠습니까?'))return;
+  var r=await sb.from('employees').delete().eq('id',editingEmpId);
+  if(r.error){alert('삭제 오류: '+r.error.message);return;}
+  closeEmpModal();
+  var d=await sb.from('employees').select('*');
+  employees=d.data||[];
+  renderAll();
+}
+
 function openLeaderCell(divId,teamId){
   // 해당 팀 기존 책임자 찾기
   const existing=employees.find(e=>e.team_id===teamId&&isLeaderPos(e));
