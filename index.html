@@ -478,10 +478,10 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
     </div>
     <table style="width:100%;border-collapse:collapse;font-size:13px;">
       <thead><tr style="background:#dce6f1;">
-        <th style="padding:8px 12px;text-align:left;color:#1e3a5f;">직함</th>
+        <th style="padding:8px 12px;text-align:left;color:#1e3a5f;">직책</th>
         <th style="padding:8px 12px;text-align:left;color:#1e3a5f;">이름</th>
-        <th style="padding:8px 12px;text-align:left;color:#1e3a5f;">직급</th>
-        <th style="padding:8px 12px;text-align:center;color:#1e3a5f;">근속(년)</th>
+        <th style="padding:8px 12px;text-align:center;color:#1e3a5f;">임기 시작</th>
+        <th style="padding:8px 12px;text-align:center;color:#1e3a5f;">임기 종료</th>
         <th style="padding:8px 12px;text-align:center;color:#1e3a5f;">관리</th>
       </tr></thead>
       <tbody id="execTbody"><tr><td colspan="5" class="loading"><div class="spinner"></div></td></tr></tbody>
@@ -677,10 +677,10 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
 <div class="modal">
   <h2 id="execModalTitle">임원 추가</h2>
   <div class="row2">
-    <div class="fr"><label>직함 *</label><input id="ef_title" placeholder="대표이사"></div>
+    <div class="fr"><label>직책 *</label><input id="ef_title" placeholder="대표이사"></div>
     <div class="fr"><label>이름</label><input id="ef_name"></div>
-    <div class="fr"><label>직급</label><input id="ef_grade"></div>
-    <div class="fr"><label>근속(년)</label><input type="number" id="ef_years" min="0"></div>
+    <div class="fr"><label>임기 시작</label><input type="date" id="ef_term_start"></div>
+    <div class="fr"><label>임기 종료</label><input type="date" id="ef_term_end"></div>
   </div>
   <div class="mact">
     <button class="btn btn-d" id="delExecBtn" onclick="deleteExec()" style="display:none;margin-right:auto;">삭제</button>
@@ -911,6 +911,9 @@ async function connectSupabase(){
     await loadAll();
     renderAll();
     subscribeRealtime();
+    // 연결 후 틀고정/메모 재적용
+    if(isFrozen)setTimeout(applyFreeze,100);
+    if(showMemo&&window.innerWidth>768)setTimeout(_initMemoTip,200);
   }catch(e){
     sb=null;
     showErr('❌ 예외: '+e.message+'\n\nSupabase 프로젝트가 일시정지(Paused)되었거나\nURL/Key가 잘못되었을 수 있습니다.');
@@ -1345,11 +1348,37 @@ function renderMatrix(){
   });
   html+='</tr>';
   html+='</thead><tbody>';
+  // 이름 매칭 팀 집합 (리더·팀원 모두) → 해당 팀 전체 표시
+  var matchedLeaderTeams=new Set();
+  if(filterText){
+    // 일반 팀원 매칭
+    emps.forEach(function(e){
+      if(e.team_id&&e.name.toLowerCase().includes(filterText))
+        matchedLeaderTeams.add(e.team_id);
+    });
+    // 리더 매칭
+    allTeams.forEach(function(x){
+      var ldr=emps.find(function(e){return e.team_id===x.team.id&&isLeaderPos(e);});
+      if(ldr&&ldr.name.toLowerCase().includes(filterText))matchedLeaderTeams.add(x.team.id);
+    });
+    // 본부장·센터장 매칭
+    divs.forEach(function(d){
+      if(d.head_name&&d.head_name.toLowerCase().includes(filterText))
+        (d.teams||[]).forEach(function(t){matchedLeaderTeams.add(t.id);});
+      (d.teams||[]).forEach(function(t){
+        if(t.center_head_name&&t.center_head_name.toLowerCase().includes(filterText))
+          matchedLeaderTeams.add(t.id);
+      });
+    });
+  }
   GRADES.forEach(grade=>{
-    const hasAny=allTeams.some(({team})=>emps.some(e=>
-      e.grade===grade&&e.team_id===team.id&&e.status!=='leave'&&!isLeaderPos(e)&&
-      (!filterText||e.name.toLowerCase().includes(filterText))
-    ));
+    const hasAny=allTeams.some(({team})=>
+      matchedLeaderTeams.has(team.id)||
+      emps.some(e=>
+        e.grade===grade&&e.team_id===team.id&&e.status!=='leave'&&!isLeaderPos(e)&&
+        (!filterText||e.name.toLowerCase().includes(filterText))
+      )
+    );
     if(!hasAny)return;
     html+=`<tr><td class="grade-hdr" style="background:${GRADE_COLORS[grade]||'#f5f5f5'};">${grade}</td>`;
     allTeams.forEach(({div,team})=>{
@@ -1370,7 +1399,7 @@ function renderMatrix(){
         return byear(a)-byear(b);        // 나이 많은 순(출생연도 낮을수록 연장자)
       });
       let leavers=emps.filter(e=>e.grade===grade&&e.team_id===team.id&&e.status==='leave');
-      if(filterText){members=members.filter(e=>e.name.toLowerCase().includes(filterText));leavers=leavers.filter(e=>e.name.toLowerCase().includes(filterText));}
+      if(filterText&&!matchedLeaderTeams.has(team.id)){members=members.filter(e=>e.name.toLowerCase().includes(filterText));leavers=leavers.filter(e=>e.name.toLowerCase().includes(filterText));}
       let c='';
       members.forEach(e=>{
       const bg=STATUS_COLOR[e.status]||'';
@@ -1387,7 +1416,7 @@ function renderMatrix(){
       }
       if(tenure!=='')if(tenure>=0)subParts.push(tenure+'년');
       const subLine=subParts.length?`<span class="emp-sub">${subParts.join('·')}</span>`:'';
-      c+=`<span class="emp-name" style="background:${bg};${fc}" onclick="openEditEmpModal('${e.id}')"${e.note?' data-note="'+e.note.replace(/"/g,'&quot;')+ '"':''} >${e.name}${subLine}</span>`;
+      c+=`<span class="emp-name" style="background:${filterText&&e.name.toLowerCase().includes(filterText)?'#dbeafe':bg};${filterText&&e.name.toLowerCase().includes(filterText)?'font-weight:700;color:#1d4ed8;':fc}" onclick="openEditEmpModal('${e.id}')"${e.note?' data-note="'+e.note.replace(/"/g,'&quot;')+ '"':''} >${e.name}${subLine}</span>`;
     });
       leavers.forEach(e=>{c+=`<span class="emp-name" style="background:#f8d7da;text-decoration:line-through;color:#999;" onclick="openEditEmpModal('${e.id}')">${e.name}</span>`;});
       const addAct=viewSnap?'':`<span class="add-btn" onclick="openAddEmpInCell('${div.id}','${team.id}','${grade}')">+추가</span>`;
@@ -1473,57 +1502,21 @@ function updateDivFilter(){const sel=document.getElementById('filterDiv');const 
 function renderExecTab(){
   const tbody=document.getElementById('execTbody');
   if(!executives.length){tbody.innerHTML='<tr><td colspan="5" style="padding:20px;text-align:center;color:#aaa;">임원 정보 없음</td></tr>';return;}
-  tbody.innerHTML=executives.map(e=>`<tr style="border-bottom:1px solid #f0f0f0;"><td style="padding:8px 12px;">${e.title||''}</td><td style="padding:8px 12px;font-weight:600;">${e.name||''}</td><td style="padding:8px 12px;">${e.grade||''}</td><td style="padding:8px 12px;text-align:center;">${e.years!=null?e.years:''}</td><td style="padding:8px 12px;text-align:center;"><button onclick="openEditExecModal('${e.id}')" style="padding:3px 10px;font-size:11px;background:#e8ecf0;border:none;border-radius:3px;cursor:pointer;">수정</button></td></tr>`).join('');
+  tbody.innerHTML=executives.map(e=>`<tr style="border-bottom:1px solid #f0f0f0;">
+    <td style="padding:8px 12px;">${e.title||''}</td>
+    <td style="padding:8px 12px;font-weight:600;">${e.name||''}</td>
+    <td style="padding:8px 12px;text-align:center;font-size:12px;">${e.term_start||'-'}</td>
+    <td style="padding:8px 12px;text-align:center;font-size:12px;">${e.term_end||'-'}</td>
+    <td style="padding:8px 12px;text-align:center;"><button onclick="openEditExecModal('${e.id}')" style="padding:3px 10px;font-size:11px;background:#e8ecf0;border:none;border-radius:3px;cursor:pointer;">수정</button></td>
+  </tr>`).join('');
 }
-
-// ── 직원 CRUD (Supabase) ──
-function buildDivOptions(selId){const sel=document.getElementById('f_div');sel.innerHTML='<option value="">-- 본부 선택 --</option>'+divisions.map(d=>`<option value="${d.id}"${d.id===selId?' selected':''}>${d.name}</option>`).join('');buildTeamOptions(selId,'');}
-function onDivChange(){buildTeamOptions(document.getElementById('f_div').value,'');}
-function buildTeamOptions(divId,selId){const sel=document.getElementById('f_team');const div=divisions.find(d=>d.id===divId);sel.innerHTML='<option value="">-- 팀 선택 --</option>'+(div?(div.teams||[]).map(t=>`<option value="${t.id}"${t.id===selId?' selected':''}>${t.name}</option>`).join(''):'');}
-function buildGradeOptions(sel){document.getElementById('f_grade').innerHTML=GRADES.map(g=>`<option value="${g}"${g===sel?' selected':''}>${g}</option>`).join('');}
-
-function openAddEmpModal(){editingEmpId=null;document.getElementById('empModalTitle').textContent='직원 추가';document.getElementById('delEmpBtn').style.display='none';['f_name','f_position','f_note','f_birth_year','f_workplace','f_emp_type','f_gender','f_education'].forEach(i=>document.getElementById(i).value='');document.getElementById('f_joinDate').value='';document.getElementById('f_status').value='normal';buildGradeOptions('부장급');buildDivOptions('');document.getElementById('empOverlay').classList.add('show');}
-function openAddEmpInCell(did,tid,grade){openAddEmpModal();buildGradeOptions(grade);buildDivOptions(did);buildTeamOptions(did,tid);}
-function openEditEmpModal(id){
-  if(viewSnap)return;
-  const e=employees.find(x=>x.id===id);if(!e)return;
-  editingEmpId=id;document.getElementById('empModalTitle').textContent='직원 수정';document.getElementById('delEmpBtn').style.display='block';
-  document.getElementById('f_name').value=e.name||'';document.getElementById('f_position').value=e.position||'';document.getElementById('f_joinDate').value=e.join_date||'';document.getElementById('f_status').value=e.status||'normal';document.getElementById('f_note').value=e.note||'';document.getElementById('f_birth_year').value=e.birth_year||'';
-  document.getElementById('f_workplace').value=e.workplace||'';
-  document.getElementById('f_emp_type').value=e.emp_type||'';
-  document.getElementById('f_gender').value=e.gender||'';
-  document.getElementById('f_education').value=e.education||'';
-  buildGradeOptions(e.grade||'부장급');buildDivOptions(e.div_id||'');buildTeamOptions(e.div_id||'',e.team_id||'');
-  document.getElementById('empOverlay').classList.add('show');
-}
-function closeEmpModal(){document.getElementById('empOverlay').classList.remove('show');editingEmpId=null;}
-async function saveEmp(){
-  if(!sb){alert('Supabase에 연결하세요.');return;}
-  const name=document.getElementById('f_name').value.trim();if(!name){alert('이름을 입력하세요.');return;}
-  const byRaw=document.getElementById('f_birth_year').value;const birthYear=byRaw?parseInt(byRaw):null;
-  const data={name,grade:document.getElementById('f_grade').value,div_id:document.getElementById('f_div').value,team_id:document.getElementById('f_team').value,position:document.getElementById('f_position').value.trim(),join_date:document.getElementById('f_joinDate').value,status:document.getElementById('f_status').value,note:document.getElementById('f_note').value.trim(),birth_year:birthYear};
-  if(editingEmpId){await sb.from('employees').update(data).eq('id',editingEmpId);}
-  else{await sb.from('employees').insert({...data,id:uid()});}
-  closeEmpModal();
-  const{data:d}=await sb.from('employees').select('*');employees=d||[];
-  renderAll();
-}
-async function deleteEmp(){
-  if(!editingEmpId||!confirm('삭제하시겠습니까?'))return;
-  await sb.from('employees').delete().eq('id',editingEmpId);
-  closeEmpModal();
-  const{data}=await sb.from('employees').select('*');employees=data||[];
-  renderAll();
-}
-
-// ── 임원 CRUD ──
-function openAddExecModal(){editingExecId=null;document.getElementById('execModalTitle').textContent='임원 추가';document.getElementById('delExecBtn').style.display='none';['ef_title','ef_name','ef_grade'].forEach(i=>document.getElementById(i).value='');document.getElementById('ef_years').value='';document.getElementById('execOverlay').classList.add('show');}
-function openEditExecModal(id){const e=executives.find(x=>x.id===id);if(!e)return;editingExecId=id;document.getElementById('execModalTitle').textContent='임원 수정';document.getElementById('delExecBtn').style.display='block';document.getElementById('ef_title').value=e.title||'';document.getElementById('ef_name').value=e.name||'';document.getElementById('ef_grade').value=e.grade||'';document.getElementById('ef_years').value=e.years!=null?e.years:'';document.getElementById('execOverlay').classList.add('show');}
+function openAddExecModal(){editingExecId=null;document.getElementById('execModalTitle').textContent='임원 추가';document.getElementById('delExecBtn').style.display='none';['ef_title','ef_name','ef_term_start','ef_term_end'].forEach(i=>document.getElementById(i).value='');document.getElementById('execOverlay').classList.add('show');}
+function openEditExecModal(id){const e=executives.find(x=>x.id===id);if(!e)return;editingExecId=id;document.getElementById('execModalTitle').textContent='임원 수정';document.getElementById('delExecBtn').style.display='block';document.getElementById('ef_title').value=e.title||'';document.getElementById('ef_name').value=e.name||'';document.getElementById('ef_term_start').value=e.term_start||'';document.getElementById('ef_term_end').value=e.term_end||'';document.getElementById('execOverlay').classList.add('show');}
 function closeExecModal(){document.getElementById('execOverlay').classList.remove('show');editingExecId=null;}
 async function saveExec(){
   if(!sb){alert('Supabase에 연결하세요.');return;}
   const title=document.getElementById('ef_title').value.trim();if(!title){alert('직함을 입력하세요.');return;}
-  const data={title,name:document.getElementById('ef_name').value.trim(),grade:document.getElementById('ef_grade').value.trim(),years:document.getElementById('ef_years').value!==''?Number(document.getElementById('ef_years').value):null};
+  const data={title,name:document.getElementById('ef_name').value.trim(),term_start:document.getElementById('ef_term_start').value,term_end:document.getElementById('ef_term_end').value};
   if(editingExecId){await sb.from('executives').update(data).eq('id',editingExecId);}
   else{await sb.from('executives').insert({...data,id:uid(),sort_order:executives.length});}
   closeExecModal();const{data:d}=await sb.from('executives').select('*').order('sort_order');executives=d||[];renderExecTab();
@@ -1916,7 +1909,7 @@ function exportExcel(){
   employees.forEach(e=>empRows.push([e.name||'',divMap[e.div_id]||'',teamCenterMap[e.team_id]||'',teamMap[e.team_id]||'',e.grade||'',e.position||'',e.join_date||'',e.birth_year||'',e.workplace||'',e.emp_type||'',e.gender||'',e.education||'',({normal:'재직',join:'입사',leave:'퇴사',transfer:'인사이동',leave_abs:'휴직',dispatch:'파견'}[e.status]||'재직'),e.note||'']));
   const ws1=XLSX.utils.aoa_to_sheet(empRows);ws1['!cols']=[{wch:10},{wch:14},{wch:14},{wch:14},{wch:10},{wch:10},{wch:12},{wch:8},{wch:8},{wch:10},{wch:4},{wch:12},{wch:8},{wch:20}];
   XLSX.utils.book_append_sheet(wb,ws1,'인원현황');
-  const execRows=[['직함','이름','직급','근속(년)']];executives.forEach(e=>execRows.push([e.title||'',e.name||'',e.grade||'',e.years!=null?e.years:'']));
+  const execRows=[['직책','이름','임기 시작','임기 종료']];executives.forEach(e=>execRows.push([e.title||'',e.name||'',e.term_start||'',e.term_end||'']));
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(execRows),'임원현황');
   const structRows=[['본부','센터/단/소','팀']];
   divisions.forEach(function(d){
@@ -2036,6 +2029,15 @@ async function importExcel(event){
       for(var chi in ctrHeadMap){
         var parts=chi.split('::');
         await sb.from('teams').update({center_head_name:ctrHeadMap[chi].name,center_head_title:ctrHeadMap[chi].title,center_head_grade:ctrHeadMap[chi].grade}).eq('div_id',parts[0]).eq('center_name',parts[1]);
+      }
+      // 임원현황 시트 처리
+      if(wb.SheetNames.includes('임원현황')){
+        var eRows=XLSX.utils.sheet_to_json(wb.Sheets['임원현황'],{header:1}).slice(1).filter(function(r){return r[0];});
+        if(eRows.length){
+          executives=eRows.map(function(r){return{id:'x_'+uid(),title:r[0]||'',name:r[1]||'',term_start:r[2]||'',term_end:r[3]||''};});
+          await sb.from('executives').delete().not('id','is',null);
+          await sb.from('executives').insert(executives.map(function(e,i){return{id:e.id,title:e.title,name:e.name,term_start:e.term_start,term_end:e.term_end,sort_order:i};}));
+        }
       }
       // 조직구조 시트 처리
       if(wb.SheetNames.includes('조직구조')){
@@ -2295,10 +2297,16 @@ async function init(){
   const snapEl=document.getElementById('snapMonthInput');
   if(mEl)mEl.value=m;
   if(snapEl)snapEl.value=m;
-  // 모바일: 틀고정 자동 체크
-  if(window.innerWidth<=768){
-    var ft=document.getElementById('freezeToggle');
-    if(ft){ft.checked=true;}
+  // 틀고정 기본 활성화 (PC/모바일 공통)
+  isFrozen=true;
+  var ft=document.getElementById('freezeToggle');
+  if(ft){ft.checked=true;}
+  // 메모보기 기본 활성화 (PC만)
+  if(window.innerWidth>768){
+    showMemo=true;
+    var mt=document.getElementById('memoToggle');
+    if(mt){mt.checked=true;}
+    setTimeout(function(){_initMemoTip();},500);
   }
 
   const savedUrl=localStorage.getItem('sb_url');
