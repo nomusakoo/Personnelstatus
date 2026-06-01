@@ -1261,7 +1261,10 @@ function renderMatrix(){
     var ht=d.head_title||'본부장',hn=d.head_name||'';
     var hdEmp=hn?emps.find(function(e){return e.name===hn;}):null;
     var hdSub=makeHeadSub(hdEmp);
-    var hl=hn?ht+': <strong>'+hn+'</strong>'+hdSub:'<span style="color:#aaa;">'+ht+' 미입력 (클릭하여 추가)</span>';
+    var hdMatch=filterText&&hn&&hn.toLowerCase().includes(filterText);
+    var hdStyle=hdMatch?'background:#dbeafe;color:#1d4ed8;':'';
+    var hnSpan=hdMatch?'<span class="emp-name" style="'+hdStyle+'font-weight:700;">'+hn+'</span>':hn;
+    var hl=hn?ht+': <strong>'+hnSpan+'</strong>'+hdSub:'<span style="color:#aaa;">'+ht+' 미입력 (클릭하여 추가)</span>';
     html+='<td class="head-hdr" colspan="'+(d.teams?d.teams.length:1)+'" onclick="openDivHeadModal(\''+d.id+'\')">'+(viewSnap?(hn||'-')+hdSub:hl)+'</td>';
   });
   html+='</tr>';
@@ -1305,7 +1308,11 @@ function renderMatrix(){
         var safeCn=cn.replace(/'/g,"\\'");
         var chEmpR=chn?emps.find(function(e){return e.name===chn;}):null;
         var chSubR=makeHeadSub(chEmpR);
-        html+='<td class="head2-hdr" colspan="'+(j-i)+'" onclick="openCenterHeadModal(\''+safeId+'\',\''+safeCn+'\')">'+(viewSnap?(chn||'-')+chSubR:chl+chSubR)+'</td>';
+        var chnMatch=filterText&&chn&&chn.toLowerCase().includes(filterText);
+        var chnStyle=chnMatch?'background:#dbeafe;color:#1d4ed8;font-weight:700;':'';
+        var chnSpan=chnMatch?'<span class="emp-name" style="'+chnStyle+'">'+chn+chSubR+'</span>':chn+chSubR;
+        var chlFinal=chn?(cht+': <strong>'+chnSpan+'</strong>'):('<span style="color:#aaa;">'+cht+' 미입력 (클릭하여 추가)</span>');
+        html+='<td class="head2-hdr" colspan="'+(j-i)+'" onclick="openCenterHeadModal(\''+safeId+'\',\''+safeCn+'\')">'+(viewSnap?(chnMatch?'<span class="emp-name" style="'+chnStyle+'">'+chn+chSubR+'</span>':(chn||'-')+chSubR):chlFinal)+'</td>';
         i=j;
       }
     });
@@ -1328,7 +1335,9 @@ function renderMatrix(){
     var ldr=emps.find(e=>e.team_id===team.id&&isLeaderPos(e));
     var lSub=ldr?makeHeadSub(ldr):'';
     var lNote=ldr&&ldr.note?(' data-note="'+ldr.note.replace(/"/g,'&quot;')+'"'):'';
-    var lName=ldr?('<span'+lNote+'>'+ldr.name+lSub+'</span>'):'<span style="color:#bbb;font-size:10px;">+ 추가</span>';
+    var lMatch=filterText&&ldr&&ldr.name.toLowerCase().includes(filterText);
+    var lStyle=lMatch?'background:#dbeafe;color:#1d4ed8;font-weight:700;':'';
+    var lName=ldr?('<span class="emp-name" style="'+lStyle+'"'+lNote+'>'+ldr.name+lSub+'</span>'):'<span style="color:#bbb;font-size:10px;">+ 추가</span>';
     var ll=lName;
     var ca=viewSnap?'':`onclick="openLeaderCell('${div.id}','${team.id}')"`;
     html+=`<td class="role-hdr clickable" ${ca}>${ll}</td>`;
@@ -1396,6 +1405,16 @@ function renderMatrix(){
   html+='</tr>';
   table.innerHTML=html;
   if(isFrozen)setTimeout(applyFreeze,30);
+  // 검색어가 있으면 첫 번째 결과를 화면 중앙으로 스크롤
+  var _ft=filterText;
+  if(_ft){
+    setTimeout(function(){
+      var first=document.querySelector('#orgTable .emp-name');
+      if(first){
+        first.scrollIntoView({behavior:'smooth',block:'center',inline:'center'});
+      }
+    },80);
+  }
 }
 function renderSnapBar(){
   const keys=Object.keys(snapshots).sort().reverse();
@@ -2271,6 +2290,11 @@ async function init(){
   const snapEl=document.getElementById('snapMonthInput');
   if(mEl)mEl.value=m;
   if(snapEl)snapEl.value=m;
+  // 모바일: 틀고정 자동 체크
+  if(window.innerWidth<=768){
+    var ft=document.getElementById('freezeToggle');
+    if(ft){ft.checked=true;}
+  }
 
   const savedUrl=localStorage.getItem('sb_url');
   const savedKey=localStorage.getItem('sb_key');
