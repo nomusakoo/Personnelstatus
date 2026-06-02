@@ -490,7 +490,7 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
 </div>
 
 <!-- Supabase 설정 모달 -->
-<div class="overlay show" id="setupOverlay">
+<div class="overlay" id="setupOverlay">
 <div class="setup-modal">
   <h2>🔗 Supabase 연결 설정</h2>
   <p class="desc">Supabase 프로젝트에 연결하면 팀원 모두가 실시간으로 같은 데이터를 보고 편집할 수 있습니다.</p>
@@ -2440,10 +2440,10 @@ async function init(){
       console.warn('자동 연결 실패:', e.message);
     }
   }
-  // 자동 연결 실패 또는 저장 없음 → 설정 화면 표시
+  // 자격증명 없음 OR 연결 실패 → 팝업 표시
+  if(document.getElementById('sb_url'))document.getElementById('sb_url').value=savedUrl||'';
+  if(document.getElementById('sb_key'))document.getElementById('sb_key').value=savedKey||'';
   document.getElementById('setupOverlay').classList.add('show');
-  if(savedUrl&&document.getElementById('sb_url'))document.getElementById('sb_url').value=savedUrl;
-  if(savedKey&&document.getElementById('sb_key'))document.getElementById('sb_key').value=savedKey;
 }
 
 document.addEventListener('DOMContentLoaded', init);
