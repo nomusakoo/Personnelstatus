@@ -366,9 +366,80 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
   .tbtn{padding:4px 8px;font-size:10px;}
 }
 
+/* ── 비밀번호 잠금 화면 ── */
+#lockScreen{
+  display:none;position:fixed;inset:0;z-index:99999;
+  background:linear-gradient(135deg,#0f2240 0%,#1e3a5f 60%,#16305a 100%);
+  align-items:center;justify-content:center;flex-direction:column;
+}
+#lockScreen.active{display:flex;}
+.lock-box{
+  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);
+  border-radius:16px;padding:36px 40px;width:300px;max-width:90vw;
+  display:flex;flex-direction:column;align-items:center;gap:0;
+  box-shadow:0 12px 48px rgba(0,0,0,.5);backdrop-filter:blur(8px);
+}
+.lock-icon{font-size:40px;margin-bottom:12px;line-height:1;}
+.lock-title{font-size:17px;font-weight:700;color:white;margin-bottom:4px;letter-spacing:.5px;}
+.lock-sub{font-size:12px;color:rgba(255,255,255,.5);margin-bottom:24px;}
+.pin-dots{display:flex;gap:14px;margin-bottom:24px;}
+.pin-dot{
+  width:16px;height:16px;border-radius:50%;
+  border:2px solid rgba(255,255,255,.4);background:transparent;
+  transition:all .2s;
+}
+.pin-dot.filled{background:white;border-color:white;box-shadow:0 0 8px rgba(255,255,255,.5);}
+.pin-dot.error{background:#f87171;border-color:#f87171;box-shadow:0 0 8px rgba(248,113,113,.6);}
+.pin-keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:100%;}
+.pin-key{
+  background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);
+  border-radius:10px;color:white;font-size:20px;font-weight:600;
+  padding:14px 0;cursor:pointer;font-family:inherit;
+  transition:background .15s,transform .1s;user-select:none;
+  -webkit-tap-highlight-color:transparent;
+}
+.pin-key:hover{background:rgba(255,255,255,.2);}
+.pin-key:active{background:rgba(255,255,255,.3);transform:scale(.95);}
+.pin-key.del{font-size:16px;background:rgba(255,100,100,.15);border-color:rgba(255,100,100,.25);}
+.pin-key.del:hover{background:rgba(255,100,100,.28);}
+.lock-error{
+  font-size:12px;color:#f87171;margin-top:12px;height:16px;text-align:center;
+  animation:shake .4s ease;
+}
+@keyframes shake{0%,100%{transform:translateX(0);}20%{transform:translateX(-6px);}40%{transform:translateX(6px);}60%{transform:translateX(-4px);}80%{transform:translateX(4px);}}
 </style>
 </head>
 <body>
+
+<!-- ── 비밀번호 잠금 화면 ── -->
+<div id="lockScreen" class="active">
+  <div class="lock-box">
+    <div class="lock-icon">🔒</div>
+    <div class="lock-title">인원현황 대시보드</div>
+    <div class="lock-sub">4자리 비밀번호를 입력하세요</div>
+    <div class="pin-dots">
+      <div class="pin-dot" id="pd0"></div>
+      <div class="pin-dot" id="pd1"></div>
+      <div class="pin-dot" id="pd2"></div>
+      <div class="pin-dot" id="pd3"></div>
+    </div>
+    <div class="pin-keypad">
+      <button class="pin-key" onclick="pinInput('1')">1</button>
+      <button class="pin-key" onclick="pinInput('2')">2</button>
+      <button class="pin-key" onclick="pinInput('3')">3</button>
+      <button class="pin-key" onclick="pinInput('4')">4</button>
+      <button class="pin-key" onclick="pinInput('5')">5</button>
+      <button class="pin-key" onclick="pinInput('6')">6</button>
+      <button class="pin-key" onclick="pinInput('7')">7</button>
+      <button class="pin-key" onclick="pinInput('8')">8</button>
+      <button class="pin-key" onclick="pinInput('9')">9</button>
+      <button class="pin-key" style="visibility:hidden;" disabled></button>
+      <button class="pin-key" onclick="pinInput('0')">0</button>
+      <button class="pin-key del" onclick="pinDel()">⌫</button>
+    </div>
+    <div class="lock-error" id="lockError"></div>
+  </div>
+</div>
 
 <div id="syncBadge"><i class="spin">↻</i> 업데이트 중...</div>
 <div id="printTitle" style="display:none;">
@@ -2445,6 +2516,62 @@ async function init(){
   if(document.getElementById('sb_key'))document.getElementById('sb_key').value=savedKey||'';
   document.getElementById('setupOverlay').classList.add('show');
 }
+
+// ── 비밀번호 잠금 ──
+(function(){
+  var CORRECT='1234';
+  var pinBuf='';
+  var locked=true;
+
+  function updateDots(){
+    for(var i=0;i<4;i++){
+      var d=document.getElementById('pd'+i);
+      if(d)d.className='pin-dot'+(i<pinBuf.length?' filled':'');
+    }
+  }
+  function showError(msg){
+    var el=document.getElementById('lockError');
+    if(!el)return;
+    el.textContent=msg;
+    // 점 에러 색상
+    for(var i=0;i<4;i++){var d=document.getElementById('pd'+i);if(d)d.className='pin-dot error';}
+    setTimeout(function(){
+      pinBuf='';
+      updateDots();
+      el.textContent='';
+    },900);
+  }
+  function unlock(){
+    locked=false;
+    var ls=document.getElementById('lockScreen');
+    if(ls){ls.classList.remove('active');}
+  }
+
+  window.pinInput=function(n){
+    if(!locked)return;
+    if(pinBuf.length>=4)return;
+    pinBuf+=n;
+    updateDots();
+    if(pinBuf.length===4){
+      if(pinBuf===CORRECT){
+        setTimeout(unlock,180);
+      }else{
+        setTimeout(function(){showError('비밀번호가 올바르지 않습니다');},80);
+      }
+    }
+  };
+  window.pinDel=function(){
+    if(!locked)return;
+    if(pinBuf.length>0){pinBuf=pinBuf.slice(0,-1);updateDots();}
+  };
+
+  // 키보드 지원
+  document.addEventListener('keydown',function(e){
+    if(!locked)return;
+    if(e.key>='0'&&e.key<='9'){pinInput(e.key);}
+    else if(e.key==='Backspace'){pinDel();}
+  });
+})();
 
 document.addEventListener('DOMContentLoaded', init);
 
