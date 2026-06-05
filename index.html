@@ -575,7 +575,6 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
   <p style="font-size:11px;color:#888;margin-top:-6px;margin-bottom:4px;">Project Settings → API → <strong>anon public</strong> 키 (service_role 아님)</p>
   <div id="sbError" style="display:none;background:#fef2f2;border:1px solid #fca5a5;border-radius:6px;padding:10px 12px;font-size:12px;color:#991b1b;margin-bottom:12px;white-space:pre-wrap;line-height:1.6;"></div>
   <div class="mact">
-    <button class="btn btn-g" onclick="skipSetup()">나중에</button>
     <button class="btn btn-p" id="connectBtn" onclick="try{connectSupabase();}catch(e){document.getElementById('sbError').style.display='block';document.getElementById('sbError').textContent='JS 오류: '+e.message;}">연결하기</button>
   </div>
 </div>
@@ -992,8 +991,9 @@ async function connectSupabase(){
 }
 
 function skipSetup(){
-  document.getElementById('setupOverlay').classList.remove('show');
-  setConnected(false);
+  // DB 연결 없이는 진입 불가
+  var el=document.getElementById('sbError');
+  if(el){el.style.display='block';el.textContent='❌ Supabase 연결이 필요합니다. URL과 Key를 입력하고 연결하세요.';}
 }
 function openSetupModal(){
   const url=localStorage.getItem('sb_url')||'';
@@ -1078,6 +1078,7 @@ async function uploadDefaultData(){
 
 // ── 탭 ──
 function switchTab(id){
+  if(!_requireDB())return;
   document.querySelectorAll('.tab').forEach((t,i)=>{const ids=['dashboard','matrix','exec'];t.classList.toggle('active',ids[i]===id);});
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('tab-'+id).classList.add('active');
@@ -1121,7 +1122,15 @@ function getHeadExtras(){
 }
 
 // ── 대시보드 ──
+function _requireDB(){
+  if(!sb){
+    document.getElementById('setupOverlay').classList.add('show');
+    return false;
+  }
+  return true;
+}
 function renderAll(){
+  if(!_requireDB())return;
   updateDivFilter();
   const activeTab=document.querySelector('.tab.active');
   if(!activeTab)return;
@@ -1599,7 +1608,7 @@ async function deleteExec(){
 }
 
 // ── 조직 관리 ──
-function openStructModal(){renderDivList();renderStructTeamList();const sel=document.getElementById('s_divSel');sel.innerHTML=divisions.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');document.getElementById('structOverlay').classList.add('show');}
+function openStructModal(){if(!_requireDB())return;renderDivList();renderStructTeamList();const sel=document.getElementById('s_divSel');sel.innerHTML=divisions.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');document.getElementById('structOverlay').classList.add('show');}
 function closeStructModal(){document.getElementById('structOverlay').classList.remove('show');renderAll();}
 function renderDivList(){document.getElementById('divList').innerHTML=divisions.map(d=>`<div class="struct-item"><span>${d.name} <small style="color:#aaa">(${(d.teams||[]).length}팀)</small></span><button onclick="removeDiv('${d.id}')">삭제</button></div>`).join('')||'<div style="padding:8px;color:#aaa;font-size:12px;">본부 없음</div>';}
 function renderStructTeamList(){const divId=document.getElementById('s_divSel').value;const div=divisions.find(d=>d.id===divId);document.getElementById('teamList').innerHTML=(div&&div.teams||[]).map(t=>`<div class="struct-item"><span>${t.name}</span><button onclick="removeTeam('${divId}','${t.id}')">삭제</button></div>`).join('')||'<div style="padding:8px;color:#aaa;font-size:12px;">팀 없음</div>';}
@@ -1681,7 +1690,7 @@ function buildTeamOptions(divId,selId){
 }
 
 function openAddEmpModal(){
-  editingEmpId=null;
+  if(!_requireDB())return;
   document.getElementById('empModalTitle').textContent='직원 추가';
   document.getElementById('delEmpBtn').style.display='none';
   ['f_name','f_position','f_note','f_birth_year','f_workplace','f_emp_type','f_gender','f_education'].forEach(function(i){
@@ -1972,7 +1981,7 @@ function makeBulkRow(n){
 }
 
 function openBulkModal(){
-  // datalist 생성
+  if(!_requireDB())return;
   var dl1=document.getElementById('bulkDivList');
   if(!dl1){dl1=document.createElement('datalist');dl1.id='bulkDivList';document.body.appendChild(dl1);}
   dl1.innerHTML=divisions.map(function(d){return'<option value="'+d.name+'">';}).join('');
@@ -2061,7 +2070,7 @@ async function saveBulkInput(){
 }
 document.getElementById('bulkInputOverlay').addEventListener('click',function(e){if(e.target===this)closeBulkModal();});
 
-function openSnapModal(){document.getElementById('snapOverlay').classList.add('show');}
+function openSnapModal(){if(!_requireDB())return;document.getElementById('snapOverlay').classList.add('show');}
 function closeSnapModal(){document.getElementById('snapOverlay').classList.remove('show');}
 async function saveSnap(){
   if(!sb){alert('Supabase에 연결하세요.');return;}
@@ -2077,7 +2086,7 @@ async function saveSnap(){
 
 // ── 엑셀 내보내기 ──
 function exportExcel(){
-  const wb=XLSX.utils.book_new();
+  if(!_requireDB())return;
   const divMap=Object.fromEntries(divisions.map(d=>[d.id,d.name]));
   const teamMap={};const teamCenterMap={};
   divisions.forEach(d=>(d.teams||[]).forEach(t=>{teamMap[t.id]=t.name;teamCenterMap[t.id]=(t.center_name||'');}));
@@ -2454,7 +2463,7 @@ function toggleMemo(enabled){
 })();
 
 function doPrint(){
-  var m=document.getElementById('curMonth').value||new Date().toISOString().slice(0,7);
+  if(!_requireDB())return;
   var parts=m.split('-');
   var label=parts[0]+'년 '+parseInt(parts[1])+'월 기준 조직 인원현황 보고서';
   document.getElementById('printTitleText').textContent=label;
