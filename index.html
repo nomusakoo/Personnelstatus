@@ -1203,7 +1203,15 @@ function switchTab(id){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('tab-'+id).classList.add('active');
   if(id==='dashboard')renderDashboard();
-  if(id==='matrix')renderMatrix();
+  if(id==='matrix'){
+    renderMatrix();
+    // 탭 전환 시 스크롤 초기화 — 렌더 완료 후 (0,0)으로 리셋
+    setTimeout(function(){
+      var s=document.querySelector('.matrix-scroll');
+      if(s){s.scrollTop=0;s.scrollLeft=0;}
+      window.scrollTo(0,0);
+    },0);
+  }
   if(id==='exec')renderExecTab();
   if(id==='sim')renderSimTab();
 }
