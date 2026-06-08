@@ -591,6 +591,10 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
     <button class="sim-btn sim-btn-primary" onclick="simLoadEmployees()">📥 현재 인원 가져오기</button>
     <button class="sim-btn sim-btn-danger" onclick="simReset()">🔄 새로고침</button>
     <div class="sim-sep"></div>
+    <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;user-select:none;color:#333;white-space:nowrap;">
+      <input type="checkbox" id="simFreezeToggle" onchange="toggleSimFreeze(this.checked)" checked> 틀고정
+    </label>
+    <div class="sim-sep"></div>
     <button class="sim-btn sim-btn-green" onclick="simExportExcel()">📤 인사발령 내보내기</button>
     <button class="sim-btn" onclick="document.getElementById('simXlsxInput').click()">📂 인사발령 불러오기</button>
     <input type="file" id="simXlsxInput" accept=".xlsx,.xls" style="display:none" onchange="simImportExcel(event)">
@@ -2688,6 +2692,59 @@ document.addEventListener('DOMContentLoaded', init);
 var simEmps = null;       // 시뮬레이션 복사본 (id → 객체 Map)
 var simDivs = null;       // 조직구조 복사본 (배열)
 var simOrigMap = null;    // 원본 스냅샷 (id → {div_id,team_id,grade,position})
+var simFrozen = true;     // 시뮬 틀고정 상태 (기본 ON)
+
+function toggleSimFreeze(enabled){
+  simFrozen = enabled;
+  if(enabled){ _applySimFreeze(); } else { _clearSimFreeze(); }
+}
+function _clearSimFreeze(){
+  var scroll = document.querySelector('#simMatrixWrap .matrix-scroll');
+  if(scroll){ scroll.style.maxHeight=''; scroll.style.overflowY=''; }
+  // thead/tbody sticky 해제
+  var table = document.getElementById('simOrgTable');
+  if(!table) return;
+  table.querySelectorAll('thead td').forEach(function(td){
+    td.style.position=''; td.style.top=''; td.style.zIndex=''; td.style.backgroundColor='';
+    td.style.left='';
+  });
+  table.querySelectorAll('tbody .grade-hdr').forEach(function(td){
+    td.style.position=''; td.style.left=''; td.style.zIndex=''; td.style.backgroundColor='';
+  });
+}
+function _applySimFreeze(){
+  if(!simFrozen) return;
+  var scroll = document.querySelector('#simMatrixWrap .matrix-scroll');
+  var table  = document.getElementById('simOrgTable');
+  if(!scroll || !table) return;
+  var rect = scroll.getBoundingClientRect();
+  scroll.style.maxHeight = (window.innerHeight - rect.top - 16) + 'px';
+  scroll.style.overflowY = 'auto';
+  // thead 행 순차 sticky
+  var theadRows = table.querySelectorAll('thead tr');
+  var cumTop = 0;
+  theadRows.forEach(function(row){
+    var rh = row.offsetHeight;
+    row.querySelectorAll('td').forEach(function(td){
+      td.style.position = 'sticky';
+      td.style.top = cumTop + 'px';
+      td.style.backgroundColor = _getBg(td);
+      if(td.classList.contains('grade-hdr')){
+        td.style.left = '0'; td.style.zIndex = '6';
+      } else {
+        td.style.zIndex = '2';
+      }
+    });
+    cumTop += rh;
+  });
+  // tbody grade-hdr 좌측 고정
+  table.querySelectorAll('tbody .grade-hdr').forEach(function(td){
+    td.style.position = 'sticky';
+    td.style.left = '0';
+    td.style.zIndex = '3';
+    td.style.backgroundColor = _getBg(td);
+  });
+}
 
 // 깊은 복사 헬퍼 ── JSON 직렬화로 참조 완전 차단
 function simDeepCopy(obj){ return JSON.parse(JSON.stringify(obj)); }
@@ -2705,6 +2762,8 @@ function renderSimTab(){
   _simRenderMatrix();
   _simRenderDiff();
   _simUpdateBanner();
+  // 틀고정 상태 반영 (렌더 직후 레이아웃 완료 대기)
+  if(simFrozen){ setTimeout(_applySimFreeze, 40); }
 }
 
 // 현재 인원 가져오기
@@ -2797,12 +2856,14 @@ function _simRenderMatrix(){
     allTeams.forEach(function(x){ html+='<td class="team-hdr">'+x.team.name+'</td>'; });
     html += '</tr>';
   }
-  // 팀장 행
+  // 팀장 행 (드롭 가능 — data-isleader="1" 로 팀장 영역 식별)
   html += '<tr>';
   allTeams.forEach(function(x){
     var ldr = empsArr.find(function(e){ return e.team_id===x.team.id && isLeaderPos(e); });
-    var changed = ldr && simOrigMap[ldr.id] && (simOrigMap[ldr.id].team_id !== ldr.team_id || simOrigMap[ldr.id].grade !== ldr.grade);
-    html += '<td class="role-hdr">'+(ldr?'<span class="sim-chip'+(changed?' changed':'')+'" draggable="true" data-empid="'+ldr.id+'">'+ldr.name+'</span>':'<span style="color:#bbb;font-size:10px;">-</span>')+'</td>';
+    var changed = ldr && simOrigMap[ldr.id] && (simOrigMap[ldr.id].team_id !== ldr.team_id || simOrigMap[ldr.id].grade !== ldr.grade || simOrigMap[ldr.id].position !== ldr.position);
+    html += '<td class="role-hdr sim-drop-cell" data-divid="'+x.div.id+'" data-teamid="'+x.team.id+'" data-grade="" data-isleader="1">'
+      +(ldr?'<span class="sim-chip'+(changed?' changed':'')+'" draggable="true" data-empid="'+ldr.id+'">'+ldr.name+'</span>':'<span style="color:#bbb;font-size:10px;">-</span>')
+      +'</td>';
   });
   html += '</tr></thead><tbody>';
   GRADES.forEach(function(grade){
@@ -2818,7 +2879,7 @@ function _simRenderMatrix(){
         var bg = STATUS_COLOR[e.status]||'';
         return '<span class="sim-chip'+(changed?' changed':'')+'" draggable="true" data-empid="'+e.id+'" style="background:'+(changed?'':bg)+';">'+e.name+'</span>';
       }).join('');
-      html += '<td class="sim-drop-cell emp-cell" data-divid="'+x.div.id+'" data-teamid="'+x.team.id+'" data-grade="'+grade+'">'+chips+'</td>';
+      html += '<td class="sim-drop-cell emp-cell" data-divid="'+x.div.id+'" data-teamid="'+x.team.id+'" data-grade="'+grade+'" data-isleader="0">'+chips+'</td>';
     });
     html += '</tr>';
   });
@@ -2830,6 +2891,8 @@ function _simRenderMatrix(){
   table.innerHTML = html;
   _simBindDragDrop();
   _simBindTouchDrag();
+  // 틀고정 재적용 (매트릭스 재렌더 시마다)
+  if(simFrozen){ setTimeout(_applySimFreeze, 30); }
 }
 
 // ── 드래그&드롭 바인딩 ──
@@ -2859,10 +2922,11 @@ function _simBindDragDrop(){
       e.preventDefault();
       cell.classList.remove('drag-over');
       if(!_simDragEmpId) return;
-      var divId  = cell.getAttribute('data-divid');
-      var teamId = cell.getAttribute('data-teamid');
-      var grade  = cell.getAttribute('data-grade');
-      _simMoveEmp(_simDragEmpId, divId, teamId, grade);
+      var divId      = cell.getAttribute('data-divid');
+      var teamId     = cell.getAttribute('data-teamid');
+      var grade      = cell.getAttribute('data-grade');
+      var isLeader   = cell.getAttribute('data-isleader') === '1';
+      _simMoveEmp(_simDragEmpId, divId, teamId, grade, isLeader);
       _simDragEmpId = null;
     });
   });
@@ -2904,10 +2968,11 @@ function _simBindTouchDrag(){
       var el = document.elementFromPoint(t.clientX, t.clientY);
       var cell = el ? el.closest('.sim-drop-cell') : null;
       if(cell){
-        var divId  = cell.getAttribute('data-divid');
-        var teamId = cell.getAttribute('data-teamid');
-        var grade  = cell.getAttribute('data-grade');
-        _simMoveEmp(_touchEmpId, divId, teamId, grade);
+        var divId    = cell.getAttribute('data-divid');
+        var teamId   = cell.getAttribute('data-teamid');
+        var grade    = cell.getAttribute('data-grade');
+        var isLeader = cell.getAttribute('data-isleader') === '1';
+        _simMoveEmp(_touchEmpId, divId, teamId, grade, isLeader);
       }
       _touchEmpId = null;
     }, {passive:true});
@@ -2915,13 +2980,34 @@ function _simBindTouchDrag(){
 }
 
 // ── 인원 이동 처리 — 원본 데이터 절대 수정 안 함 ──
-function _simMoveEmp(empId, newDivId, newTeamId, newGrade){
+// isLeaderTarget: true = 팀장 행으로 드롭, false = 일반 직원 셀로 드롭
+function _simMoveEmp(empId, newDivId, newTeamId, newGrade, isLeaderTarget){
   var emp = simEmps[empId];
   if(!emp) return;
-  // 변경사항 적용 (시뮬레이션 복사본만)
+
+  var wasLeader = isLeaderPos(emp);  // 드래그 전 팀장 여부
+
+  // 소속·팀 변경
   emp.div_id  = newDivId  || emp.div_id;
   emp.team_id = newTeamId || emp.team_id;
-  emp.grade   = newGrade  || emp.grade;
+
+  if(isLeaderTarget){
+    // ── 팀장 라인으로 이동 ──
+    // grade: 드롭 셀에 data-grade가 없으므로 기존 유지
+    // position: 이미 팀장 직책이면 그대로, 아니면 '팀장' 부여
+    if(!wasLeader){
+      emp.position = '팀장';
+    }
+    // 같은 팀장 라인으로 이동한 경우도 팀장 직책 유지 (wasLeader=true 이면 position 그대로)
+  } else {
+    // ── 일반 직원 셀로 이동 ──
+    emp.grade = newGrade || emp.grade;
+    // 팀장이었는데 일반 셀로 내려오면 직책 초기화
+    if(wasLeader){
+      emp.position = '';
+    }
+  }
+
   // 매트릭스 및 diff 갱신
   _simRenderMatrix();
   _simRenderDiff();
@@ -2947,7 +3033,7 @@ function _simGetDiff(){
     if(orig.div_id   !== (e.div_id  ||'')) changes.push('소속변경');
     if(orig.team_id  !== (e.team_id ||'')) changes.push('팀변경');
     if(orig.grade    !== (e.grade   ||'')) changes.push('직급변경');
-    if(orig.position !== (e.position||'')) changes.push('직책변경');
+    if((orig.position||'') !== (e.position||'')) changes.push('직책변경('+( orig.position||'없음')+' → '+(e.position||'없음')+')');
     if(changes.length){
       diff.push({
         id: e.id, name: e.name,
