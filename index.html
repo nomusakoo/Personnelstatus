@@ -28,7 +28,7 @@ body{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;font-size:12px
 .conn-dot.ok{background:#4ade80;box-shadow:0 0 4px #4ade80;}
 .conn-dot.err{background:#f87171;}
 
-.tabs{background:#16305a;display:flex;gap:2px;padding:0 16px;}
+.tabs{background:#16305a;display:flex;gap:2px;padding:0 16px;position:sticky;top:var(--toolbar-h,48px);z-index:190;box-shadow:0 2px 4px rgba(0,0,0,.18);}
 .tab{padding:9px 18px;font-size:13px;color:rgba(255,255,255,.6);cursor:pointer;border-bottom:3px solid transparent;transition:all .15s;font-family:inherit;}
 .tab:hover{color:white;}.tab.active{color:white;border-bottom-color:#4da6ff;font-weight:700;}
 
@@ -2584,6 +2584,81 @@ async function init(){
 })();
 
 document.addEventListener('DOMContentLoaded', init);
+
+// ── 툴바 높이 → CSS 변수 (탭 sticky top 동기화) ──
+(function(){
+  function updateToolbarHeight(){
+    var tb=document.querySelector('.toolbar');
+    if(!tb)return;
+    document.documentElement.style.setProperty('--toolbar-h', tb.offsetHeight+'px');
+  }
+  document.addEventListener('DOMContentLoaded', function(){
+    updateToolbarHeight();
+    window.addEventListener('load', updateToolbarHeight);
+    window.addEventListener('resize', updateToolbarHeight);
+  });
+})();
+
+// ── 모바일 스와이프로 탭 전환 ──
+(function(){
+  var TAB_IDS=['dashboard','matrix','exec'];
+  var _sx=null, _sy=null;
+  var _ignoreDrag=false;
+
+  function currentTabIdx(){
+    var active=document.querySelector('.tabs .tab.active');
+    if(!active)return 0;
+    var tabs=Array.from(document.querySelectorAll('.tabs .tab'));
+    return tabs.indexOf(active);
+  }
+
+  function isInsideHScrollable(el){
+    while(el&&el!==document.body){
+      var st=window.getComputedStyle(el);
+      var ox=st.overflowX;
+      if((ox==='auto'||ox==='scroll')&&el.scrollWidth>el.clientWidth+2){
+        return true;
+      }
+      el=el.parentElement;
+    }
+    return false;
+  }
+
+  document.addEventListener('touchstart',function(e){
+    _sx=null;_sy=null;_ignoreDrag=false;
+    if(e.touches.length!==1)return;
+    var t=e.touches[0];
+    _sx=t.clientX;
+    _sy=t.clientY;
+    if(isInsideHScrollable(e.target)){
+      _ignoreDrag=true;
+    }
+  },{passive:true});
+
+  document.addEventListener('touchmove',function(e){
+    if(_sx===null||_ignoreDrag)return;
+    var dx=e.touches[0].clientX-_sx;
+    var dy=e.touches[0].clientY-_sy;
+    if(Math.abs(dy)>Math.abs(dx)){
+      _ignoreDrag=true;
+    }
+  },{passive:true});
+
+  document.addEventListener('touchend',function(e){
+    if(_sx===null||_ignoreDrag){_sx=null;return;}
+    if(!e.changedTouches||!e.changedTouches.length){_sx=null;return;}
+    var ex=e.changedTouches[0].clientX;
+    var ey=e.changedTouches[0].clientY;
+    var dx=ex-_sx;
+    var dy=ey-_sy;
+    _sx=null;
+    if(Math.abs(dx)<60||Math.abs(dy)>Math.abs(dx)*0.6)return;
+    var idx=currentTabIdx();
+    var next=dx<0 ? idx+1 : idx-1;
+    if(next<0||next>=TAB_IDS.length)return;
+    try{switchTab(TAB_IDS[next]);}catch(err){console.warn('swipe switchTab error:',err);}
+  },{passive:true});
+})();
 
 </script>
 </body>
