@@ -806,7 +806,7 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
     <div class="fr"><label>팀</label><select id="f_team"></select></div>
     <div class="fr"><label>직책</label><input id="f_position" placeholder="팀장/법인장"></div>
     <div class="fr"><label>입사일</label><input type="date" id="f_joinDate"></div>
-    <div class="fr"><label>출생연도 (두 자리: 87)</label><input type="number" id="f_birth_year" placeholder="87" min="50" max="99"></div>
+    <div class="fr"><label>출생연도 (두 자리 또는 네 자리)</label><input type="number" id="f_birth_year" placeholder="87 또는 2000" min="0" max="9999"></div>
   </div>
   <div class="row2">
     <div class="fr"><label>사업장</label>
@@ -956,8 +956,8 @@ const hrBarLabels={
 function _calcSubParts(e){
   var p=[];
   if(e&&e.birth_year){
-    var by=e.birth_year>100?e.birth_year:e.birth_year+1900;
-    p.push((e.birth_year>100?e.birth_year-1900:e.birth_year)+'년');
+    var by=byTo4(e.birth_year);
+    p.push(byTo2(e.birth_year)+'년');
     p.push((new Date().getFullYear()-by+1)+'세');
   }
   if(e&&e.join_date){
@@ -1006,6 +1006,20 @@ var hrDoughnutLabels={
   }
 };
 
+// ── 출생연도 → 4자리 연도 변환 헬퍼 ──
+// 입력 규칙: 100 이상 → 4자리 그대로 / 0~23 → 2000년대 / 24~99 → 1900년대
+function byTo4(by){
+  if(by===null||by===undefined)return null;
+  if(by>=100)return by;        // 1900, 1987, 2000 등 4자리 직접 입력
+  if(by<=23)return 2000+by;    // 00~23 → 2000~2023
+  return 1900+by;              // 24~99 → 1924~1999
+}
+// 화면 표시용 두 자리
+function byTo2(by){
+  var y=byTo4(by);
+  if(!y)return '';
+  return String(y).slice(-2); // 2000 → '00', 1987 → '87'
+}
 const LEADER_POSITIONS=['팀장','법인장','지점장','실장','본부장','센터장','단장','부문장','소장','연구소장','대표이사','지회장'];
 const isLeaderPos=e=>e.position&&LEADER_POSITIONS.some(p=>e.position.includes(p));
 // 전역 오류 캐처 (디버그용)
@@ -1399,11 +1413,10 @@ function renderCatChart(canvasId,chartRef,field,categories,color,totalId){
   ctx=ctx.getContext('2d');
   if(chartRef)chartRef.destroy();
   var active=getActive();
-  var labels=categories.filter(function(c){return active.some(function(e){return e[field]===c;});});
-  if(!labels.length)labels=categories;
-  var data=labels.map(function(c){return active.filter(function(e){return e[field]===c;}).length;});
-  var total=data.reduce(function(a,b){return a+b;},0);
-  var unset=active.length-total;
+  var labels=categories.filter(function(c){return active.some(function(e){return (e[field]||'').trim()===c;});});
+  if(!labels.length)labels=categories.slice();
+  var data=labels.map(function(c){return active.filter(function(e){return (e[field]||'').trim()===c;}).length;});
+  var unset=active.filter(function(e){return !(e[field]||'').trim();}).length;
   if(unset>0){labels.push('미입력');data.push(unset);}
   var el=document.getElementById(totalId);
   if(el)el.textContent='합계: '+active.length+'명';
@@ -1421,12 +1434,13 @@ function _renderMultiColorCatChart(canvasId, chartRef, field, categories, colors
   ctx = ctx.getContext('2d');
   if(chartRef) chartRef.destroy();
   var active = getActive();
-  var labels = categories.filter(function(c){ return active.some(function(e){ return e[field]===c; }); });
-  if(!labels.length) labels = categories;
-  var data = labels.map(function(c){ return active.filter(function(e){ return e[field]===c; }).length; });
-  var total = data.reduce(function(a,b){ return a+b; }, 0);
-  var unset = active.length - total;
+  // 카테고리에 등록된 값만 집계 (대소문자 트림 후 비교)
+  var labels = categories.filter(function(c){ return active.some(function(e){ return (e[field]||'').trim()===c; }); });
+  if(!labels.length) labels = categories.slice();
+  var data = labels.map(function(c){ return active.filter(function(e){ return (e[field]||'').trim()===c; }).length; });
   var bgColors = labels.map(function(_, i){ return colors[i % colors.length]; });
+  // 미입력: 빈 문자열, null, undefined 인 경우만
+  var unset = active.filter(function(e){ return !(e[field]||'').trim(); }).length;
   if(unset > 0){ labels.push('미입력'); data.push(unset); bgColors.push('#c8d3df'); }
   var el = document.getElementById(totalId);
   if(el) el.textContent = '합계: ' + active.length + '명';
@@ -1481,7 +1495,7 @@ function renderAgeChart(){
   var buckets = [0,0,0,0,0,0]; // 10대이하, 20대, 30대, 40대, 50대, 60대이상
   var totalAge = 0; var countAge = 0;
   withAge.forEach(function(e){
-    var by = e.birth_year > 100 ? e.birth_year : e.birth_year + 1900;
+    var by = byTo4(e.birth_year);
     var age = now - by + 1; // 한국식 나이
     totalAge += age; countAge++;
     if(age <= 19)       buckets[0]++;
@@ -1670,7 +1684,7 @@ function renderMatrix(){
         }
         function byear(e){
           if(!e.birth_year)return 9999;
-          return e.birth_year>100?e.birth_year:e.birth_year+1900;
+          return byTo4(e.birth_year)||9999;
         }
         var ta=tenure(a),tb=tenure(b);
         if(tb!==ta)return tb-ta;         // 근속 높은 순
@@ -1687,9 +1701,9 @@ function renderMatrix(){
       const tenure=(_jd&&!isNaN(_jd)&&_jd.getFullYear()>1970)?Math.floor((Date.now()-_jd)/(365.25*864e5)):'';
       let subParts=[];
       if(e.birth_year){
-        const by=e.birth_year>100?e.birth_year:e.birth_year+1900;
+        const by=byTo4(e.birth_year);
         const age=new Date().getFullYear()-by+1;
-        subParts.push(String(e.birth_year>100?e.birth_year-1900:e.birth_year)+'년');
+        subParts.push(byTo2(e.birth_year)+'년');
         subParts.push(age+'세');
       }
       if(tenure!=='')if(tenure>=0)subParts.push(tenure+'년');
@@ -1934,7 +1948,7 @@ async function saveEmp(){
   name=name.trim();
   if(!name){alert('이름을 입력하세요.');return;}
   var byRaw=document.getElementById('f_birth_year');
-  var birthYear=byRaw&&byRaw.value?parseInt(byRaw.value):null;
+  var birthYear=(byRaw&&byRaw.value!==''&&byRaw.value!==null)?parseInt(byRaw.value):null;
   var data={
     name:name,
     grade:(document.getElementById('f_grade')||{}).value||'',
@@ -2556,8 +2570,8 @@ function buildOrgTableHTML(groupDivs,emps,hasCenters){
       h+='<td class="emp-cell">'+(mem.map(function(e){
         var sub='';
         if(e.birth_year){
-          var by=e.birth_year>100?e.birth_year:e.birth_year+1900;
-          sub='<span class="emp-sub">'+(e.birth_year>100?e.birth_year-1900:e.birth_year)+'·'+(new Date().getFullYear()-by+1)+'세</span>';
+          var by=byTo4(e.birth_year);
+          sub='<span class="emp-sub">'+byTo2(e.birth_year)+'·'+(new Date().getFullYear()-by+1)+'세</span>';
         }
         return'<span class="emp-name">'+e.name+sub+'</span>';
       }).join(''))+'</td>';
