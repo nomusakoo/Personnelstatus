@@ -2087,6 +2087,7 @@ async function saveSnap(){
 // ── 엑셀 내보내기 ──
 function exportExcel(){
   if(!_requireDB())return;
+  const wb=XLSX.utils.book_new();
   const divMap=Object.fromEntries(divisions.map(d=>[d.id,d.name]));
   const teamMap={};const teamCenterMap={};
   divisions.forEach(d=>(d.teams||[]).forEach(t=>{teamMap[t.id]=t.name;teamCenterMap[t.id]=(t.center_name||'');}));
