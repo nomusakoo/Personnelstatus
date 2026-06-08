@@ -407,6 +407,29 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
   animation:shake .4s ease;
 }
 @keyframes shake{0%,100%{transform:translateX(0);}20%{transform:translateX(-6px);}40%{transform:translateX(6px);}60%{transform:translateX(-4px);}80%{transform:translateX(4px);}}
+
+/* ── 인사발령 시뮬레이션 ── */
+.sim-toolbar{background:white;border-radius:8px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;box-shadow:0 1px 4px rgba(0,0,0,.07);}
+.sim-btn{padding:6px 13px;border-radius:5px;font-size:12px;font-family:inherit;cursor:pointer;font-weight:600;border:1px solid #ccc;background:#f5f5f5;color:#333;transition:background .15s;white-space:nowrap;}
+.sim-btn:hover{background:#e8ecf0;}
+.sim-btn-primary{background:#1e3a5f;color:white;border-color:#1e3a5f;}.sim-btn-primary:hover{background:#16305a;}
+.sim-btn-green{background:#2d7a3a;color:white;border-color:#2d7a3a;}.sim-btn-green:hover{background:#236030;}
+.sim-btn-danger{background:#6b7280;color:white;border-color:#6b7280;}.sim-btn-danger:hover{background:#555e6b;}
+.sim-btn-warn{background:#c2410c;color:white;border-color:#c2410c;}.sim-btn-warn:hover{background:#a33309;}
+.sim-sep{width:1px;height:22px;background:#e0e0e0;flex-shrink:0;}
+/* 드래그 가능한 칩 */
+.sim-chip{display:inline-block;padding:2px 6px;border-radius:3px;font-size:11px;white-space:nowrap;cursor:grab;user-select:none;margin:1px;transition:box-shadow .1s,opacity .1s;border:1px solid transparent;}
+.sim-chip:active{cursor:grabbing;}
+.sim-chip.dragging{opacity:.45;box-shadow:0 2px 8px rgba(0,0,0,.25);}
+.sim-chip.changed{border:1.5px solid #f59e0b !important;background:#fffbeb !important;color:#92400e !important;}
+/* 드롭 타겟 */
+.sim-drop-cell{vertical-align:top;min-width:72px;padding:2px;transition:background .12s;}
+.sim-drop-cell.drag-over{background:#dbeafe !important;outline:2px dashed #3b82f6;outline-offset:-2px;}
+@media(max-width:768px){
+  .sim-toolbar{padding:8px 10px;gap:6px;}
+  .sim-btn{padding:5px 10px;font-size:11px;}
+  .sim-chip{font-size:10px;padding:2px 4px;}
+}
 </style>
 </head>
 <body>
@@ -472,6 +495,7 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
   <div class="tab active" onclick="switchTab('dashboard')">📊 대시보드</div>
   <div class="tab" onclick="switchTab('matrix')">📋 인원현황표</div>
   <div class="tab" onclick="switchTab('exec')">👔 임원 관리</div>
+  <div class="tab" onclick="switchTab('sim')">🔀 인사발령 시뮬레이션</div>
 </div>
 
 <!-- 대시보드 -->
@@ -557,6 +581,77 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
       </tr></thead>
       <tbody id="execTbody"><tr><td colspan="5" class="loading"><div class="spinner"></div></td></tr></tbody>
     </table>
+  </div>
+</div>
+
+<!-- 인사발령 시뮬레이션 탭 -->
+<div class="page" id="tab-sim">
+  <!-- 툴바 -->
+  <div class="sim-toolbar">
+    <button class="sim-btn sim-btn-primary" onclick="simLoadEmployees()">📥 현재 인원 가져오기</button>
+    <button class="sim-btn sim-btn-danger" onclick="simReset()">🔄 새로고침</button>
+    <div class="sim-sep"></div>
+    <button class="sim-btn sim-btn-green" onclick="simExportExcel()">📤 인사발령 내보내기</button>
+    <button class="sim-btn" onclick="document.getElementById('simXlsxInput').click()">📂 인사발령 불러오기</button>
+    <input type="file" id="simXlsxInput" accept=".xlsx,.xls" style="display:none" onchange="simImportExcel(event)">
+    <div class="sim-sep"></div>
+    <button class="sim-btn sim-btn-warn" onclick="simApplyConfirm()">⚡ 인사발령 반영하기</button>
+  </div>
+  <!-- 변경사항 배너 -->
+  <div id="simBanner" style="display:none;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:10px 16px;margin-bottom:12px;font-size:13px;color:#92400e;display:flex;align-items:center;gap:8px;">
+    <span style="font-size:16px;">📋</span>
+    <span id="simBannerText"></span>
+  </div>
+  <!-- 빈 상태 -->
+  <div id="simEmpty" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:320px;color:#aaa;gap:12px;">
+    <div style="font-size:48px;">🔀</div>
+    <div style="font-size:15px;font-weight:600;color:#888;">인사발령 시뮬레이션</div>
+    <div style="font-size:13px;color:#aaa;">「현재 인원 가져오기」를 눌러 시뮬레이션을 시작하세요</div>
+  </div>
+  <!-- 매트릭스 -->
+  <div id="simMatrixWrap" style="display:none;">
+    <div class="matrix-wrap">
+      <div class="matrix-scroll">
+        <table class="org" id="simOrgTable"></table>
+      </div>
+    </div>
+    <!-- 변경 목록 -->
+    <div id="simDiffWrap" style="display:none;margin-top:16px;background:white;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.07);overflow:hidden;">
+      <div style="padding:10px 16px;background:#f8fafc;border-bottom:1px solid #e8ecf0;font-weight:700;font-size:13px;color:#1e3a5f;">📋 변경 예정 목록</div>
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:12px;" id="simDiffTable">
+          <thead><tr style="background:#dce6f1;">
+            <th style="padding:6px 10px;text-align:left;color:#1e3a5f;">이름</th>
+            <th style="padding:6px 10px;text-align:left;color:#b12c2c;">이전 본부</th>
+            <th style="padding:6px 10px;text-align:left;color:#b12c2c;">이전 팀</th>
+            <th style="padding:6px 10px;text-align:left;color:#b12c2c;">이전 직급</th>
+            <th style="padding:6px 10px;text-align:left;color:#2d7a3a;">신규 본부</th>
+            <th style="padding:6px 10px;text-align:left;color:#2d7a3a;">신규 팀</th>
+            <th style="padding:6px 10px;text-align:left;color:#2d7a3a;">신규 직급</th>
+            <th style="padding:6px 10px;text-align:left;color:#555;">변경유형</th>
+          </tr></thead>
+          <tbody id="simDiffTbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 인사발령 반영 확인 모달 -->
+<div class="overlay" id="simConfirmOverlay">
+  <div class="modal" style="width:440px;">
+    <h2>⚡ 인사발령 반영하기</h2>
+    <p style="font-size:13px;color:#555;margin-bottom:12px;line-height:1.7;">
+      시뮬레이션 결과를 실제 데이터에 반영합니다.<br>
+      <strong style="color:#b12c2c;">이 작업은 되돌릴 수 없습니다.</strong><br>
+      변경 대상 인원을 확인한 후 진행하세요.
+    </p>
+    <div id="simConfirmCount" style="background:#fff7ed;border:1px solid #fed7aa;border-radius:6px;padding:10px 14px;font-size:13px;color:#92400e;margin-bottom:16px;"></div>
+    <p style="font-size:14px;font-weight:700;color:#1e3a5f;text-align:center;margin-bottom:16px;">정말 진행하시겠습니까?</p>
+    <div class="mact">
+      <button class="btn btn-g" onclick="document.getElementById('simConfirmOverlay').classList.remove('show')">취소</button>
+      <button class="btn btn-d" onclick="simApplyNow()">반영하기</button>
+    </div>
   </div>
 </div>
 
@@ -1079,12 +1174,13 @@ async function uploadDefaultData(){
 // ── 탭 ──
 function switchTab(id){
   if(!_requireDB())return;
-  document.querySelectorAll('.tab').forEach((t,i)=>{const ids=['dashboard','matrix','exec'];t.classList.toggle('active',ids[i]===id);});
+  document.querySelectorAll('.tab').forEach((t,i)=>{const ids=['dashboard','matrix','exec','sim'];t.classList.toggle('active',ids[i]===id);});
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('tab-'+id).classList.add('active');
   if(id==='dashboard')renderDashboard();
   if(id==='matrix')renderMatrix();
   if(id==='exec')renderExecTab();
+  if(id==='sim')renderSimTab();
 }
 function onMonthChange(){document.getElementById('snapMonthInput').value=document.getElementById('curMonth').value;}
 function getActive(){return employees.filter(e=>e.status!=='leave');}
@@ -2585,6 +2681,438 @@ async function init(){
 
 document.addEventListener('DOMContentLoaded', init);
 
+// ══════════════════════════════════════════════
+// 인사발령 시뮬레이션 — 완전 독립 메모리 공간
+// 원본 employees / divisions 에 절대 쓰지 않음
+// ══════════════════════════════════════════════
+var simEmps = null;       // 시뮬레이션 복사본 (id → 객체 Map)
+var simDivs = null;       // 조직구조 복사본 (배열)
+var simOrigMap = null;    // 원본 스냅샷 (id → {div_id,team_id,grade,position})
+
+// 깊은 복사 헬퍼 ── JSON 직렬화로 참조 완전 차단
+function simDeepCopy(obj){ return JSON.parse(JSON.stringify(obj)); }
+
+// ── 시뮬레이션 탭 렌더 ──
+function renderSimTab(){
+  if(!simEmps){
+    document.getElementById('simEmpty').style.display='flex';
+    document.getElementById('simMatrixWrap').style.display='none';
+    document.getElementById('simBanner').style.display='none';
+    return;
+  }
+  document.getElementById('simEmpty').style.display='none';
+  document.getElementById('simMatrixWrap').style.display='block';
+  _simRenderMatrix();
+  _simRenderDiff();
+  _simUpdateBanner();
+}
+
+// 현재 인원 가져오기
+function simLoadEmployees(){
+  if(!_requireDB())return;
+  if(simEmps && Object.keys(simEmps).length > 0){
+    if(!confirm('이미 불러온 데이터가 있습니다. 현재 인원으로 다시 가져오시겠습니까?')) return;
+  }
+  // 원본을 깊은 복사 — 참조 완전 차단
+  simDivs = simDeepCopy(divisions);
+  var empsArray = simDeepCopy(employees);
+  // id → 객체 Map
+  simEmps = {};
+  empsArray.forEach(function(e){ simEmps[e.id] = e; });
+  // 원본 스냅샷 (변경 감지용)
+  simOrigMap = {};
+  empsArray.forEach(function(e){
+    simOrigMap[e.id] = {
+      div_id:   e.div_id   || '',
+      team_id:  e.team_id  || '',
+      grade:    e.grade    || '',
+      position: e.position || ''
+    };
+  });
+  renderSimTab();
+}
+
+// 새로고침
+function simReset(){
+  if(simEmps && Object.keys(simEmps).length > 0){
+    if(!confirm('시뮬레이션 데이터를 초기화합니다. 변경사항이 모두 사라집니다. 계속하시겠습니까?')) return;
+  }
+  simEmps = null; simDivs = null; simOrigMap = null;
+  renderSimTab();
+}
+
+// ── 매트릭스 렌더링 ──
+function _simRenderMatrix(){
+  var allTeams = [];
+  simDivs.forEach(function(d){
+    (d.teams || []).forEach(function(t){ allTeams.push({div:d, team:t}); });
+  });
+  var empsArr = Object.values(simEmps).filter(function(e){ return e.status !== 'leave'; });
+  var table = document.getElementById('simOrgTable');
+  if(!allTeams.length){ table.innerHTML='<tr><td style="padding:30px;color:#aaa;text-align:center;">조직 데이터 없음</td></tr>'; return; }
+
+  var hasCenters = allTeams.some(function(x){ return x.team.center_name && x.team.center_name.trim(); });
+  var html = '<thead><tr><td class="grade-hdr" rowspan="'+(hasCenters?6:4)+'">직급</td>';
+  simDivs.forEach(function(d){ html += '<td class="div-hdr" colspan="'+(d.teams?d.teams.length:1)+'">'+d.name+'</td>'; });
+  html += '</tr><tr>';
+  simDivs.forEach(function(d){
+    var ht = d.head_title||'본부장', hn = d.head_name||'';
+    html += '<td class="head-hdr" colspan="'+(d.teams?d.teams.length:1)+'">'+(hn?ht+': <strong>'+hn+'</strong>':ht+' 미입력')+'</td>';
+  });
+  html += '</tr>';
+  if(hasCenters){
+    var skipSet = {};
+    html += '<tr>';
+    simDivs.forEach(function(d){
+      var td = allTeams.filter(function(x){ return x.div.id===d.id; });
+      var i = 0;
+      while(i < td.length){
+        var cn = (td[i].team.center_name||'').trim();
+        if(!cn){ skipSet[td[i].team.id]=true; html+='<td class="team-hdr" rowspan="3" style="vertical-align:middle;">'+td[i].team.name+'</td>'; i++; }
+        else {
+          var j=i; while(j<td.length&&(td[j].team.center_name||'').trim()===cn)j++;
+          html+='<td class="center-grp-hdr" colspan="'+(j-i)+'">'+cn+'</td>'; i=j;
+        }
+      }
+    });
+    html += '</tr><tr>';
+    simDivs.forEach(function(d){
+      var td = allTeams.filter(function(x){ return x.div.id===d.id; });
+      var i=0;
+      while(i<td.length){
+        if(skipSet[td[i].team.id]){i++;continue;}
+        var cn=(td[i].team.center_name||'').trim();
+        var j=i; while(j<td.length&&!skipSet[td[j].team.id]&&(td[j].team.center_name||'').trim()===cn)j++;
+        var rt=td[i].team;
+        var cht=rt.center_head_title||'센터장', chn=rt.center_head_name||'';
+        html+='<td class="head2-hdr" colspan="'+(j-i)+'">'+(chn?cht+': <strong>'+chn+'</strong>':cht+' 미입력')+'</td>';
+        i=j;
+      }
+    });
+    html += '</tr><tr>';
+    allTeams.forEach(function(x){ if(!skipSet[x.team.id]) html+='<td class="team-hdr">'+x.team.name+'</td>'; });
+    html += '</tr>';
+  } else {
+    html += '<tr>';
+    allTeams.forEach(function(x){ html+='<td class="team-hdr">'+x.team.name+'</td>'; });
+    html += '</tr>';
+  }
+  // 팀장 행
+  html += '<tr>';
+  allTeams.forEach(function(x){
+    var ldr = empsArr.find(function(e){ return e.team_id===x.team.id && isLeaderPos(e); });
+    var changed = ldr && simOrigMap[ldr.id] && (simOrigMap[ldr.id].team_id !== ldr.team_id || simOrigMap[ldr.id].grade !== ldr.grade);
+    html += '<td class="role-hdr">'+(ldr?'<span class="sim-chip'+(changed?' changed':'')+'" draggable="true" data-empid="'+ldr.id+'">'+ldr.name+'</span>':'<span style="color:#bbb;font-size:10px;">-</span>')+'</td>';
+  });
+  html += '</tr></thead><tbody>';
+  GRADES.forEach(function(grade){
+    var hasAny = allTeams.some(function(x){
+      return empsArr.some(function(e){ return e.grade===grade && e.team_id===x.team.id && !isLeaderPos(e); });
+    });
+    if(!hasAny)return;
+    html += '<tr><td class="grade-hdr" style="background:'+(GRADE_COLORS[grade]||'#f5f5f5')+';">'+grade+'</td>';
+    allTeams.forEach(function(x){
+      var members = empsArr.filter(function(e){ return e.grade===grade && e.team_id===x.team.id && !isLeaderPos(e); });
+      var chips = members.map(function(e){
+        var changed = simOrigMap[e.id] && (simOrigMap[e.id].team_id!==e.team_id || simOrigMap[e.id].grade!==e.grade);
+        var bg = STATUS_COLOR[e.status]||'';
+        return '<span class="sim-chip'+(changed?' changed':'')+'" draggable="true" data-empid="'+e.id+'" style="background:'+(changed?'':bg)+';">'+e.name+'</span>';
+      }).join('');
+      html += '<td class="sim-drop-cell emp-cell" data-divid="'+x.div.id+'" data-teamid="'+x.team.id+'" data-grade="'+grade+'">'+chips+'</td>';
+    });
+    html += '</tr>';
+  });
+  html += '<tr><td class="count-hdr">팀 인원</td>';
+  allTeams.forEach(function(x){
+    html += '<td class="count-cell">'+empsArr.filter(function(e){ return e.team_id===x.team.id; }).length+'</td>';
+  });
+  html += '</tr></tbody>';
+  table.innerHTML = html;
+  _simBindDragDrop();
+  _simBindTouchDrag();
+}
+
+// ── 드래그&드롭 바인딩 ──
+var _simDragEmpId = null;
+
+function _simBindDragDrop(){
+  var chips = document.querySelectorAll('#simOrgTable .sim-chip[draggable]');
+  chips.forEach(function(chip){
+    chip.addEventListener('dragstart', function(e){
+      _simDragEmpId = chip.getAttribute('data-empid');
+      chip.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    chip.addEventListener('dragend', function(){
+      chip.classList.remove('dragging');
+    });
+  });
+  var cells = document.querySelectorAll('#simOrgTable .sim-drop-cell');
+  cells.forEach(function(cell){
+    cell.addEventListener('dragover', function(e){
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      cell.classList.add('drag-over');
+    });
+    cell.addEventListener('dragleave', function(){ cell.classList.remove('drag-over'); });
+    cell.addEventListener('drop', function(e){
+      e.preventDefault();
+      cell.classList.remove('drag-over');
+      if(!_simDragEmpId) return;
+      var divId  = cell.getAttribute('data-divid');
+      var teamId = cell.getAttribute('data-teamid');
+      var grade  = cell.getAttribute('data-grade');
+      _simMoveEmp(_simDragEmpId, divId, teamId, grade);
+      _simDragEmpId = null;
+    });
+  });
+}
+
+// ── 터치 드래그 (모바일) ──
+function _simBindTouchDrag(){
+  var chips = document.querySelectorAll('#simOrgTable .sim-chip[draggable]');
+  var _ghost = null;
+  var _touchEmpId = null;
+
+  chips.forEach(function(chip){
+    chip.addEventListener('touchstart', function(e){
+      if(e.touches.length !== 1) return;
+      _touchEmpId = chip.getAttribute('data-empid');
+      // 유령 엘리먼트 생성
+      _ghost = chip.cloneNode(true);
+      _ghost.style.cssText = 'position:fixed;z-index:9999;pointer-events:none;opacity:.75;font-size:12px;padding:4px 8px;background:#1e3a5f;color:white;border-radius:4px;';
+      document.body.appendChild(_ghost);
+    }, {passive:true});
+
+    chip.addEventListener('touchmove', function(e){
+      if(!_ghost || !_touchEmpId) return;
+      var t = e.touches[0];
+      _ghost.style.left = (t.clientX - 20) + 'px';
+      _ghost.style.top  = (t.clientY - 20) + 'px';
+      // 드롭 타겟 하이라이트
+      document.querySelectorAll('#simOrgTable .sim-drop-cell').forEach(function(c){ c.classList.remove('drag-over'); });
+      var el = document.elementFromPoint(t.clientX, t.clientY);
+      var cell = el ? el.closest('.sim-drop-cell') : null;
+      if(cell) cell.classList.add('drag-over');
+    }, {passive:true});
+
+    chip.addEventListener('touchend', function(e){
+      if(_ghost){ _ghost.remove(); _ghost = null; }
+      document.querySelectorAll('#simOrgTable .sim-drop-cell').forEach(function(c){ c.classList.remove('drag-over'); });
+      if(!_touchEmpId) return;
+      var t = e.changedTouches[0];
+      var el = document.elementFromPoint(t.clientX, t.clientY);
+      var cell = el ? el.closest('.sim-drop-cell') : null;
+      if(cell){
+        var divId  = cell.getAttribute('data-divid');
+        var teamId = cell.getAttribute('data-teamid');
+        var grade  = cell.getAttribute('data-grade');
+        _simMoveEmp(_touchEmpId, divId, teamId, grade);
+      }
+      _touchEmpId = null;
+    }, {passive:true});
+  });
+}
+
+// ── 인원 이동 처리 — 원본 데이터 절대 수정 안 함 ──
+function _simMoveEmp(empId, newDivId, newTeamId, newGrade){
+  var emp = simEmps[empId];
+  if(!emp) return;
+  // 변경사항 적용 (시뮬레이션 복사본만)
+  emp.div_id  = newDivId  || emp.div_id;
+  emp.team_id = newTeamId || emp.team_id;
+  emp.grade   = newGrade  || emp.grade;
+  // 매트릭스 및 diff 갱신
+  _simRenderMatrix();
+  _simRenderDiff();
+  _simUpdateBanner();
+}
+
+// ── 변경 diff 계산 ──
+function _simGetDiff(){
+  if(!simEmps || !simOrigMap) return [];
+  var diff = [];
+  var divMap = {}; simDivs.forEach(function(d){ divMap[d.id]=d.name; });
+  var teamMap = {};
+  simDivs.forEach(function(d){ (d.teams||[]).forEach(function(t){ teamMap[t.id]=t.name; }); });
+  // 원본 divMap, teamMap (이전 소속 이름 표시용)
+  var origDivMap = {}; divisions.forEach(function(d){ origDivMap[d.id]=d.name; });
+  var origTeamMap = {};
+  divisions.forEach(function(d){ (d.teams||[]).forEach(function(t){ origTeamMap[t.id]=t.name; }); });
+
+  Object.values(simEmps).forEach(function(e){
+    var orig = simOrigMap[e.id];
+    if(!orig) return;
+    var changes = [];
+    if(orig.div_id   !== (e.div_id  ||'')) changes.push('소속변경');
+    if(orig.team_id  !== (e.team_id ||'')) changes.push('팀변경');
+    if(orig.grade    !== (e.grade   ||'')) changes.push('직급변경');
+    if(orig.position !== (e.position||'')) changes.push('직책변경');
+    if(changes.length){
+      diff.push({
+        id: e.id, name: e.name,
+        from_div:   origDivMap[orig.div_id]  || orig.div_id  || '-',
+        from_team:  origTeamMap[orig.team_id]|| orig.team_id || '-',
+        from_grade: orig.grade    || '-',
+        to_div:     divMap[e.div_id]   || e.div_id   || '-',
+        to_team:    teamMap[e.team_id] || e.team_id  || '-',
+        to_grade:   e.grade    || '-',
+        changes:    changes.join(', ')
+      });
+    }
+  });
+  return diff;
+}
+
+// ── diff 테이블 렌더 ──
+function _simRenderDiff(){
+  var diff = _simGetDiff();
+  var wrap = document.getElementById('simDiffWrap');
+  var tbody = document.getElementById('simDiffTbody');
+  if(!diff.length){ wrap.style.display='none'; return; }
+  wrap.style.display='block';
+  tbody.innerHTML = diff.map(function(d){
+    return '<tr style="border-bottom:1px solid #f0f0f0;">'
+      +'<td style="padding:5px 10px;font-weight:600;">'+d.name+'</td>'
+      +'<td style="padding:5px 10px;color:#b12c2c;">'+d.from_div+'</td>'
+      +'<td style="padding:5px 10px;color:#b12c2c;">'+d.from_team+'</td>'
+      +'<td style="padding:5px 10px;color:#b12c2c;">'+d.from_grade+'</td>'
+      +'<td style="padding:5px 10px;color:#2d7a3a;">'+d.to_div+'</td>'
+      +'<td style="padding:5px 10px;color:#2d7a3a;">'+d.to_team+'</td>'
+      +'<td style="padding:5px 10px;color:#2d7a3a;">'+d.to_grade+'</td>'
+      +'<td style="padding:5px 10px;color:#555;font-size:11px;">'+d.changes+'</td>'
+      +'</tr>';
+  }).join('');
+}
+
+// ── 배너 업데이트 ──
+function _simUpdateBanner(){
+  var diff = _simGetDiff();
+  var banner = document.getElementById('simBanner');
+  var bannerText = document.getElementById('simBannerText');
+  if(!diff.length){ banner.style.display='none'; return; }
+  banner.style.display='flex';
+  bannerText.textContent = '변경 예정: ' + diff.length + '명 (' + diff.map(function(d){ return d.name; }).join(', ') + ')';
+}
+
+// ── 엑셀 내보내기 ──
+function simExportExcel(){
+  if(!simEmps){ alert('먼저 인원을 가져오세요.'); return; }
+  var diff = _simGetDiff();
+  if(!diff.length){ alert('변경된 인원이 없습니다.'); return; }
+  var wb = XLSX.utils.book_new();
+  var rows = [['이름','이전 본부','이전 팀','이전 직급','신규 본부','신규 팀','신규 직급','변경유형']];
+  diff.forEach(function(d){
+    rows.push([d.name, d.from_div, d.from_team, d.from_grade, d.to_div, d.to_team, d.to_grade, d.changes]);
+  });
+  var ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [{wch:10},{wch:14},{wch:16},{wch:10},{wch:14},{wch:16},{wch:10},{wch:14}];
+  XLSX.utils.book_append_sheet(wb, ws, '인사발령');
+  // 전체 시뮬레이션 인원도 시트로 포함
+  var allRows = [['이름','본부','팀','직급','직책','상태']];
+  var divMap = {}; simDivs.forEach(function(d){ divMap[d.id]=d.name; });
+  var teamMap = {}; simDivs.forEach(function(d){ (d.teams||[]).forEach(function(t){ teamMap[t.id]=t.name; }); });
+  Object.values(simEmps).forEach(function(e){
+    allRows.push([e.name, divMap[e.div_id]||'', teamMap[e.team_id]||'', e.grade||'', e.position||'', e.status||'normal']);
+  });
+  var ws2 = XLSX.utils.aoa_to_sheet(allRows);
+  ws2['!cols'] = [{wch:10},{wch:14},{wch:16},{wch:10},{wch:12},{wch:8}];
+  XLSX.utils.book_append_sheet(wb, ws2, '전체인원(시뮬)');
+  var now = new Date();
+  var stamp = now.getFullYear()+String(now.getMonth()+1).padStart(2,'0')+String(now.getDate()).padStart(2,'0');
+  XLSX.writeFile(wb, '인사발령_시뮬레이션_'+stamp+'.xlsx');
+}
+
+// ── 엑셀 불러오기 ──
+function simImportExcel(event){
+  if(!simEmps){ alert('먼저 「현재 인원 가져오기」를 눌러 기준 데이터를 불러오세요.'); event.target.value=''; return; }
+  var file = event.target.files[0];
+  if(!file){ return; }
+  var reader = new FileReader();
+  reader.onload = function(ev){
+    try{
+      var wb = XLSX.read(ev.target.result, {type:'array'});
+      // '인사발령' 시트 우선, 없으면 첫 번째 시트
+      var sheetName = wb.SheetNames.includes('인사발령') ? '인사발령' : wb.SheetNames[0];
+      var rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], {header:1, defval:''});
+      if(rows.length < 2){ alert('데이터가 없습니다.'); return; }
+      // 헤더: 이름, 이전본부, 이전팀, 이전직급, 신규본부, 신규팀, 신규직급, 변경유형
+      // 이름으로 simEmps에서 찾아서 신규 본부/팀/직급 반영
+      var divMap = {}; simDivs.forEach(function(d){ divMap[d.name]=d.id; });
+      var teamMap = {};
+      simDivs.forEach(function(d){ (d.teams||[]).forEach(function(t){ teamMap[t.name]=t.id; teamMap[t.name+'|'+d.id]=t.id; }); });
+      var applied=0, skipped=0;
+      rows.slice(1).forEach(function(row){
+        if(!row[0]) return;
+        var name = String(row[0]).trim();
+        var toDiv  = String(row[4]||'').trim();
+        var toTeam = String(row[5]||'').trim();
+        var toGrade= String(row[6]||'').trim();
+        // 이름으로 직원 찾기 (id 기반이 가장 안전하나 엑셀엔 id가 없으므로 이름 매칭)
+        var matches = Object.values(simEmps).filter(function(e){ return e.name === name; });
+        if(!matches.length){ skipped++; return; }
+        matches.forEach(function(emp){
+          if(toDiv  && divMap[toDiv])   emp.div_id  = divMap[toDiv];
+          if(toTeam && teamMap[toTeam]) emp.team_id = teamMap[toTeam];
+          if(toGrade) emp.grade = toGrade;
+        });
+        applied++;
+      });
+      event.target.value = '';
+      _simRenderMatrix();
+      _simRenderDiff();
+      _simUpdateBanner();
+      alert('불러오기 완료: '+applied+'명 반영' + (skipped?' ('+skipped+'명 이름 불일치)':''));
+    }catch(err){
+      event.target.value = '';
+      alert('파일 읽기 오류: ' + err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ── 반영 확인 팝업 ──
+function simApplyConfirm(){
+  if(!simEmps){ alert('먼저 인원을 가져오세요.'); return; }
+  if(!_requireDB()) return;
+  var diff = _simGetDiff();
+  if(!diff.length){ alert('변경된 인원이 없습니다.'); return; }
+  document.getElementById('simConfirmCount').textContent
+    = '변경 대상: ' + diff.length + '명\n' + diff.map(function(d){ return '• '+d.name+' ('+d.changes+')'; }).join('\n');
+  document.getElementById('simConfirmOverlay').classList.add('show');
+}
+
+// ── 실제 DB 반영 ──
+async function simApplyNow(){
+  document.getElementById('simConfirmOverlay').classList.remove('show');
+  if(!_requireDB()) return;
+  var diff = _simGetDiff();
+  if(!diff.length) return;
+  try{
+    // diff에 있는 직원만 업데이트 — 원본과 무관한 시뮬레이션 복사본 값을 DB에 씀
+    for(var i=0; i<diff.length; i++){
+      var e = simEmps[diff[i].id];
+      if(!e) continue;
+      await sb.from('employees').update({
+        div_id:   e.div_id   || null,
+        team_id:  e.team_id  || null,
+        grade:    e.grade    || '',
+        position: e.position || '',
+        status:   'transfer'   // 인사이동 상태로 마킹
+      }).eq('id', e.id);
+    }
+    // 원본 데이터 재로드
+    await loadAll();
+    renderAll();
+    // 시뮬레이션 초기화
+    simEmps = null; simDivs = null; simOrigMap = null;
+    renderSimTab();
+    alert('✅ 인사발령 반영 완료!\n변경된 직원은 「인사이동」 상태로 처리되었습니다.');
+  }catch(err){
+    alert('오류 발생: ' + err.message);
+  }
+}
+
 // ── 툴바 높이 → CSS 변수 (탭 sticky top 동기화) ──
 (function(){
   function updateToolbarHeight(){
@@ -2601,7 +3129,7 @@ document.addEventListener('DOMContentLoaded', init);
 
 // ── 모바일 스와이프로 탭 전환 ──
 (function(){
-  var TAB_IDS=['dashboard','matrix','exec'];
+  var TAB_IDS=['dashboard','matrix','exec','sim'];
   var _sx=null, _sy=null;
   var _ignoreDrag=false;
 
