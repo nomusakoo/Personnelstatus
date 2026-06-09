@@ -124,10 +124,11 @@ table.org td,table.org th{border:1px solid #bdc8d8;padding:0;vertical-align:top;
 #execToast{display:none;position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1e3a5f;color:#fff;padding:9px 18px;border-radius:20px;font-size:12px;z-index:9999;box-shadow:0 2px 10px rgba(0,0,0,.3);max-width:90vw;}
 #execToast.show{display:block;}
 .ec-card{background:#fff;border-radius:8px;padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,.08);}
-.ec-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;}
+.ec-topbar{display:flex;align-items:center;justify-content:space-between;gap:10px 14px;flex-wrap:wrap;margin-bottom:10px;}
+.ec-nav{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.ec-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
 .ec-month{font-size:15px;font-weight:700;color:#1e3a5f;min-width:108px;text-align:center;}
 .ec-hint{margin-left:auto;font-size:11px;color:#aaa;}
-.ec-tools{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;}
 .ec-navbtn{font-size:12px;padding:5px 12px;}
 .ec-legend{display:flex;gap:14px;margin-bottom:9px;font-size:11px;color:#666;}
 .ec-legend-item{display:flex;align-items:center;gap:5px;}
@@ -644,23 +645,25 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
 <!-- 임원 일정 탭 -->
 <div class="page" id="tab-execcal">
   <div class="ec-card">
-    <div class="ec-head">
-      <button class="btn btn-g ec-navbtn" onclick="ecShiftMonth(-1)">← 이전 달</button>
-      <span class="ec-month" id="ecMonthLabel"></span>
-      <button class="btn btn-g ec-navbtn" onclick="ecShiftMonth(1)">다음 달 →</button>
-      <button class="btn btn-g ec-navbtn" onclick="ecGoToday()">이번 달</button>
-      <span id="ecCountLabel" style="font-size:12px;color:#1e3a5f;font-weight:700;margin-left:4px;"></span>
-      <span class="ec-hint">날짜 칸을 클릭해 일정을 추가할 수 있습니다.</span>
-    </div>
-    <div class="ec-tools">
-      <button class="btn btn-s ec-navbtn" onclick="openExecEvt()">+ 임원 일정 추가</button>
-      <button class="btn btn-p ec-navbtn" onclick="openExecPaste()">📋 붙여넣기 입력</button>
-      <button class="btn btn-g ec-navbtn" onclick="ecExportExcel()">📥 엑셀 내보내기</button>
-      <label class="btn btn-g ec-navbtn" style="cursor:pointer;">📤 엑셀 불러오기<input type="file" id="ecExcelInput" accept=".xlsx,.xls" style="display:none;" onchange="ecImportExcel(this)"></label>
+    <div class="ec-topbar">
+      <div class="ec-nav">
+        <button class="btn btn-g ec-navbtn" onclick="ecShiftMonth(-1)">← 이전 달</button>
+        <span class="ec-month" id="ecMonthLabel"></span>
+        <button class="btn btn-g ec-navbtn" onclick="ecShiftMonth(1)">다음 달 →</button>
+        <button class="btn btn-g ec-navbtn" onclick="ecGoToday()">이번 달</button>
+        <span id="ecCountLabel" style="font-size:12px;color:#1e3a5f;font-weight:700;margin-left:4px;"></span>
+      </div>
+      <div class="ec-actions">
+        <button class="btn btn-s ec-navbtn" onclick="openExecEvt()">+ 임원 일정 추가</button>
+        <button class="btn btn-p ec-navbtn" onclick="openExecPaste()">📋 붙여넣기 입력</button>
+        <button class="btn btn-g ec-navbtn" onclick="ecExportExcel()">📥 엑셀 내보내기</button>
+        <label class="btn btn-g ec-navbtn" style="cursor:pointer;">📤 엑셀 불러오기<input type="file" id="ecExcelInput" accept=".xlsx,.xls" style="display:none;" onchange="ecImportExcel(this)"></label>
+      </div>
     </div>
     <div class="ec-legend">
       <div class="ec-legend-item"><div class="ec-legend-dot" style="background:#c9a227;"></div>임원 일정</div>
       <div class="ec-legend-item"><div class="ec-legend-dot" style="background:#fee2e2;"></div>마감 표시</div>
+      <span class="ec-hint">날짜 칸을 클릭해 일정을 추가할 수 있습니다.</span>
     </div>
     <div class="ec-dow-row">
       <div class="ec-dow sun">일</div><div class="ec-dow">월</div><div class="ec-dow">화</div><div class="ec-dow">수</div><div class="ec-dow">목</div><div class="ec-dow">금</div><div class="ec-dow sat">토</div>
