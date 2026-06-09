@@ -1009,7 +1009,7 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
     </select>
   </div>
   <div class="row2">
-    <div class="fr"><label>소속</label><input id="dp_affiliation" placeholder="예: 베트남법인"></div>
+    <div class="fr"><label>소속</label><input id="dp_affiliation" placeholder="예: 중국법인"></div>
     <div class="fr"><label>직책</label><input id="dp_position_title" placeholder="예: 법인장"></div>
   </div>
   <div class="row2">
@@ -1279,6 +1279,7 @@ const STATUS_COLOR={join:'#d4edda',leave:'#f8d7da',transfer:'#fff3cd',leave_abs:
 let sb=null; // supabase client
 let employees=[],executives=[],divisions=[],snapshots={},execEvents=[],dispatchEmps=[];
 let editingEmpId=null,editingExecId=null,viewSnap=null,execMonthOffset=0,execEditId=null,editingDispatchId=null;
+let execCollapsed=true;
 let chartTrend=null,chartGrade=null,chartDiv=null,chartStatus=null,chartPosition=null;
 let chartWorkplace=null,chartEmpType=null,chartGender=null,chartEdu=null,chartAge=null;
 const WORKPLACES=['본사','지점','여주','밀양','김제','정읍','해외','지주파견'];
@@ -2070,15 +2071,43 @@ function updateDivFilter(){const sel=document.getElementById('filterDiv');const 
 // ── 임원 탭 ──
 function renderExecTab(){
   const tbody=document.getElementById('execTbody');
-  if(!executives.length){tbody.innerHTML='<tr><td colspan="5" style="padding:20px;text-align:center;color:#aaa;">임원 정보 없음</td></tr>';}
-  else{tbody.innerHTML=executives.map(e=>`<tr style="border-bottom:1px solid #f0f0f0;">
-    <td style="padding:8px 12px;">${e.title||''}</td>
-    <td style="padding:8px 12px;font-weight:600;">${e.name||''}</td>
-    <td style="padding:8px 12px;text-align:center;font-size:12px;">${e.term_start||'-'}</td>
-    <td style="padding:8px 12px;text-align:center;font-size:12px;">${e.term_end||'-'}</td>
-    <td style="padding:8px 12px;text-align:center;"><button onclick="openEditExecModal('${e.id}')" style="padding:3px 10px;font-size:11px;background:#e8ecf0;border:none;border-radius:3px;cursor:pointer;">수정</button></td>
-  </tr>`).join('');}
+  if(!executives.length){
+    tbody.innerHTML='<tr><td colspan="5" style="padding:20px;text-align:center;color:#aaa;">임원 정보 없음</td></tr>';
+  } else {
+    const FOLD=6;
+    const visible=executives.slice(0,FOLD);
+    const hidden=executives.slice(FOLD);
+    const makeRow=e=>`<tr style="border-bottom:1px solid #f0f0f0;">
+      <td style="padding:8px 12px;">${e.title||''}</td>
+      <td style="padding:8px 12px;font-weight:600;">${e.name||''}</td>
+      <td style="padding:8px 12px;text-align:center;font-size:12px;">${e.term_start||'-'}</td>
+      <td style="padding:8px 12px;text-align:center;font-size:12px;">${e.term_end||'-'}</td>
+      <td style="padding:8px 12px;text-align:center;"><button onclick="openEditExecModal('${e.id}')" style="padding:3px 10px;font-size:11px;background:#e8ecf0;border:none;border-radius:3px;cursor:pointer;">수정</button></td>
+    </tr>`;
+    let html=visible.map(makeRow).join('');
+    if(hidden.length){
+      const display=execCollapsed?'none':'';
+      html+=`<tr id="execHiddenRows" style="display:${display}"><td colspan="5" style="padding:0;">
+        <table style="width:100%;border-collapse:collapse;">${hidden.map(makeRow).join('')}</table>
+      </td></tr>`;
+      const label=execCollapsed?`펼치기 (${hidden.length}명 더 보기)`:`접기`;
+      html+=`<tr id="execToggleRow"><td colspan="5" style="padding:6px 12px;text-align:center;background:#f8fafd;border-top:1px solid #e8ecf0;">
+        <button onclick="toggleExecCollapse()" style="font-size:12px;color:#34629c;background:none;border:none;cursor:pointer;padding:2px 8px;">${label}</button>
+      </td></tr>`;
+    }
+    tbody.innerHTML=html;
+  }
   renderDispatch();
+}
+function toggleExecCollapse(){
+  execCollapsed=!execCollapsed;
+  const hiddenRow=document.getElementById('execHiddenRows');
+  const toggleBtn=document.querySelector('#execToggleRow button');
+  if(hiddenRow) hiddenRow.style.display=execCollapsed?'none':'';
+  if(toggleBtn){
+    const hiddenCount=executives.length-6;
+    toggleBtn.textContent=execCollapsed?`펼치기 (${hiddenCount}명 더 보기)`:'접기';
+  }
 }
 function openAddExecModal(){editingExecId=null;document.getElementById('execModalTitle').textContent='임원 추가';document.getElementById('delExecBtn').style.display='none';['ef_title','ef_name','ef_term_start','ef_term_end'].forEach(i=>document.getElementById(i).value='');document.getElementById('execOverlay').classList.add('show');}
 function openEditExecModal(id){const e=executives.find(x=>x.id===id);if(!e)return;editingExecId=id;document.getElementById('execModalTitle').textContent='임원 수정';document.getElementById('delExecBtn').style.display='block';document.getElementById('ef_title').value=e.title||'';document.getElementById('ef_name').value=e.name||'';document.getElementById('ef_term_start').value=e.term_start||'';document.getElementById('ef_term_end').value=e.term_end||'';document.getElementById('execOverlay').classList.add('show');}
@@ -2109,7 +2138,7 @@ function renderDispatch(){
     if(!tb)return;
     if(!rows.length){tb.innerHTML=empty;return;}
     tb.innerHTML=rows.map(function(d){
-      return'<tr><td>'+esc(d.affiliation)+'</td><td>'+esc(d.position_title)+'</td><td>'+esc(d.grade)+'</td><td style="font-weight:600;">'+esc(d.name)+'</td><td style="font-size:11px;color:#555;">'+esc(d.start_date||'-')+'</td><td style="font-size:11px;color:#555;">'+esc(d.end_date||'-')+'</td><td style="color:#777;font-size:11px;">'+esc(d.note||'')+'</td><td style="text-align:center;"><button onclick="openEditDispatch('+JSON.stringify(d.id)+')" style="padding:3px 10px;font-size:11px;background:#e8ecf0;border:none;border-radius:3px;cursor:pointer;">수정</button></td></tr>';
+      return'<tr><td>'+esc(d.affiliation)+'</td><td>'+esc(d.position_title)+'</td><td>'+esc(d.grade)+'</td><td style="font-weight:600;">'+esc(d.name)+'</td><td style="font-weight:600;">'+esc(d.start_date||'-')+'</td><td style="font-weight:600;">'+esc(d.end_date||'-')+'</td><td style="color:#777;font-size:11px;">'+esc(d.note||'')+'</td><td style="text-align:center;"><button onclick="openEditDispatch('+JSON.stringify(d.id)+')" style="padding:3px 10px;font-size:11px;background:#e8ecf0;border:none;border-radius:3px;cursor:pointer;">수정</button></td></tr>';
     }).join('');
   });
 }
