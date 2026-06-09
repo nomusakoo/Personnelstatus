@@ -3263,7 +3263,7 @@ function renderExecCal(){
     var evts=execEvents.filter(function(e){return e.date===dateStr;}).sort(function(a,b){var ka=a.time?a.time:'99:99~'+(a.title||'');var kb=b.time?b.time:'99:99~'+(b.title||'');return ka>kb?1:ka<kb?-1:0;});
     var shown=evts.slice(0,MAX);
     var hidden=evts.length-MAX;
-    var chips=shown.map(function(e){var lab=(e.deadline?'⚑ ':'')+(e.time?e.time+' ':'')+exEsc(e.title);return'<div class="ec-chip'+(e.deadline?' dl':'')+'" onclick="event.stopPropagation();openExecEvt(null,'+e.id+')" title="'+lab+'">'+(e.deadline?'⚑ ':'')+(e.time?'<b>'+exEsc(e.time)+'</b> ':'')+exEsc(e.title)+'</div>';}).join('');
+    var chips=shown.map(function(e){var lab=(e.deadline?'⚑ ':'')+(e.time?e.time+' ':'')+exEsc(e.title);return'<div class="ec-chip'+(e.deadline?' dl':'')+'" onclick="ecChipClick(\''+dateStr+'\','+e.id+',event)" title="'+lab+'">'+(e.deadline?'⚑ ':'')+(e.time?'<b>'+exEsc(e.time)+'</b> ':'')+exEsc(e.title)+'</div>';}).join('');
     var more=hidden>0?'<div class="ec-more" onclick="event.stopPropagation();openExecMore(\''+dateStr+'\')">+'+hidden+'개 더보기</div>':'';
     html+='<div class="ec-cell'+(other?' other':'')+(isToday?' today':'')+(dow===0?' sun':'')+(dow===6?' sat':'')+'" onclick="ecCellClick(\''+dateStr+'\',event)"><div class="ec-daynum">'+cd.getDate()+'</div>'+chips+more+'</div>';
   }
@@ -3271,6 +3271,11 @@ function renderExecCal(){
 }
 function ecCellClick(dateStr,event){
   if(event&&(event.target.closest('.ec-chip')||event.target.closest('.ec-more')))return;
+  if(isMobileView()){
+    var dayEvts=execEvents.filter(function(e){return e.date===dateStr;});
+    if(dayEvts.length>0)openExecMore(dateStr);
+    return;
+  }
   openExecEvt(dateStr);
 }
 function openExecMore(dateStr){
@@ -3283,6 +3288,13 @@ function openExecMore(dateStr){
   document.getElementById('execMoreOverlay').classList.add('show');
 }
 function closeExecMore(){document.getElementById('execMoreOverlay').classList.remove('show');}
+function isMobileView(){return window.innerWidth<=768;}
+// 모바일: 칩 클릭 → 해당 날 전체 일정 팝업 / 데스크톱: 바로 수정 모달
+function ecChipClick(dateStr,evtId,event){
+  event.stopPropagation();
+  if(isMobileView()){openExecMore(dateStr);}
+  else{openExecEvt(null,evtId);}
+}
 
 // ── 추가/수정 모달 ──
 function openExecEvt(prefillDate,editId){
