@@ -3403,7 +3403,7 @@ function renderExecCal(){
     var allEvts=execEvents.concat(execEvents2);var evts=allEvts.filter(function(e){return e.date===dateStr;}).sort(function(a,b){var ka=a.time?a.time:'99:99~'+(a.title||'');var kb=b.time?b.time:'99:99~'+(b.title||'');return ka>kb?1:ka<kb?-1:0;});
     var shown=evts.slice(0,MAX);
     var hidden=evts.length-MAX;
-    var chips=shown.map(function(e){var lab=(e.deadline?'⚑ ':'')+(e.time?e.time+' ':'')+exEsc(e.title)+(e._external?' [외부]':'');var clickAttr='onclick="ecChipClick(\''+dateStr+'\','+e.id+',event)"';return'<div class="ec-chip'+(e.deadline?' dl':'')+(e._external?' ec-chip-ext':'')+'" '+clickAttr+' title="'+lab+'">'+(e.deadline?'⚑ ':'')+(e.time?'<b>'+exEsc(e.time)+'</b> ':'')+exEsc(e.title)+'</div>';}).join('');
+    var chips=shown.map(function(e){var lab=(e.deadline?'⚑ ':'')+(e.time?e.time+' ':'')+exEsc(e.title)+(e._external?' [외부]':'');var clickAttr='onclick="event.stopPropagation();openExecMore(\''+dateStr+'\')"';return'<div class="ec-chip'+(e.deadline?' dl':'')+(e._external?' ec-chip-ext':'')+'" '+clickAttr+' title="'+lab+'">'+(e.deadline?'⚑ ':'')+(e.time?'<b>'+exEsc(e.time)+'</b> ':'')+exEsc(e.title)+'</div>';}).join('');
     var more=hidden>0?'<div class="ec-more" onclick="event.stopPropagation();openExecMore(\''+dateStr+'\')">+'+hidden+'개 더보기</div>':'';
     html+='<div class="ec-cell'+(other?' other':'')+(isToday?' today':'')+(dow===0?' sun':'')+(dow===6?' sat':'')+'" onclick="ecCellClick(\''+dateStr+'\',event)"><div class="ec-daynum">'+cd.getDate()+'</div>'+chips+more+'</div>';
   }
