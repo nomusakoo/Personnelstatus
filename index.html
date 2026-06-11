@@ -1435,8 +1435,7 @@ async function connectSupabase2(){
     setSb2Status(true);
     await loadExecEvents2();
     subscribeSb2Realtime();
-    var ec=document.getElementById('tab-execcal');
-    if(ec&&ec.classList.contains('active'))renderExecCal();
+    renderExecCal();
     exToast('외부 임원 일정 연동 완료');
   }catch(e){
     sb2=null;
@@ -3250,6 +3249,7 @@ async function init(){
                     setSb2Status(true);
                     await loadExecEvents2();
                     subscribeSb2Realtime();
+                    renderExecCal();
                   }
                 }
               }catch(e){console.warn('[sb2] 자동 연결 실패:',e.message);}
