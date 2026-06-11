@@ -1136,6 +1136,7 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
           <th style="padding:7px 10px;text-align:left;color:#1e3a5f;white-space:nowrap;">직급</th>
           <th style="padding:7px 10px;text-align:left;color:#1e3a5f;white-space:nowrap;">직책</th>
           <th style="padding:7px 10px;text-align:left;color:#1e3a5f;white-space:nowrap;">입사일</th>
+          <th style="padding:7px 10px;text-align:left;color:#1e3a5f;white-space:nowrap;">나이</th>
           <th style="padding:7px 10px;text-align:left;color:#1e3a5f;white-space:nowrap;">상태</th>
         </tr>
       </thead>
@@ -1745,6 +1746,21 @@ function openScardModal(type, filterValue, filterLabel){
   } else if(type==='education'){
     if(filterValue==='')list=getActive().filter(function(e){return !(e.education||'').trim();});
     else list=getActive().filter(function(e){return (e.education||'').trim()===(filterValue||'');});
+  } else if(type==='age'){
+    // filterValue: 연령대 라벨 (예: '30대')
+    var now=new Date().getFullYear();
+    list=getActive().filter(function(e){
+      if(!e.birth_year)return false;
+      var by=byTo4(e.birth_year);
+      var age=now-by+1;
+      if(filterValue==='10대 이하')return age<=19;
+      if(filterValue==='20대')return age>=20&&age<=29;
+      if(filterValue==='30대')return age>=30&&age<=39;
+      if(filterValue==='40대')return age>=40&&age<=49;
+      if(filterValue==='50대')return age>=50&&age<=59;
+      if(filterValue==='60대 이상')return age>=60;
+      return false;
+    });
   } else if(type==='status_chart'){
     list=employees.filter(function(e){return e.status===(filterValue||'');});
   } else {
@@ -1761,7 +1777,7 @@ function openScardModal(type, filterValue, filterLabel){
 
   var tbody=document.getElementById('scardTbody');
   if(!list.length){
-    tbody.innerHTML='<tr><td colspan="7" style="padding:20px;text-align:center;color:#aaa;">해당 인원 없음</td></tr>';
+    tbody.innerHTML='<tr><td colspan="8" style="padding:20px;text-align:center;color:#aaa;">해당 인원 없음</td></tr>';
   } else {
     tbody.innerHTML=list.map(function(e,i){
       var div=divisions.find(function(d){return d.id===(e.div_id||e.divId);})||{};
@@ -1774,6 +1790,7 @@ function openScardModal(type, filterValue, filterLabel){
         +'<td style="padding:6px 10px;">'+escHtml(e.grade||'-')+'</td>'
         +'<td style="padding:6px 10px;">'+escHtml(e.position||'-')+'</td>'
         +'<td style="padding:6px 10px;">'+escHtml(e.join_date||e.joinDate||'-')+'</td>'
+        +(function(){if(!e.birth_year)return'<td style="padding:6px 10px;">-</td>';var age=new Date().getFullYear()-byTo4(e.birth_year)+1;return'<td style="padding:6px 10px;">'+age+'세</td>';})()
         +'<td style="padding:6px 10px;">'
           +'<span style="padding:2px 7px;border-radius:10px;font-size:11px;background:'
           +(e.status==='join'?'#dcfce7;color:#166534'
@@ -2073,9 +2090,13 @@ function renderAgeChart(){
       scales:{
         x:{ ticks:{ font:{ size:11 } }, grid:{ display:false } },
         y:{ beginAtZero:true, ticks:{ font:{ size:10 }, stepSize:1 }, grid:{ color:'rgba(0,0,0,.05)' } }
+      },
+      onClick:function(_,els){
+        if(els.length){var lbl=labels[els[0].index];openScardModal('age',lbl,lbl+' 인원');}
       }
     }
   });
+  document.getElementById('ageChart').style.cursor='pointer';
 }
 
 function renderMatrix(){
