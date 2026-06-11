@@ -568,7 +568,7 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
 <!-- 대시보드 -->
 <div class="page active" id="tab-dashboard">
   <div class="summary-cards">
-    <div class="scard total" style="cursor:pointer;" onclick="openScardModal('total')"><div class="lbl">현재 총 인원</div><div class="val" id="s-total">-</div><div class="sub" id="s-total-sub"></div></div>
+    <div class="scard total" style="cursor:pointer;" onclick="openScardModal('total')"><div class="lbl">현재 총 인원</div><div class="val" id="s-total">-</div><div class="sub" id="s-total-sub"></div><div style="font-size:10px;color:#aaa;margin-top:2px;">사외이사 제외</div></div>
     <div class="scard join" style="cursor:pointer;" onclick="openScardModal('join')"><div class="lbl">이번달 입사</div><div class="val" id="s-join">-</div></div>
     <div class="scard leave" style="cursor:pointer;" onclick="openScardModal('leave')"><div class="lbl">이번달 퇴사</div><div class="val" id="s-leave">-</div></div>
     <div class="scard transfer" style="cursor:pointer;" onclick="openScardModal('transfer')"><div class="lbl">인사이동</div><div class="val" id="s-transfer">-</div></div>
@@ -1623,6 +1623,13 @@ function switchTab(id){
 function onMonthChange(){document.getElementById('snapMonthInput').value=document.getElementById('curMonth').value;}
 function getActive(){return employees.filter(e=>e.status!=='leave');}
 // 이름 기준 중복 제거 총 인원 (겸직/동명이인 1명 카운팅)
+// 총인원에 포함할 임원 직함 (사외이사 제외)
+var EXEC_INCLUDE_TITLES=['대표이사','전무이사'];
+function getIncludedExecs(){
+  return executives.filter(function(e){
+    return EXEC_INCLUDE_TITLES.indexOf(e.title)!==-1;
+  });
+}
 function getTotalCount(empsData){
   empsData=empsData||employees;
   var seen=new Set();
@@ -1633,6 +1640,10 @@ function getTotalCount(empsData){
   // 클릭 모달 직책자 (employees 미등록, 동명이인 제외)
   getHeadExtras().forEach(function(x){
     if(!seen.has(x.name)){seen.add(x.name);cnt++;}
+  });
+  // 대표이사/전무이사 추가 (employees에 없는 경우만)
+  getIncludedExecs().forEach(function(x){
+    if(x.name&&!seen.has(x.name)){seen.add(x.name);cnt++;}
   });
   return cnt;
 }
@@ -1690,6 +1701,13 @@ function openScardModal(type){
   var list=[];
   if(type==='total'){
     list=getActive();
+    // 대표이사/전무이사를 임시 직원 형태로 추가 (employees에 없는 경우만)
+    var empNames=new Set(list.map(function(e){return e.name;}));
+    getIncludedExecs().forEach(function(x){
+      if(x.name&&!empNames.has(x.name)){
+        list=list.concat([{name:x.name,div_id:'',team_id:'',grade:x.grade||'',position:x.title||'',join_date:'',status:'normal',_isExec:true}]);
+      }
+    });
   } else if(type==='prev'){
     var snapKeys=Object.keys(snapshots).sort();
     var prevKey=snapKeys[snapKeys.length-1];
