@@ -421,45 +421,63 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
 }
 
 /* ── 비밀번호 잠금 화면 ── */
-#lockScreen{
+/* ── Supabase Auth 로그인 화면 ── */
+#authScreen{
   display:none;position:fixed;inset:0;z-index:99999;
   background:linear-gradient(135deg,#0f2240 0%,#1e3a5f 60%,#16305a 100%);
   align-items:center;justify-content:center;flex-direction:column;
 }
-#lockScreen.active{display:flex;}
-.lock-box{
-  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);
-  border-radius:16px;padding:36px 40px;width:300px;max-width:90vw;
-  display:flex;flex-direction:column;align-items:center;gap:0;
-  box-shadow:0 12px 48px rgba(0,0,0,.5);backdrop-filter:blur(8px);
+#authScreen.active{display:flex;}
+.auth-box{
+  background:white;border-radius:16px;padding:36px 32px;width:340px;max-width:92vw;
+  display:flex;flex-direction:column;align-items:stretch;gap:0;
+  box-shadow:0 12px 48px rgba(0,0,0,.5);
 }
-.lock-icon{font-size:40px;margin-bottom:12px;line-height:1;}
-.lock-title{font-size:17px;font-weight:700;color:white;margin-bottom:4px;letter-spacing:.5px;}
-.lock-sub{font-size:12px;color:rgba(255,255,255,.5);margin-bottom:24px;}
-.pin-dots{display:flex;gap:14px;margin-bottom:24px;}
-.pin-dot{
-  width:16px;height:16px;border-radius:50%;
-  border:2px solid rgba(255,255,255,.4);background:transparent;
-  transition:all .2s;
+.auth-logo{text-align:center;margin-bottom:22px;}
+.auth-logo-title{font-size:18px;font-weight:700;color:#1e3a5f;letter-spacing:.5px;}
+.auth-logo-sub{font-size:11px;color:#888;margin-top:3px;}
+.auth-step{display:none;}
+.auth-step.active{display:block;}
+.auth-field{margin-bottom:14px;}
+.auth-field label{font-size:12px;color:#555;display:block;margin-bottom:5px;font-weight:600;}
+.auth-field input{
+  width:100%;padding:10px 12px;border:1.5px solid #dde1e7;
+  border-radius:8px;font-size:13px;font-family:inherit;
+  transition:border-color .15s;box-sizing:border-box;
 }
-.pin-dot.filled{background:white;border-color:white;box-shadow:0 0 8px rgba(255,255,255,.5);}
-.pin-dot.error{background:#f87171;border-color:#f87171;box-shadow:0 0 8px rgba(248,113,113,.6);}
-.pin-keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:100%;}
-.pin-key{
-  background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);
-  border-radius:10px;color:white;font-size:20px;font-weight:600;
-  padding:14px 0;cursor:pointer;font-family:inherit;
-  transition:background .15s,transform .1s;user-select:none;
-  -webkit-tap-highlight-color:transparent;
+.auth-field input:focus{outline:none;border-color:#1e3a5f;}
+.auth-btn{
+  width:100%;padding:11px;background:#1e3a5f;color:white;
+  border:none;border-radius:8px;font-size:13px;font-weight:600;
+  font-family:inherit;cursor:pointer;transition:background .15s;margin-top:4px;
 }
-.pin-key:hover{background:rgba(255,255,255,.2);}
-.pin-key:active{background:rgba(255,255,255,.3);transform:scale(.95);}
-.pin-key.del{font-size:16px;background:rgba(255,100,100,.15);border-color:rgba(255,100,100,.25);}
-.pin-key.del:hover{background:rgba(255,100,100,.28);}
-.lock-error{
-  font-size:12px;color:#f87171;margin-top:12px;height:16px;text-align:center;
-  animation:shake .4s ease;
+.auth-btn:hover{background:#16305a;}
+.auth-btn:disabled{background:#9ca3af;cursor:not-allowed;}
+.auth-btn.green{background:#2d7a3a;}
+.auth-btn.green:hover{background:#235f2c;}
+.auth-err{
+  color:#b12c2c;font-size:12px;margin-top:10px;
+  text-align:center;min-height:18px;line-height:1.4;
 }
+.mfa-hint{font-size:12px;color:#555;text-align:center;margin-bottom:16px;line-height:1.5;}
+.mfa-code-wrap{text-align:center;margin-bottom:4px;}
+.mfa-code-wrap input{
+  width:180px;padding:12px;border:1.5px solid #dde1e7;border-radius:8px;
+  font-size:26px;text-align:center;letter-spacing:10px;font-family:monospace;
+  transition:border-color .15s;
+}
+.mfa-code-wrap input:focus{outline:none;border-color:#1e3a5f;}
+.qr-wrap{text-align:center;margin:8px 0 14px;}
+.qr-wrap img{width:160px;height:160px;border:1px solid #eee;border-radius:8px;}
+.qr-secret{font-size:10px;color:#888;margin-top:6px;word-break:break-all;}
+.auth-divider{border:none;border-top:1px solid #eee;margin:14px 0;}
+.auth-back{font-size:11px;color:#888;text-align:center;margin-top:12px;cursor:pointer;}
+.auth-back:hover{color:#1e3a5f;text-decoration:underline;}
+.auth-user-info{
+  display:none;align-items:center;gap:6px;font-size:11px;color:rgba(255,255,255,.8);
+  padding:3px 10px;border:1px solid rgba(255,255,255,.25);border-radius:12px;
+}
+.auth-user-info.visible{display:flex;}
 @keyframes shake{0%,100%{transform:translateX(0);}20%{transform:translateX(-6px);}40%{transform:translateX(6px);}60%{transform:translateX(-4px);}80%{transform:translateX(4px);}}
 
 /* ── 인사발령 시뮬레이션 ── */
@@ -500,33 +518,52 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
 </head>
 <body>
 
-<!-- ── 비밀번호 잠금 화면 ── -->
-<div id="lockScreen" class="active">
-  <div class="lock-box">
-    <div class="lock-icon">🔒</div>
-    <div class="lock-title">인원현황 대시보드</div>
-    <div class="lock-sub">4자리 비밀번호를 입력하세요</div>
-    <div class="pin-dots">
-      <div class="pin-dot" id="pd0"></div>
-      <div class="pin-dot" id="pd1"></div>
-      <div class="pin-dot" id="pd2"></div>
-      <div class="pin-dot" id="pd3"></div>
+<!-- ── Supabase Auth 로그인 화면 ── -->
+<div id="authScreen" class="active">
+  <div class="auth-box">
+    <div class="auth-logo">
+      <div class="auth-logo-title">🌾 NH농우바이오</div>
+      <div class="auth-logo-sub">인원현황 대시보드 · 인사노무팀 전용</div>
     </div>
-    <div class="pin-keypad">
-      <button class="pin-key" onclick="pinInput('1')">1</button>
-      <button class="pin-key" onclick="pinInput('2')">2</button>
-      <button class="pin-key" onclick="pinInput('3')">3</button>
-      <button class="pin-key" onclick="pinInput('4')">4</button>
-      <button class="pin-key" onclick="pinInput('5')">5</button>
-      <button class="pin-key" onclick="pinInput('6')">6</button>
-      <button class="pin-key" onclick="pinInput('7')">7</button>
-      <button class="pin-key" onclick="pinInput('8')">8</button>
-      <button class="pin-key" onclick="pinInput('9')">9</button>
-      <button class="pin-key" style="visibility:hidden;" disabled></button>
-      <button class="pin-key" onclick="pinInput('0')">0</button>
-      <button class="pin-key del" onclick="pinDel()">⌫</button>
+
+    <!-- STEP 1: 이메일 / 비밀번호 -->
+    <div id="authStepLogin" class="auth-step active">
+      <div class="auth-field">
+        <label>이메일</label>
+        <input id="authEmail" type="email" placeholder="example@nhagriculture.com" autocomplete="email">
+      </div>
+      <div class="auth-field">
+        <label>비밀번호</label>
+        <input id="authPw" type="password" placeholder="비밀번호 입력" autocomplete="current-password"
+          onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <button class="auth-btn" id="loginBtn" onclick="doLogin()">로그인</button>
     </div>
-    <div class="lock-error" id="lockError"></div>
+
+    <!-- STEP 2: MFA 코드 입력 (기등록자) -->
+    <div id="authStepMFA" class="auth-step">
+      <p class="mfa-hint">인증 앱(Google Authenticator 등)의<br><strong>6자리 코드</strong>를 입력하세요</p>
+      <div class="mfa-code-wrap">
+        <input id="mfaCode" type="text" inputmode="numeric" maxlength="6" placeholder="000000"
+          onkeydown="if(event.key==='Enter')doMFAVerify()">
+      </div>
+      <button class="auth-btn" style="margin-top:14px;" onclick="doMFAVerify()">인증 확인</button>
+      <p class="auth-back" onclick="authGoBack()">← 로그인 화면으로</p>
+    </div>
+
+    <!-- STEP 3: MFA 최초 등록 (QR 스캔) -->
+    <div id="authStepEnroll" class="auth-step">
+      <p class="mfa-hint">최초 1회: 인증 앱으로 아래 QR을 스캔한 후<br>생성된 <strong>6자리 코드</strong>를 입력하세요</p>
+      <div class="qr-wrap" id="qrWrap"></div>
+      <div class="mfa-code-wrap">
+        <input id="mfaEnrollCode" type="text" inputmode="numeric" maxlength="6" placeholder="000000"
+          onkeydown="if(event.key==='Enter')doEnrollVerify()">
+      </div>
+      <button class="auth-btn green" style="margin-top:14px;" onclick="doEnrollVerify()">등록 완료</button>
+      <p class="auth-back" onclick="authGoBack()">← 로그인 화면으로</p>
+    </div>
+
+    <div class="auth-err" id="authErr"></div>
   </div>
 </div>
 
@@ -555,6 +592,9 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
   <div class="sep"></div>
   <button class="tbtn" style="background:rgba(255,180,0,.2);border-color:rgba(255,180,0,.5);" onclick="openSetupModal()">⚙ DB 설정</button>
   <button class="tbtn ml" onclick="doPrint()">🖨 인쇄</button>
+  <div class="sep"></div>
+  <div class="auth-user-info" id="authUserInfo">👤 <span id="authUserEmail"></span></div>
+  <button class="tbtn" onclick="doLogout()" id="logoutBtn" style="background:rgba(177,44,44,.3);border-color:rgba(177,44,44,.5);" title="로그아웃">🔓 로그아웃</button>
 </div>
 
 <div class="tabs">
@@ -1391,7 +1431,13 @@ async function connectSupabase(){
     localStorage.setItem('sb_url',url);
     localStorage.setItem('sb_key',key);
     document.getElementById('setupOverlay').classList.remove('show');
+    // Auth 상태 변화 리스너
+    sb.auth.onAuthStateChange(function(event){
+      if(event==='SIGNED_OUT'){showAuthScreen&&showAuthScreen();}
+    });
     setConnected(true);
+    // Auth 세션 확인 → 로그인 화면 or 대시보드 진입
+    await checkAuthSession();
     await loadAll();
     renderAll();
     subscribeRealtime();
@@ -3452,60 +3498,192 @@ async function init(){
   document.getElementById('setupOverlay').classList.add('show');
 }
 
-// ── 비밀번호 잠금 ──
+// ══════════════════════════════════════════════
+//  Supabase Auth + MFA (TOTP 2단계 인증)
+// ══════════════════════════════════════════════
 (function(){
-  var CORRECT='1234';
-  var pinBuf='';
-  var locked=true;
+  var _mfaFactorId = null;
+  var _mfaChallengeId = null;
 
-  function updateDots(){
-    for(var i=0;i<4;i++){
-      var d=document.getElementById('pd'+i);
-      if(d)d.className='pin-dot'+(i<pinBuf.length?' filled':'');
-    }
+  // ── 유틸
+  function authErr(msg){
+    var el=document.getElementById('authErr');
+    if(el){el.textContent=msg||'';}
   }
-  function showError(msg){
-    var el=document.getElementById('lockError');
-    if(!el)return;
-    el.textContent=msg;
-    // 점 에러 색상
-    for(var i=0;i<4;i++){var d=document.getElementById('pd'+i);if(d)d.className='pin-dot error';}
-    setTimeout(function(){
-      pinBuf='';
-      updateDots();
-      el.textContent='';
-    },900);
+  function authBtnLoading(btnId,loading,label){
+    var btn=document.getElementById(btnId);
+    if(!btn)return;
+    btn.disabled=loading;
+    btn.textContent=loading?'처리 중...':(label||btn.textContent);
   }
-  function unlock(){
-    locked=false;
-    var ls=document.getElementById('lockScreen');
-    if(ls){ls.classList.remove('active');}
+  function showAuthStep(stepId){
+    ['authStepLogin','authStepMFA','authStepEnroll'].forEach(function(id){
+      var el=document.getElementById(id);
+      if(el)el.className='auth-step'+(id===stepId?' active':'');
+    });
+    authErr('');
+  }
+  function hideAuthScreen(){
+    var el=document.getElementById('authScreen');
+    if(el)el.classList.remove('active');
+    // 사용자 이메일 표시
+    var info=document.getElementById('authUserInfo');
+    var emailSpan=document.getElementById('authUserEmail');
+    if(info)info.className='auth-user-info visible';
+    if(emailSpan&&window._authUser)emailSpan.textContent=window._authUser.email||'';
+  }
+  function showAuthScreen(){
+    var el=document.getElementById('authScreen');
+    if(el)el.classList.add('active');
+    showAuthStep('authStepLogin');
+    var info=document.getElementById('authUserInfo');
+    if(info)info.className='auth-user-info';
+    var pw=document.getElementById('authPw');
+    if(pw)pw.value='';
+    var code=document.getElementById('mfaCode');
+    if(code)code.value='';
   }
 
-  window.pinInput=function(n){
-    if(!locked)return;
-    if(pinBuf.length>=4)return;
-    pinBuf+=n;
-    updateDots();
-    if(pinBuf.length===4){
-      if(pinBuf===CORRECT){
-        setTimeout(unlock,180);
-      }else{
-        setTimeout(function(){showError('비밀번호가 올바르지 않습니다');},80);
+  // ── 세션 확인 (앱 시작 or Supabase 연결 후 호출)
+  window.checkAuthSession = async function(){
+    if(!sb)return;
+    try{
+      var res = await sb.auth.getSession();
+      var session = res.data && res.data.session;
+      if(!session){ showAuthScreen(); return; }
+      window._authUser = session.user;
+      // AAL 확인 — MFA 완료 여부
+      var aalRes = await sb.auth.mfa.getAuthenticatorAssuranceLevel();
+      var aal = aalRes.data;
+      if(aal && aal.currentLevel === 'aal2'){
+        hideAuthScreen(); // MFA 완료
+      } else {
+        // 세션은 있지만 MFA 미완료 → MFA factor 확인
+        var facRes = await sb.auth.mfa.listFactors();
+        var totp = facRes.data && facRes.data.totp && facRes.data.totp[0];
+        if(totp){
+          _mfaFactorId = totp.id;
+          await _startChallenge();
+        } else {
+          await _startEnroll();
+        }
       }
+    }catch(e){
+      showAuthScreen();
     }
   };
-  window.pinDel=function(){
-    if(!locked)return;
-    if(pinBuf.length>0){pinBuf=pinBuf.slice(0,-1);updateDots();}
+
+  // ── 로그인
+  window.doLogin = async function(){
+    var email=(document.getElementById('authEmail')||{}).value||'';
+    var pw=(document.getElementById('authPw')||{}).value||'';
+    email=email.trim();
+    if(!email||!pw){authErr('이메일과 비밀번호를 입력하세요.');return;}
+    authErr('');
+    authBtnLoading('loginBtn',true);
+    try{
+      var res = await sb.auth.signInWithPassword({email:email,password:pw});
+      if(res.error){authErr('❌ '+res.error.message);authBtnLoading('loginBtn',false,'로그인');return;}
+      window._authUser = res.data.user;
+      // MFA 등록 여부 확인
+      var facRes = await sb.auth.mfa.listFactors();
+      var totp = facRes.data && facRes.data.totp && facRes.data.totp[0];
+      authBtnLoading('loginBtn',false,'로그인');
+      if(totp){
+        _mfaFactorId = totp.id;
+        await _startChallenge();
+      } else {
+        await _startEnroll();
+      }
+    }catch(e){
+      authErr('❌ 오류: '+e.message);
+      authBtnLoading('loginBtn',false,'로그인');
+    }
   };
 
-  // 키보드 지원
-  document.addEventListener('keydown',function(e){
-    if(!locked)return;
-    if(e.key>='0'&&e.key<='9'){pinInput(e.key);}
-    else if(e.key==='Backspace'){pinDel();}
-  });
+  // ── MFA 최초 등록 (QR)
+  async function _startEnroll(){
+    try{
+      var res = await sb.auth.mfa.enroll({
+        factorType:'totp',
+        friendlyName:'NH농우바이오 인증'
+      });
+      if(res.error){authErr('MFA 등록 오류: '+res.error.message);showAuthStep('authStepLogin');return;}
+      _mfaFactorId = res.data.id;
+      var qrDiv=document.getElementById('qrWrap');
+      if(qrDiv){
+        qrDiv.innerHTML='<img src="'+res.data.totp.qr_code+'" alt="QR코드">'
+          +'<div class="qr-secret">수동 입력 코드: '+res.data.totp.secret+'</div>';
+      }
+      showAuthStep('authStepEnroll');
+      setTimeout(function(){var inp=document.getElementById('mfaEnrollCode');if(inp)inp.focus();},200);
+    }catch(e){
+      authErr('MFA 등록 오류: '+e.message);
+    }
+  }
+
+  // ── MFA 등록 검증
+  window.doEnrollVerify = async function(){
+    var code=(document.getElementById('mfaEnrollCode')||{}).value||'';
+    code=code.replace(/\s/g,'');
+    if(code.length!==6){authErr('6자리 코드를 입력하세요.');return;}
+    authErr('');
+    try{
+      var res = await sb.auth.mfa.challengeAndVerify({factorId:_mfaFactorId,code:code});
+      if(res.error){authErr('❌ 코드 오류: '+res.error.message);return;}
+      hideAuthScreen();
+    }catch(e){
+      authErr('❌ 오류: '+e.message);
+    }
+  };
+
+  // ── MFA Challenge 시작 (기등록자)
+  async function _startChallenge(){
+    try{
+      var res = await sb.auth.mfa.challenge({factorId:_mfaFactorId});
+      if(res.error){authErr('MFA 오류: '+res.error.message);return;}
+      _mfaChallengeId = res.data.id;
+      showAuthStep('authStepMFA');
+      setTimeout(function(){var inp=document.getElementById('mfaCode');if(inp)inp.focus();},200);
+    }catch(e){
+      authErr('MFA 오류: '+e.message);
+    }
+  }
+
+  // ── MFA 코드 검증
+  window.doMFAVerify = async function(){
+    var code=(document.getElementById('mfaCode')||{}).value||'';
+    code=code.replace(/\s/g,'');
+    if(code.length!==6){authErr('6자리 코드를 입력하세요.');return;}
+    authErr('');
+    try{
+      var res = await sb.auth.mfa.verify({
+        factorId:_mfaFactorId,
+        challengeId:_mfaChallengeId,
+        code:code
+      });
+      if(res.error){authErr('❌ 코드 오류: '+res.error.message);return;}
+      hideAuthScreen();
+    }catch(e){
+      authErr('❌ 오류: '+e.message);
+    }
+  };
+
+  // ── 로그아웃
+  window.doLogout = async function(){
+    if(!confirm('로그아웃 하시겠습니까?'))return;
+    if(sb)await sb.auth.signOut();
+    window._authUser = null;
+    _mfaFactorId = null;
+    _mfaChallengeId = null;
+    showAuthScreen();
+  };
+
+  // ── 뒤로가기 (MFA/등록 → 로그인)
+  window.authGoBack = async function(){
+    if(sb)await sb.auth.signOut();
+    showAuthStep('authStepLogin');
+  };
 })();
 
 // ══════════════════════════════════════════════
