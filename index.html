@@ -822,7 +822,7 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
     <span id="sb2ConnDot" style="width:7px;height:7px;border-radius:50%;background:#ccc;display:inline-block;"></span>
     <span id="sb2ConnText" style="font-size:11px;color:#888;">미연결</span>
   </div>
-  <p style="font-size:12px;color:#666;margin-bottom:12px;line-height:1.6;">다른 Supabase 프로젝트의 <code>exec_events</code> 테이블을 읽기 전용으로 연동합니다. 캘린더에 함께 표시됩니다.</p>
+  <p style="font-size:12px;color:#666;margin-bottom:12px;line-height:1.6;">다른 Supabase 프로젝트의 <code>hr_exec_events</code> 테이블을 읽기 전용으로 연동합니다. 캘린더에 함께 표시됩니다.</p>
   <div class="fr"><label>외부 Supabase URL</label><input id="sb2_url" placeholder="https://xxxxxxxxxxxx.supabase.co" type="url"></div>
   <div class="fr"><label>외부 Supabase Anon Key</label><input id="sb2_key" placeholder="eyJ..." type="text"></div>
   <div id="sb2Error" style="display:none;background:#fef2f2;border:1px solid #fca5a5;border-radius:6px;padding:10px 12px;font-size:12px;color:#991b1b;margin-bottom:12px;white-space:pre-wrap;line-height:1.6;"></div>
@@ -1389,7 +1389,7 @@ function setSb2Status(ok){
 async function loadExecEvents2(){
   if(!sb2)return;
   try{
-    var res=await sb2.from('exec_events').select('*').order('date',{ascending:true});
+    var res=await sb2.from('hr_exec_events').select('*').order('date',{ascending:true});
     if(res.error){console.warn('[sb2] exec_events 로드 실패:',res.error.message);return;}
     execEvents2=(res.data||[]).map(function(r){return{id:'ext_'+r.id,date:r.date,time:r.time||'',title:r.title,desc:r.description||'',deadline:!!r.deadline,_external:true};});
   }catch(e){console.warn('[sb2] loadExecEvents2 오류:',e.message);}
@@ -1398,7 +1398,7 @@ function subscribeSb2Realtime(){
   if(!sb2)return;
   try{
     sb2.channel('sb2-exec-live')
-      .on('postgres_changes',{event:'*',schema:'public',table:'exec_events'},async function(){
+      .on('postgres_changes',{event:'*',schema:'public',table:'hr_exec_events'},async function(){
         await loadExecEvents2();
         var ec=document.getElementById('tab-execcal');
         if(ec&&ec.classList.contains('active'))renderExecCal();
@@ -1420,7 +1420,7 @@ async function connectSupabase2(){
   if(!SBLib||!SBLib.createClient){showErr('❌ Supabase 라이브러리 로드 실패');return;}
   try{
     var client=SBLib.createClient(url,key);
-    var test=await client.from('exec_events').select('id').limit(1);
+    var test=await client.from('hr_exec_events').select('id').limit(1);
     if(test.error){
       var m=test.error.message||'';
       if(m.includes('does not exist')||test.error.code==='42P01'){showErr('❌ exec_events 테이블이 없습니다.');}
