@@ -1698,7 +1698,6 @@ function openScardModal(type){
     list=employees.filter(function(e){return e.status===type;});
   }
 
-  if(list.length>0)console.log('[scardModal] 첫번째 직원 데이터:', JSON.stringify(list[0]));
   document.getElementById('scardModalTitle').textContent=titles[type]||'명단';
   document.getElementById('scardModalCount').textContent='총 '+list.length+'명';
 
