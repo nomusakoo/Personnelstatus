@@ -49,6 +49,7 @@ body{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;font-size:12px
 .scard .val{font-size:26px;font-weight:700;}
 .scard.total .val{color:#1e3a5f;}.scard.join .val{color:#2d7a3a;}.scard.leave .val{color:#b12c2c;}.scard.transfer .val{color:#c17d11;}.scard.prev .val{color:#6b7280;}
 .scard .sub{font-size:11px;color:#aaa;margin-top:3px;}
+.scard[onclick]:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.13);transition:all .15s;}
 
 .charts-row{display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-bottom:16px;}
 .charts-row2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;}
@@ -567,13 +568,13 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
 <!-- 대시보드 -->
 <div class="page active" id="tab-dashboard">
   <div class="summary-cards">
-    <div class="scard total"><div class="lbl">현재 총 인원</div><div class="val" id="s-total">-</div><div class="sub" id="s-total-sub"></div></div>
-    <div class="scard join"><div class="lbl">이번달 입사</div><div class="val" id="s-join">-</div></div>
-    <div class="scard leave"><div class="lbl">이번달 퇴사</div><div class="val" id="s-leave">-</div></div>
-    <div class="scard transfer"><div class="lbl">인사이동</div><div class="val" id="s-transfer">-</div></div>
-    <div class="scard prev"><div class="lbl">전월 인원</div><div class="val" id="s-prev">-</div></div>
-    <div class="scard" style="border-color:#1d4ed8;"><div class="lbl">휴직</div><div class="val" style="color:#1d4ed8;" id="s-leave-abs">0</div></div>
-    <div class="scard" style="border-color:#7c3aed;"><div class="lbl">파견</div><div class="val" style="color:#7c3aed;" id="s-dispatch">0</div></div>
+    <div class="scard total" style="cursor:pointer;" onclick="openScardModal('total')"><div class="lbl">현재 총 인원</div><div class="val" id="s-total">-</div><div class="sub" id="s-total-sub"></div></div>
+    <div class="scard join" style="cursor:pointer;" onclick="openScardModal('join')"><div class="lbl">이번달 입사</div><div class="val" id="s-join">-</div></div>
+    <div class="scard leave" style="cursor:pointer;" onclick="openScardModal('leave')"><div class="lbl">이번달 퇴사</div><div class="val" id="s-leave">-</div></div>
+    <div class="scard transfer" style="cursor:pointer;" onclick="openScardModal('transfer')"><div class="lbl">인사이동</div><div class="val" id="s-transfer">-</div></div>
+    <div class="scard prev" style="cursor:pointer;" onclick="openScardModal('prev')"><div class="lbl">전월 인원</div><div class="val" id="s-prev">-</div></div>
+    <div class="scard" style="border-color:#1d4ed8;cursor:pointer;" onclick="openScardModal('leave_abs')"><div class="lbl">휴직</div><div class="val" style="color:#1d4ed8;" id="s-leave-abs">0</div></div>
+    <div class="scard" style="border-color:#7c3aed;cursor:pointer;" onclick="openScardModal('dispatch')"><div class="lbl">파견</div><div class="val" style="color:#7c3aed;" id="s-dispatch">0</div></div>
   </div>
   <div class="charts-row">
     <div class="chart-box"><h3>월별 인원 추이</h3><canvas id="trendChart" height="200"></canvas></div>
@@ -1120,6 +1121,31 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
 </div>
 </div>
 
+<!-- 요약 카드 명단 모달 -->
+<div class="overlay" id="scardOverlay">
+<div class="modal" style="width:640px;max-width:96vw;">
+  <h2 id="scardModalTitle">명단</h2>
+  <div style="font-size:12px;color:#888;margin-bottom:10px;" id="scardModalCount"></div>
+  <div style="overflow-x:auto;max-height:60vh;overflow-y:auto;">
+    <table style="width:100%;border-collapse:collapse;font-size:12px;" id="scardTable">
+      <thead>
+        <tr style="background:#dce6f1;position:sticky;top:0;">
+          <th style="padding:7px 10px;text-align:left;color:#1e3a5f;white-space:nowrap;">이름</th>
+          <th style="padding:7px 10px;text-align:left;color:#1e3a5f;white-space:nowrap;">본부</th>
+          <th style="padding:7px 10px;text-align:left;color:#1e3a5f;white-space:nowrap;">팀</th>
+          <th style="padding:7px 10px;text-align:left;color:#1e3a5f;white-space:nowrap;">직급</th>
+          <th style="padding:7px 10px;text-align:left;color:#1e3a5f;white-space:nowrap;">직책</th>
+          <th style="padding:7px 10px;text-align:left;color:#1e3a5f;white-space:nowrap;">입사일</th>
+          <th style="padding:7px 10px;text-align:left;color:#1e3a5f;white-space:nowrap;">상태</th>
+        </tr>
+      </thead>
+      <tbody id="scardTbody"></tbody>
+    </table>
+  </div>
+  <div class="mact"><button class="btn btn-g" onclick="document.getElementById('scardOverlay').classList.remove('show')">닫기</button></div>
+</div>
+</div>
+
 <!-- 임원 일정 붙여넣기 입력 모달 -->
 <div class="overlay" id="execPasteOverlay">
 <div class="modal" style="width:680px;">
@@ -1649,6 +1675,63 @@ function renderAll(){
   if(tabs[idx]==='exec')renderExecTab();
   if(tabs[idx]==='execcal')renderExecCal();
 }
+// ── 요약 카드 명단 모달 ──
+function openScardModal(type){
+  if(!_requireDB())return;
+  var titles={
+    total:'현재 총 인원',join:'이번달 입사',leave:'이번달 퇴사',
+    transfer:'인사이동',prev:'전월 인원',leave_abs:'휴직',dispatch:'파견'
+  };
+  var statusLabels={
+    normal:'재직',join:'입사',leave:'퇴사',transfer:'인사이동',
+    leave_abs:'휴직',dispatch:'파견'
+  };
+
+  var list=[];
+  if(type==='total'){
+    list=getActive();
+  } else if(type==='prev'){
+    var snapKeys=Object.keys(snapshots).sort();
+    var prevKey=snapKeys[snapKeys.length-1];
+    if(prevKey) list=(snapshots[prevKey].employees||[]).filter(function(e){return e.status!=='leave';});
+  } else {
+    list=employees.filter(function(e){return e.status===type;});
+  }
+
+  document.getElementById('scardModalTitle').textContent=titles[type]||'명단';
+  document.getElementById('scardModalCount').textContent='총 '+list.length+'명';
+
+  var tbody=document.getElementById('scardTbody');
+  if(!list.length){
+    tbody.innerHTML='<tr><td colspan="7" style="padding:20px;text-align:center;color:#aaa;">해당 인원 없음</td></tr>';
+  } else {
+    tbody.innerHTML=list.map(function(e,i){
+      var div=divisions.find(function(d){return d.id===e.divId;})||{};
+      var team=(div.teams||[]).find(function(t){return t.id===e.teamId;})||{};
+      var bg=i%2===0?'#fff':'#f8fafc';
+      return '<tr style="border-bottom:1px solid #f0f0f0;background:'+bg+';">'
+        +'<td style="padding:6px 10px;font-weight:600;">'+escHtml(e.name||'-')+'</td>'
+        +'<td style="padding:6px 10px;">'+escHtml(div.name||'-')+'</td>'
+        +'<td style="padding:6px 10px;">'+escHtml(team.name||'-')+'</td>'
+        +'<td style="padding:6px 10px;">'+escHtml(e.grade||'-')+'</td>'
+        +'<td style="padding:6px 10px;">'+escHtml(e.position||'-')+'</td>'
+        +'<td style="padding:6px 10px;">'+escHtml(e.joinDate||'-')+'</td>'
+        +'<td style="padding:6px 10px;">'
+          +'<span style="padding:2px 7px;border-radius:10px;font-size:11px;background:'
+          +(e.status==='join'?'#dcfce7;color:#166534'
+            :e.status==='leave'?'#fee2e2;color:#991b1b'
+            :e.status==='transfer'?'#fef9c3;color:#854d0e'
+            :e.status==='leave_abs'?'#dbeafe;color:#1e40af'
+            :e.status==='dispatch'?'#ede9fe;color:#6b21a8'
+            :'#f1f5f9;color:#475569')+';">'+escHtml(statusLabels[e.status]||e.status||'-')+'</span>'
+        +'</td>'
+      +'</tr>';
+    }).join('');
+  }
+  document.getElementById('scardOverlay').classList.add('show');
+}
+function escHtml(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+
 function renderDashboard(){
   const active=getActive();
   document.getElementById('s-total').textContent=getTotalCount();
@@ -3010,7 +3093,7 @@ async function importExcel(event){
   event.target.value='';
 }
 
-['empOverlay','execOverlay','structOverlay','snapOverlay','setupOverlay','divHead2Overlay','centerHeadOverlay'].forEach(id=>{document.getElementById(id).addEventListener('click',function(e){if(e.target===this)this.classList.remove('show');});});
+['empOverlay','execOverlay','structOverlay','snapOverlay','setupOverlay','divHead2Overlay','centerHeadOverlay','scardOverlay'].forEach(id=>{document.getElementById(id).addEventListener('click',function(e){if(e.target===this)this.classList.remove('show');});});
 
 // ── 인쇄용 분할 테이블 생성 ──
 var MAX_PRINT_TEAMS=9; // 페이지당 최대 팀 컬럼 수
