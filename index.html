@@ -2195,9 +2195,10 @@ function renderExecTab(){
     let html=visible.map(makeRow).join('');
     if(hidden.length){
       const display=execCollapsed?'none':'';
-      html+=`<tr id="execHiddenRows" style="display:${display}"><td colspan="5" style="padding:0;">
-        <table style="width:100%;border-collapse:collapse;">${hidden.map(makeRow).join('')}</table>
-      </td></tr>`;
+      // 중첩 table 제거 — tr을 직접 추가해서 열 너비 일치
+      html+=hidden.map(e=>makeRow(e).replace('<tr style="border-bottom:1px solid #f0f0f0;">',
+        `<tr class="exec-hidden-row" style="border-bottom:1px solid #f0f0f0;display:${display};">`))
+        .join('');
       const label=execCollapsed?`펼치기 (${hidden.length}명 더 보기)`:`접기`;
       html+=`<tr id="execToggleRow"><td colspan="5" style="padding:6px 12px;text-align:center;background:#f8fafd;border-top:1px solid #e8ecf0;">
         <button onclick="toggleExecCollapse()" style="font-size:12px;color:#34629c;background:none;border:none;cursor:pointer;padding:2px 8px;">${label}</button>
@@ -2209,9 +2210,10 @@ function renderExecTab(){
 }
 function toggleExecCollapse(){
   execCollapsed=!execCollapsed;
-  const hiddenRow=document.getElementById('execHiddenRows');
+  document.querySelectorAll('tr.exec-hidden-row').forEach(function(tr){
+    tr.style.display=execCollapsed?'none':'';
+  });
   const toggleBtn=document.querySelector('#execToggleRow button');
-  if(hiddenRow) hiddenRow.style.display=execCollapsed?'none':'';
   if(toggleBtn){
     const hiddenCount=executives.length-6;
     toggleBtn.textContent=execCollapsed?`펼치기 (${hiddenCount}명 더 보기)`:'접기';
