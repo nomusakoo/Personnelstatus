@@ -1698,6 +1698,7 @@ function openScardModal(type){
     list=employees.filter(function(e){return e.status===type;});
   }
 
+  if(list.length>0)console.log('[scardModal] 첫번째 직원 데이터:', JSON.stringify(list[0]));
   document.getElementById('scardModalTitle').textContent=titles[type]||'명단';
   document.getElementById('scardModalCount').textContent='총 '+list.length+'명';
 
@@ -1706,8 +1707,8 @@ function openScardModal(type){
     tbody.innerHTML='<tr><td colspan="7" style="padding:20px;text-align:center;color:#aaa;">해당 인원 없음</td></tr>';
   } else {
     tbody.innerHTML=list.map(function(e,i){
-      var div=divisions.find(function(d){return d.id===e.divId;})||{};
-      var team=(div.teams||[]).find(function(t){return t.id===e.teamId;})||{};
+      var div=divisions.find(function(d){return d.id===(e.div_id||e.divId);})||{};
+      var team=(div.teams||[]).find(function(t){return t.id===(e.team_id||e.teamId);})||{};
       var bg=i%2===0?'#fff':'#f8fafc';
       return '<tr style="border-bottom:1px solid #f0f0f0;background:'+bg+';">'
         +'<td style="padding:6px 10px;font-weight:600;">'+escHtml(e.name||'-')+'</td>'
@@ -1715,7 +1716,7 @@ function openScardModal(type){
         +'<td style="padding:6px 10px;">'+escHtml(team.name||'-')+'</td>'
         +'<td style="padding:6px 10px;">'+escHtml(e.grade||'-')+'</td>'
         +'<td style="padding:6px 10px;">'+escHtml(e.position||'-')+'</td>'
-        +'<td style="padding:6px 10px;">'+escHtml(e.joinDate||'-')+'</td>'
+        +'<td style="padding:6px 10px;">'+escHtml(e.join_date||e.joinDate||'-')+'</td>'
         +'<td style="padding:6px 10px;">'
           +'<span style="padding:2px 7px;border-radius:10px;font-size:11px;background:'
           +(e.status==='join'?'#dcfce7;color:#166534'
