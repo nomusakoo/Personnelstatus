@@ -1111,10 +1111,12 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
 
 <!-- 임원 일정 더보기 팝업 -->
 <div class="overlay" id="execMoreOverlay">
-<div class="modal" style="width:360px;">
+<div class="modal" style="width:360px;max-width:95vw;">
   <h2 id="execMoreTitle">임원 일정</h2>
-  <div id="execMoreList" style="display:flex;flex-direction:column;gap:6px;max-height:55vh;overflow-y:auto;"></div>
-  <div class="mact"><button class="btn btn-g" onclick="closeExecMore()">닫기</button></div>
+  <div id="execMoreList" style="display:flex;flex-direction:column;gap:6px;max-height:55vh;overflow-y:auto;margin-bottom:12px;"></div>
+  <div class="mact">
+    <button class="btn btn-g" onclick="closeExecMore()">닫기</button>
+  </div>
 </div>
 </div>
 
@@ -3409,12 +3411,7 @@ function renderExecCal(){
 }
 function ecCellClick(dateStr,event){
   if(event&&(event.target.closest('.ec-chip')||event.target.closest('.ec-more')))return;
-  if(isMobileView()){
-    var dayEvts=execEvents.filter(function(e){return e.date===dateStr;});
-    if(dayEvts.length>0)openExecMore(dateStr);
-    return;
-  }
-  openExecEvt(dateStr);
+  openExecMore(dateStr);
 }
 function openExecMore(dateStr){
   var allEvts=execEvents.concat(execEvents2);var evts=allEvts.filter(function(e){return e.date===dateStr;}).sort(function(a,b){var ka=a.time?a.time:'99:99~'+(a.title||'');var kb=b.time?b.time:'99:99~'+(b.title||'');return ka>kb?1:ka<kb?-1:0;});
@@ -3430,8 +3427,7 @@ function isMobileView(){return window.innerWidth<=768;}
 // 모바일: 칩 클릭 → 해당 날 전체 일정 팝업 / 데스크톱: 바로 수정 모달
 function ecChipClick(dateStr,evtId,event){
   event.stopPropagation();
-  if(isMobileView()){openExecMore(dateStr);}
-  else{openExecEvt(null,evtId);}
+  openExecMore(dateStr);
 }
 
 // ── 추가/수정 모달 ──
