@@ -3403,7 +3403,7 @@ function renderExecCal(){
     var allEvts=execEvents.concat(execEvents2);var evts=allEvts.filter(function(e){return e.date===dateStr;}).sort(function(a,b){var ka=a.time?a.time:'99:99~'+(a.title||'');var kb=b.time?b.time:'99:99~'+(b.title||'');return ka>kb?1:ka<kb?-1:0;});
     var shown=evts.slice(0,MAX);
     var hidden=evts.length-MAX;
-    var chips=shown.map(function(e){var lab=(e.deadline?'⚑ ':'')+(e.time?e.time+' ':'')+exEsc(e.title)+(e._external?' [외부]':'');var clickAttr=e._external?'onclick="event.stopPropagation();exToast(\'외부 연동 일정 (읽기 전용)\');"':'onclick="ecChipClick(\''+dateStr+'\','+e.id+',event)"';return'<div class="ec-chip'+(e.deadline?' dl':'')+(e._external?' ec-chip-ext':'')+'" '+clickAttr+' title="'+lab+'">'+(e.deadline?'⚑ ':'')+(e.time?'<b>'+exEsc(e.time)+'</b> ':'')+exEsc(e.title)+'</div>';}).join('');
+    var chips=shown.map(function(e){var lab=(e.deadline?'⚑ ':'')+(e.time?e.time+' ':'')+exEsc(e.title)+(e._external?' [외부]':'');var clickAttr='onclick="ecChipClick(\''+dateStr+'\','+e.id+',event)"';return'<div class="ec-chip'+(e.deadline?' dl':'')+(e._external?' ec-chip-ext':'')+'" '+clickAttr+' title="'+lab+'">'+(e.deadline?'⚑ ':'')+(e.time?'<b>'+exEsc(e.time)+'</b> ':'')+exEsc(e.title)+'</div>';}).join('');
     var more=hidden>0?'<div class="ec-more" onclick="event.stopPropagation();openExecMore(\''+dateStr+'\')">+'+hidden+'개 더보기</div>':'';
     html+='<div class="ec-cell'+(other?' other':'')+(isToday?' today':'')+(dow===0?' sun':'')+(dow===6?' sat':'')+'" onclick="ecCellClick(\''+dateStr+'\',event)"><div class="ec-daynum">'+cd.getDate()+'</div>'+chips+more+'</div>';
   }
@@ -3418,7 +3418,7 @@ function openExecMore(dateStr){
   var d=new Date(dateStr+'T00:00:00');
   document.getElementById('execMoreTitle').textContent=(d.getMonth()+1)+'월 '+d.getDate()+'일 임원 일정 ('+evts.length+'건)';
   document.getElementById('execMoreList').innerHTML=evts.length
-    ? evts.map(function(e){var clickFn=e._external?'closeExecMore();exToast(\'외부 연동 일정 (읽기 전용)\');':'closeExecMore();openExecEvt(null,'+e.id+');';return'<div class="ec-chip'+(e.deadline?' dl':'')+(e._external?' ec-chip-ext':'')+'" style="white-space:normal;padding:7px 9px;" onclick="'+clickFn+'">'+(e.deadline?'⚑ ':'')+(e.time?'<b>'+exEsc(e.time)+'</b> ':'')+exEsc(e.title)+(e.desc?'<div style="font-weight:400;font-size:10px;color:#888;margin-top:2px;">'+exEsc(e.desc)+'</div>':'')+'</div>';}).join('')
+    ? evts.map(function(e){var clickFn='closeExecMore();';return'<div class="ec-chip'+(e.deadline?' dl':'')+(e._external?' ec-chip-ext':'')+'" style="white-space:normal;padding:7px 9px;" onclick="'+clickFn+'">'+(e.deadline?'⚑ ':'')+(e.time?'<b>'+exEsc(e.time)+'</b> ':'')+exEsc(e.title)+(e.desc?'<div style="font-weight:400;font-size:10px;color:#888;margin-top:2px;">'+exEsc(e.desc)+'</div>':'')+'</div>';}).join('')
     : '<div style="padding:18px;text-align:center;color:#aaa;">일정 없음</div>';
   document.getElementById('execMoreOverlay').classList.add('show');
 }
