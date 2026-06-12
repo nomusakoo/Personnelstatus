@@ -3532,6 +3532,8 @@ async function init(){
           if(document.getElementById('sb_url'))document.getElementById('sb_url').value=savedUrl;
           if(document.getElementById('sb_key'))document.getElementById('sb_key').value=savedKey;
           setConnected(true);
+          // Auth 세션 확인 → 로그인 화면 or 대시보드 진입
+          await checkAuthSession();
           await loadAll();
           renderAll();
           subscribeRealtime();
