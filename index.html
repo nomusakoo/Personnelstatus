@@ -3444,6 +3444,8 @@ async function init(){
     var emailSpan=document.getElementById('authUserEmail');
     if(info)info.className='auth-user-info visible';
     if(emailSpan&&window._authUser)emailSpan.textContent=window._authUser.email||'';
+    // 비활동 타이머 시작
+    _inactivityStart();
   }
   function showAuthScreen(){
     var el=document.getElementById('authScreen');
@@ -3455,6 +3457,8 @@ async function init(){
     if(pw)pw.value='';
     var code=document.getElementById('mfaCode');
     if(code)code.value='';
+    // 비활동 타이머 정지
+    _inactivityStop();
   }
 
   // ── 세션 확인 (앱 시작 or Supabase 연결 후 호출)
@@ -3464,6 +3468,16 @@ async function init(){
       var res = await sb.auth.getSession();
       var session = res.data && res.data.session;
       if(!session){ showAuthScreen(); return; }
+      // 비활동 만료 체크 — 세션이 살아있어도 8시간 경과 시 재로그인 요구
+      var last = parseInt(localStorage.getItem(_LAST_ACTIVE_KEY)||'0', 10);
+      if(last && Date.now() - last >= _INACTIVE_LIMIT){
+        localStorage.removeItem(_LAST_ACTIVE_KEY);
+        await sb.auth.signOut();
+        showAuthScreen();
+        var authErrEl = document.getElementById('authErr');
+        if(authErrEl) authErrEl.textContent = '⏰ 8시간 동안 활동이 없어 자동 로그아웃 되었습니다.';
+        return;
+      }
       window._authUser = session.user;
       // AAL 확인 — MFA 완료 여부
       var aalRes = await sb.auth.mfa.getAuthenticatorAssuranceLevel();
@@ -3600,9 +3614,51 @@ async function init(){
     }
   };
 
+  // ── 비활동 자동 로그아웃 타이머 (8시간) ──
+  var _INACTIVE_LIMIT = 8 * 60 * 60 * 1000; // 8시간(ms)
+  var _inactivityTimer = null;
+  var _LAST_ACTIVE_KEY = 'hr_last_active';
+
+  function _inactivityStart(){
+    _touchActivity(); // 로그인 시각을 활동 기준으로 설정
+    _inactivityStop(); // 기존 타이머 정리
+    _inactivityTimer = setInterval(_checkInactivity, 60 * 1000); // 1분마다 체크
+    // 활동 감지 이벤트 등록
+    ['mousemove','mousedown','keydown','touchstart','scroll','click'].forEach(function(ev){
+      document.addEventListener(ev, _touchActivity, {passive:true, capture:true});
+    });
+  }
+  function _inactivityStop(){
+    if(_inactivityTimer){ clearInterval(_inactivityTimer); _inactivityTimer=null; }
+    ['mousemove','mousedown','keydown','touchstart','scroll','click'].forEach(function(ev){
+      document.removeEventListener(ev, _touchActivity, {capture:true});
+    });
+  }
+  function _touchActivity(){
+    try{ localStorage.setItem(_LAST_ACTIVE_KEY, Date.now()); }catch(e){}
+  }
+  async function _checkInactivity(){
+    try{
+      var last = parseInt(localStorage.getItem(_LAST_ACTIVE_KEY)||'0', 10);
+      if(!last) return;
+      if(Date.now() - last >= _INACTIVE_LIMIT){
+        _inactivityStop();
+        if(sb) await sb.auth.signOut();
+        window._authUser = null;
+        localStorage.removeItem(_LAST_ACTIVE_KEY);
+        // 만료 안내 후 로그인 화면 표시
+        var authErrEl = document.getElementById('authErr');
+        showAuthScreen();
+        if(authErrEl) authErrEl.textContent = '⏰ 8시간 동안 활동이 없어 자동 로그아웃 되었습니다.';
+      }
+    }catch(e){ console.warn('[inactivity]', e.message); }
+  }
+
   // ── 로그아웃
   window.doLogout = async function(){
     if(!confirm('로그아웃 하시겠습니까?'))return;
+    _inactivityStop();
+    localStorage.removeItem(_LAST_ACTIVE_KEY);
     if(sb)await sb.auth.signOut();
     window._authUser = null;
     _mfaFactorId = null;
