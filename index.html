@@ -576,37 +576,63 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
   </div>
 </div>
 
-<!-- ── 비밀번호 변경 오버레이 ── -->
+<!-- ── 비밀번호 변경 오버레이 (2단계) ── -->
 <div id="changePwOverlay" style="display:none;position:fixed;inset:0;z-index:99998;background:rgba(0,0,0,.45);align-items:center;justify-content:center;">
   <div class="pw-change-box">
     <h2>🔑 비밀번호 변경</h2>
-    <div class="pw-change-sub" id="changePwSubtitle">로그인된 계정: <strong id="changePwEmail">-</strong></div>
-    <div class="auth-field" style="margin-bottom:14px;">
-      <label style="font-size:12px;color:#555;display:block;margin-bottom:5px;font-weight:600;">현재 비밀번호</label>
-      <input id="cpw_current" type="password" placeholder="현재 비밀번호 입력"
-        style="width:100%;padding:10px 12px;border:1.5px solid #dde1e7;border-radius:8px;font-size:13px;font-family:inherit;box-sizing:border-box;"
-        onfocus="this.style.borderColor='#1e3a5f'" onblur="this.style.borderColor='#dde1e7'">
+    <div class="pw-change-sub">로그인된 계정: <strong id="changePwEmail">-</strong></div>
+
+    <!-- STEP 1: 비밀번호 입력 -->
+    <div id="cpwStep1">
+      <div class="auth-field" style="margin-bottom:14px;">
+        <label style="font-size:12px;color:#555;display:block;margin-bottom:5px;font-weight:600;">현재 비밀번호</label>
+        <input id="cpw_current" type="password" placeholder="현재 비밀번호 입력"
+          style="width:100%;padding:10px 12px;border:1.5px solid #dde1e7;border-radius:8px;font-size:13px;font-family:inherit;box-sizing:border-box;"
+          onfocus="this.style.borderColor='#1e3a5f'" onblur="this.style.borderColor='#dde1e7'">
+      </div>
+      <div class="auth-field" style="margin-bottom:6px;">
+        <label style="font-size:12px;color:#555;display:block;margin-bottom:5px;font-weight:600;">새 비밀번호 <span style="color:#b12c2c;">*</span></label>
+        <input id="cpw_new" type="password" placeholder="새 비밀번호 (8자 이상)"
+          style="width:100%;padding:10px 12px;border:1.5px solid #dde1e7;border-radius:8px;font-size:13px;font-family:inherit;box-sizing:border-box;"
+          oninput="cpwStrength(this.value)"
+          onfocus="this.style.borderColor='#1e3a5f'" onblur="this.style.borderColor='#dde1e7'">
+        <div class="pw-strength"><div class="pw-strength-bar" id="cpwStrBar"></div></div>
+        <div class="pw-strength-label" id="cpwStrLabel"></div>
+      </div>
+      <div class="auth-field" style="margin-bottom:18px;">
+        <label style="font-size:12px;color:#555;display:block;margin-bottom:5px;font-weight:600;">새 비밀번호 확인 <span style="color:#b12c2c;">*</span></label>
+        <input id="cpw_confirm" type="password" placeholder="새 비밀번호 다시 입력"
+          style="width:100%;padding:10px 12px;border:1.5px solid #dde1e7;border-radius:8px;font-size:13px;font-family:inherit;box-sizing:border-box;"
+          onfocus="this.style.borderColor='#1e3a5f'" onblur="this.style.borderColor='#dde1e7'"
+          onkeydown="if(event.key==='Enter')cpwNextStep()">
+      </div>
+      <button id="cpwBtn" onclick="cpwNextStep()"
+        style="width:100%;padding:11px;background:#1e3a5f;color:white;border:none;border-radius:8px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;transition:background .15s;margin-bottom:8px;"
+        onmouseover="this.style.background='#16305a'" onmouseout="this.style.background='#1e3a5f'">다음 →</button>
     </div>
-    <div class="auth-field" style="margin-bottom:6px;">
-      <label style="font-size:12px;color:#555;display:block;margin-bottom:5px;font-weight:600;">새 비밀번호 <span style="color:#b12c2c;">*</span></label>
-      <input id="cpw_new" type="password" placeholder="새 비밀번호 (8자 이상)"
-        style="width:100%;padding:10px 12px;border:1.5px solid #dde1e7;border-radius:8px;font-size:13px;font-family:inherit;box-sizing:border-box;"
-        oninput="cpwStrength(this.value)"
-        onfocus="this.style.borderColor='#1e3a5f'" onblur="this.style.borderColor='#dde1e7'">
-      <div class="pw-strength"><div class="pw-strength-bar" id="cpwStrBar"></div></div>
-      <div class="pw-strength-label" id="cpwStrLabel"></div>
+
+    <!-- STEP 2: OTP 확인 -->
+    <div id="cpwStep2" style="display:none;">
+      <p style="font-size:12px;color:#555;text-align:center;margin-bottom:16px;line-height:1.6;">
+        보안을 위해 OTP 인증이 필요합니다.<br>
+        인증 앱의 <strong>6자리 코드</strong>를 입력하세요.
+      </p>
+      <div style="text-align:center;margin-bottom:16px;">
+        <input id="cpw_otp" type="text" inputmode="numeric" maxlength="6" placeholder="000000"
+          style="width:160px;padding:12px;border:1.5px solid #dde1e7;border-radius:8px;font-size:24px;text-align:center;letter-spacing:8px;font-family:monospace;box-sizing:border-box;"
+          onfocus="this.style.borderColor='#1e3a5f'" onblur="this.style.borderColor='#dde1e7'"
+          onkeydown="if(event.key==='Enter')cpwDoChange()">
+      </div>
+      <button id="cpwOtpBtn" onclick="cpwDoChange()"
+        style="width:100%;padding:11px;background:#2d7a3a;color:white;border:none;border-radius:8px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;transition:background .15s;margin-bottom:8px;"
+        onmouseover="this.style.background='#235f2c'" onmouseout="this.style.background='#2d7a3a'">✅ 인증 후 비밀번호 변경</button>
+      <div style="text-align:center;">
+        <span style="font-size:11px;color:#888;cursor:pointer;" onclick="cpwBackToStep1()"
+          onmouseover="this.style.color='#1e3a5f'" onmouseout="this.style.color='#888'">← 이전으로</span>
+      </div>
     </div>
-    <div class="auth-field" style="margin-bottom:18px;">
-      <label style="font-size:12px;color:#555;display:block;margin-bottom:5px;font-weight:600;">새 비밀번호 확인 <span style="color:#b12c2c;">*</span></label>
-      <input id="cpw_confirm" type="password" placeholder="새 비밀번호 다시 입력"
-        style="width:100%;padding:10px 12px;border:1.5px solid #dde1e7;border-radius:8px;font-size:13px;font-family:inherit;box-sizing:border-box;"
-        onfocus="this.style.borderColor='#1e3a5f'" onblur="this.style.borderColor='#dde1e7'"
-        onkeydown="if(event.key==='Enter')doChangePw()">
-    </div>
-    <button id="cpwBtn" onclick="doChangePw()"
-      style="width:100%;padding:11px;background:#1e3a5f;color:white;border:none;border-radius:8px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;transition:background .15s;margin-bottom:8px;"
-      onmouseover="this.style.background='#16305a'" onmouseout="this.style.background='#1e3a5f'">변경하기</button>
-    <div style="text-align:center;">
+
+    <div style="text-align:center;margin-top:8px;">
       <span style="font-size:11px;color:#888;cursor:pointer;" onclick="closeChangePwModal()"
         onmouseover="this.style.color='#1e3a5f'" onmouseout="this.style.color='#888'">취소</span>
     </div>
@@ -3753,29 +3779,57 @@ async function init(){
 })();
 
 // ══════════════════════════════════════════════
-//  비밀번호 변경 (로그인된 사용자 본인)
+//  비밀번호 변경 (2단계: 비밀번호 검증 → MFA OTP → updateUser)
+//  MFA 활성화 계정은 AAL2 세션이 있어야 updateUser 가능
+//  → 재로그인(signInWithPassword) 후 MFA challengeAndVerify로 AAL2 획득
 // ══════════════════════════════════════════════
+var _cpwMfaFactorId   = null;  // 재인증 후 얻은 factor id
+var _cpwMfaChallengeId= null;  // challenge id
+var _cpwNewPw         = null;  // step1에서 검증된 새 비밀번호 임시 보관
+
 function openChangePwModal(){
   if(!sb||!window._authUser){alert('로그인 후 사용하세요.');return;}
-  var emailEl=document.getElementById('changePwEmail');
-  if(emailEl)emailEl.textContent=window._authUser.email||'';
-  // 입력값 초기화
-  ['cpw_current','cpw_new','cpw_confirm'].forEach(function(id){
-    var el=document.getElementById(id);if(el)el.value='';
-  });
-  var strBar=document.getElementById('cpwStrBar');
-  var strLabel=document.getElementById('cpwStrLabel');
-  if(strBar){strBar.style.width='0';strBar.style.background='#e0e0e0';}
-  if(strLabel)strLabel.textContent='';
-  var errEl=document.getElementById('cpwErr');if(errEl)errEl.textContent='';
-  var ov=document.getElementById('changePwOverlay');
-  if(ov){ov.style.display='flex';}
+  document.getElementById('changePwEmail').textContent = window._authUser.email||'';
+  _cpwReset();
+  document.getElementById('changePwOverlay').style.display='flex';
   setTimeout(function(){var el=document.getElementById('cpw_current');if(el)el.focus();},150);
 }
 function closeChangePwModal(){
-  var ov=document.getElementById('changePwOverlay');
-  if(ov)ov.style.display='none';
+  document.getElementById('changePwOverlay').style.display='none';
+  _cpwReset();
 }
+function _cpwReset(){
+  _cpwMfaFactorId=null; _cpwMfaChallengeId=null; _cpwNewPw=null;
+  ['cpw_current','cpw_new','cpw_confirm','cpw_otp'].forEach(function(id){
+    var el=document.getElementById(id);if(el)el.value='';
+  });
+  var bar=document.getElementById('cpwStrBar');
+  var lbl=document.getElementById('cpwStrLabel');
+  if(bar){bar.style.width='0';bar.style.background='#e0e0e0';}
+  if(lbl)lbl.textContent='';
+  _cpwSetErr('');
+  // step1 보이기, step2 숨기기
+  var s1=document.getElementById('cpwStep1');
+  var s2=document.getElementById('cpwStep2');
+  if(s1)s1.style.display='';
+  if(s2)s2.style.display='none';
+  var btn=document.getElementById('cpwBtn');
+  if(btn){btn.disabled=false;btn.textContent='다음 →';}
+}
+function cpwBackToStep1(){
+  _cpwMfaFactorId=null; _cpwMfaChallengeId=null; _cpwNewPw=null;
+  _cpwSetErr('');
+  document.getElementById('cpwStep1').style.display='';
+  document.getElementById('cpwStep2').style.display='none';
+  var btn=document.getElementById('cpwBtn');
+  if(btn){btn.disabled=false;btn.textContent='다음 →';}
+  setTimeout(function(){document.getElementById('cpw_current').focus();},100);
+}
+function _cpwSetErr(msg){
+  var el=document.getElementById('cpwErr');
+  if(el)el.textContent=msg||'';
+}
+
 // 비밀번호 강도 측정
 function cpwStrength(pw){
   var bar=document.getElementById('cpwStrBar');
@@ -3796,57 +3850,110 @@ function cpwStrength(pw){
     {w:'100%',bg:'#15803d',lbl:'매우 강함'}
   ];
   var cfg=configs[Math.min(score,4)];
-  bar.style.width=cfg.w;bar.style.background=cfg.bg;
-  label.textContent=cfg.lbl;
+  bar.style.width=cfg.w; bar.style.background=cfg.bg;
   if(pw.length>0&&pw.length<8){label.textContent='최소 8자리 이상 필요';label.style.color='#ef4444';}
-  else{label.style.color='#888';}
+  else{label.textContent=cfg.lbl;label.style.color='#888';}
 }
-async function doChangePw(){
-  if(!sb||!window._authUser){alert('로그인 상태가 아닙니다.');return;}
-  var currentPw=(document.getElementById('cpw_current')||{}).value||'';
-  var newPw=(document.getElementById('cpw_new')||{}).value||'';
-  var confirmPw=(document.getElementById('cpw_confirm')||{}).value||'';
-  var errEl=document.getElementById('cpwErr');
-  function setErr(msg){if(errEl)errEl.textContent=msg||'';}
-  setErr('');
-  // 유효성 검사
-  if(!currentPw){setErr('현재 비밀번호를 입력하세요.');return;}
-  if(!newPw){setErr('새 비밀번호를 입력하세요.');return;}
-  if(newPw.length<8){setErr('❌ 새 비밀번호는 최소 8자리 이상이어야 합니다.');document.getElementById('cpw_new').focus();return;}
-  if(newPw!==confirmPw){setErr('❌ 새 비밀번호와 확인 비밀번호가 일치하지 않습니다.');document.getElementById('cpw_confirm').focus();return;}
-  if(currentPw===newPw){setErr('❌ 현재 비밀번호와 동일합니다. 다른 비밀번호를 사용하세요.');return;}
+
+// ── STEP 1: 비밀번호 유효성 검사 + 재인증 + MFA 챌린지 시작
+async function cpwNextStep(){
+  if(!sb||!window._authUser){_cpwSetErr('로그인 상태가 아닙니다.');return;}
+  var currentPw = (document.getElementById('cpw_current')||{}).value||'';
+  var newPw     = (document.getElementById('cpw_new')||{}).value||'';
+  var confirmPw = (document.getElementById('cpw_confirm')||{}).value||'';
+  _cpwSetErr('');
+  if(!currentPw){_cpwSetErr('현재 비밀번호를 입력하세요.');document.getElementById('cpw_current').focus();return;}
+  if(!newPw){_cpwSetErr('새 비밀번호를 입력하세요.');document.getElementById('cpw_new').focus();return;}
+  if(newPw.length<8){_cpwSetErr('❌ 새 비밀번호는 최소 8자리 이상이어야 합니다.');document.getElementById('cpw_new').focus();return;}
+  if(newPw!==confirmPw){_cpwSetErr('❌ 새 비밀번호와 확인 비밀번호가 일치하지 않습니다.');document.getElementById('cpw_confirm').focus();return;}
+  if(currentPw===newPw){_cpwSetErr('❌ 현재 비밀번호와 동일합니다. 다른 비밀번호를 사용하세요.');return;}
+
   var btn=document.getElementById('cpwBtn');
-  if(btn){btn.disabled=true;btn.textContent='변경 중...';}
+  if(btn){btn.disabled=true;btn.textContent='확인 중...';}
+
   try{
-    // 현재 비밀번호 재인증 (signInWithPassword로 검증)
     var email=window._authUser.email||'';
+    // 1) 현재 비밀번호로 재인증 → 새 AAL1 세션 발급
     var reAuth=await sb.auth.signInWithPassword({email:email,password:currentPw});
     if(reAuth.error){
-      setErr('❌ 현재 비밀번호가 올바르지 않습니다.');
-      if(btn){btn.disabled=false;btn.textContent='변경하기';}
+      _cpwSetErr('❌ 현재 비밀번호가 올바르지 않습니다.');
+      if(btn){btn.disabled=false;btn.textContent='다음 →';}
       document.getElementById('cpw_current').focus();
       return;
     }
-    // 비밀번호 업데이트
-    var upRes=await sb.auth.updateUser({password:newPw});
+    // 2) MFA factor 확인
+    var facRes=await sb.auth.mfa.listFactors();
+    var totp=facRes.data&&facRes.data.totp&&facRes.data.totp[0];
+    if(!totp){
+      // MFA 미등록 계정 → AAL2 불필요, 바로 비밀번호 변경
+      var upRes=await sb.auth.updateUser({password:newPw});
+      if(upRes.error){_cpwSetErr('❌ 변경 실패: '+upRes.error.message);if(btn){btn.disabled=false;btn.textContent='다음 →';}return;}
+      closeChangePwModal();
+      _cpwShowSuccess();
+      return;
+    }
+    // 3) MFA 챌린지 시작
+    _cpwMfaFactorId=totp.id;
+    var chalRes=await sb.auth.mfa.challenge({factorId:_cpwMfaFactorId});
+    if(chalRes.error){_cpwSetErr('❌ MFA 오류: '+chalRes.error.message);if(btn){btn.disabled=false;btn.textContent='다음 →';}return;}
+    _cpwMfaChallengeId=chalRes.data.id;
+    _cpwNewPw=newPw;  // step2로 전달
+    // STEP2로 전환
+    document.getElementById('cpwStep1').style.display='none';
+    document.getElementById('cpwStep2').style.display='';
+    _cpwSetErr('');
+    setTimeout(function(){var inp=document.getElementById('cpw_otp');if(inp)inp.focus();},150);
+  }catch(e){
+    _cpwSetErr('❌ 오류: '+e.message);
+    if(btn){btn.disabled=false;btn.textContent='다음 →';}
+  }
+}
+
+// ── STEP 2: OTP 검증 → AAL2 획득 → 비밀번호 변경
+async function cpwDoChange(){
+  var code=(document.getElementById('cpw_otp')||{}).value||'';
+  code=code.replace(/\s/g,'');
+  _cpwSetErr('');
+  if(code.length!==6){_cpwSetErr('6자리 코드를 입력하세요.');return;}
+  if(!_cpwMfaFactorId||!_cpwMfaChallengeId){_cpwSetErr('인증 세션이 만료되었습니다. 처음부터 다시 시도하세요.');cpwBackToStep1();return;}
+
+  var btn=document.getElementById('cpwOtpBtn');
+  if(btn){btn.disabled=true;btn.textContent='인증 중...';}
+
+  try{
+    // 1) MFA challengeAndVerify → AAL2 세션 획득
+    var verRes=await sb.auth.mfa.challengeAndVerify({
+      factorId:_cpwMfaFactorId,
+      code:code
+    });
+    if(verRes.error){
+      _cpwSetErr('❌ 코드 오류: '+verRes.error.message);
+      if(btn){btn.disabled=false;btn.textContent='✅ 인증 후 비밀번호 변경';}
+      document.getElementById('cpw_otp').select();
+      return;
+    }
+    // 2) AAL2 세션으로 비밀번호 변경
+    var upRes=await sb.auth.updateUser({password:_cpwNewPw});
     if(upRes.error){
-      setErr('❌ 변경 실패: '+upRes.error.message);
-      if(btn){btn.disabled=false;btn.textContent='변경하기';}
+      _cpwSetErr('❌ 변경 실패: '+upRes.error.message);
+      if(btn){btn.disabled=false;btn.textContent='✅ 인증 후 비밀번호 변경';}
       return;
     }
     // 성공
     closeChangePwModal();
-    // 성공 토스트 표시
-    var toast=document.getElementById('execToast');
-    if(toast){toast.textContent='✅ 비밀번호가 성공적으로 변경되었습니다.';toast.classList.add('show');clearTimeout(window._exToastT);window._exToastT=setTimeout(function(){toast.classList.remove('show');},3000);}
-    else{alert('✅ 비밀번호가 성공적으로 변경되었습니다.');}
+    _cpwShowSuccess();
   }catch(e){
-    setErr('❌ 오류: '+e.message);
-    if(btn){btn.disabled=false;btn.textContent='변경하기';}
-  }finally{
-    if(btn&&btn.disabled){btn.disabled=false;btn.textContent='변경하기';}
+    _cpwSetErr('❌ 오류: '+e.message);
+    if(btn){btn.disabled=false;btn.textContent='✅ 인증 후 비밀번호 변경';}
   }
 }
+
+function _cpwShowSuccess(){
+  var toast=document.getElementById('execToast');
+  if(toast){toast.textContent='✅ 비밀번호가 성공적으로 변경되었습니다.';toast.classList.add('show');clearTimeout(window._exToastT);window._exToastT=setTimeout(function(){toast.classList.remove('show');},3000);}
+  else{alert('✅ 비밀번호가 성공적으로 변경되었습니다.');}
+}
+
 // 오버레이 바깥 클릭 시 닫기
 document.addEventListener('DOMContentLoaded',function(){
   var cpwOv=document.getElementById('changePwOverlay');
