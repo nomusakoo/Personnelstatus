@@ -502,6 +502,15 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
   .sim-btn{padding:5px 10px;font-size:11px;}
   .sim-chip{font-size:10px;padding:2px 4px;}
 }
+/* ── 비밀번호 변경 모달 ── */
+.pw-change-box{background:white;border-radius:16px;padding:32px 28px;width:360px;max-width:93vw;box-shadow:0 12px 48px rgba(0,0,0,.45);}
+.pw-change-box h2{font-size:15px;color:#1e3a5f;font-weight:700;margin-bottom:6px;}
+.pw-change-sub{font-size:12px;color:#888;margin-bottom:20px;line-height:1.5;}
+.pw-change-sub strong{color:#1e3a5f;}
+.pw-strength{height:4px;border-radius:2px;margin-top:4px;transition:width .3s,background .3s;background:#e0e0e0;position:relative;overflow:hidden;}
+.pw-strength-bar{height:100%;border-radius:2px;width:0;transition:width .35s,background .35s;}
+.pw-strength-label{font-size:10px;margin-top:3px;color:#aaa;min-height:14px;}
+
 /* ── 파견직원 현황 ── */
 .dp-section{margin-top:20px;background:#fff;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.07);overflow:hidden;}
 .dp-section-head{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#fff;border-bottom:1px solid #e8ecf0;}
@@ -567,6 +576,44 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
   </div>
 </div>
 
+<!-- ── 비밀번호 변경 오버레이 ── -->
+<div id="changePwOverlay" style="display:none;position:fixed;inset:0;z-index:99998;background:rgba(0,0,0,.45);align-items:center;justify-content:center;">
+  <div class="pw-change-box">
+    <h2>🔑 비밀번호 변경</h2>
+    <div class="pw-change-sub" id="changePwSubtitle">로그인된 계정: <strong id="changePwEmail">-</strong></div>
+    <div class="auth-field" style="margin-bottom:14px;">
+      <label style="font-size:12px;color:#555;display:block;margin-bottom:5px;font-weight:600;">현재 비밀번호</label>
+      <input id="cpw_current" type="password" placeholder="현재 비밀번호 입력"
+        style="width:100%;padding:10px 12px;border:1.5px solid #dde1e7;border-radius:8px;font-size:13px;font-family:inherit;box-sizing:border-box;"
+        onfocus="this.style.borderColor='#1e3a5f'" onblur="this.style.borderColor='#dde1e7'">
+    </div>
+    <div class="auth-field" style="margin-bottom:6px;">
+      <label style="font-size:12px;color:#555;display:block;margin-bottom:5px;font-weight:600;">새 비밀번호 <span style="color:#b12c2c;">*</span></label>
+      <input id="cpw_new" type="password" placeholder="새 비밀번호 (8자 이상)"
+        style="width:100%;padding:10px 12px;border:1.5px solid #dde1e7;border-radius:8px;font-size:13px;font-family:inherit;box-sizing:border-box;"
+        oninput="cpwStrength(this.value)"
+        onfocus="this.style.borderColor='#1e3a5f'" onblur="this.style.borderColor='#dde1e7'">
+      <div class="pw-strength"><div class="pw-strength-bar" id="cpwStrBar"></div></div>
+      <div class="pw-strength-label" id="cpwStrLabel"></div>
+    </div>
+    <div class="auth-field" style="margin-bottom:18px;">
+      <label style="font-size:12px;color:#555;display:block;margin-bottom:5px;font-weight:600;">새 비밀번호 확인 <span style="color:#b12c2c;">*</span></label>
+      <input id="cpw_confirm" type="password" placeholder="새 비밀번호 다시 입력"
+        style="width:100%;padding:10px 12px;border:1.5px solid #dde1e7;border-radius:8px;font-size:13px;font-family:inherit;box-sizing:border-box;"
+        onfocus="this.style.borderColor='#1e3a5f'" onblur="this.style.borderColor='#dde1e7'"
+        onkeydown="if(event.key==='Enter')doChangePw()">
+    </div>
+    <button id="cpwBtn" onclick="doChangePw()"
+      style="width:100%;padding:11px;background:#1e3a5f;color:white;border:none;border-radius:8px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;transition:background .15s;margin-bottom:8px;"
+      onmouseover="this.style.background='#16305a'" onmouseout="this.style.background='#1e3a5f'">변경하기</button>
+    <div style="text-align:center;">
+      <span style="font-size:11px;color:#888;cursor:pointer;" onclick="closeChangePwModal()"
+        onmouseover="this.style.color='#1e3a5f'" onmouseout="this.style.color='#888'">취소</span>
+    </div>
+    <div id="cpwErr" style="color:#b12c2c;font-size:12px;margin-top:10px;text-align:center;min-height:18px;line-height:1.4;"></div>
+  </div>
+</div>
+
 <div id="syncBadge"><i class="spin">↻</i> 업데이트 중...</div>
 <div id="printTitle" style="display:none;">
   <div class="print-title-main" id="printTitleText">인원현황 보고서</div>
@@ -594,6 +641,7 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
   <button class="tbtn ml" onclick="doPrint()">🖨 인쇄</button>
   <div class="sep"></div>
   <div class="auth-user-info" id="authUserInfo">👤 <span id="authUserEmail"></span></div>
+  <button class="tbtn" onclick="openChangePwModal()" id="changePwBtn" style="background:rgba(37,99,168,.35);border-color:rgba(37,99,168,.6);" title="비밀번호 변경">🔑 비밀번호 변경</button>
   <button class="tbtn" onclick="doLogout()" id="logoutBtn" style="background:rgba(177,44,44,.3);border-color:rgba(177,44,44,.5);" title="로그아웃">🔓 로그아웃</button>
 </div>
 
@@ -3612,7 +3660,25 @@ async function init(){
       _mfaFactorId = res.data.id;
       var qrDiv=document.getElementById('qrWrap');
       if(qrDiv){
-        qrDiv.innerHTML='<img src="'+res.data.totp.qr_code+'" alt="QR코드">'
+        var qrVal = res.data.totp.qr_code || '';
+        var qrHtml = '';
+        if(qrVal.trim().startsWith('<svg') || qrVal.trim().startsWith('<?xml')){
+          // SVG 문자열 → 직접 innerHTML 삽입
+          qrHtml = '<div style="width:160px;height:160px;margin:0 auto;border:1px solid #eee;border-radius:8px;overflow:hidden;background:#fff;">'
+            + qrVal + '</div>';
+        } else if(qrVal.startsWith('data:')){
+          // 이미 data URI → img 사용
+          qrHtml = '<img src="'+qrVal+'" alt="QR코드" style="width:160px;height:160px;border:1px solid #eee;border-radius:8px;">';
+        } else {
+          // 그 외(otpauth URI 등) → base64 인코딩 후 img
+          try{
+            var b64 = btoa(unescape(encodeURIComponent(qrVal)));
+            qrHtml = '<img src="data:image/svg+xml;base64,'+b64+'" alt="QR코드" style="width:160px;height:160px;border:1px solid #eee;border-radius:8px;">';
+          }catch(e2){
+            qrHtml = '<div style="font-size:11px;color:#888;word-break:break-all;padding:8px;">'+qrVal+'</div>';
+          }
+        }
+        qrDiv.innerHTML = qrHtml
           +'<div class="qr-secret">수동 입력 코드: '+res.data.totp.secret+'</div>';
       }
       showAuthStep('authStepEnroll');
@@ -3685,6 +3751,107 @@ async function init(){
     showAuthStep('authStepLogin');
   };
 })();
+
+// ══════════════════════════════════════════════
+//  비밀번호 변경 (로그인된 사용자 본인)
+// ══════════════════════════════════════════════
+function openChangePwModal(){
+  if(!sb||!window._authUser){alert('로그인 후 사용하세요.');return;}
+  var emailEl=document.getElementById('changePwEmail');
+  if(emailEl)emailEl.textContent=window._authUser.email||'';
+  // 입력값 초기화
+  ['cpw_current','cpw_new','cpw_confirm'].forEach(function(id){
+    var el=document.getElementById(id);if(el)el.value='';
+  });
+  var strBar=document.getElementById('cpwStrBar');
+  var strLabel=document.getElementById('cpwStrLabel');
+  if(strBar){strBar.style.width='0';strBar.style.background='#e0e0e0';}
+  if(strLabel)strLabel.textContent='';
+  var errEl=document.getElementById('cpwErr');if(errEl)errEl.textContent='';
+  var ov=document.getElementById('changePwOverlay');
+  if(ov){ov.style.display='flex';}
+  setTimeout(function(){var el=document.getElementById('cpw_current');if(el)el.focus();},150);
+}
+function closeChangePwModal(){
+  var ov=document.getElementById('changePwOverlay');
+  if(ov)ov.style.display='none';
+}
+// 비밀번호 강도 측정
+function cpwStrength(pw){
+  var bar=document.getElementById('cpwStrBar');
+  var label=document.getElementById('cpwStrLabel');
+  if(!bar||!label)return;
+  if(!pw){bar.style.width='0';label.textContent='';return;}
+  var score=0;
+  if(pw.length>=8)score++;
+  if(pw.length>=12)score++;
+  if(/[A-Z]/.test(pw))score++;
+  if(/[0-9]/.test(pw))score++;
+  if(/[^A-Za-z0-9]/.test(pw))score++;
+  var configs=[
+    {w:'20%',bg:'#ef4444',lbl:'매우 약함'},
+    {w:'40%',bg:'#f97316',lbl:'약함'},
+    {w:'60%',bg:'#eab308',lbl:'보통'},
+    {w:'80%',bg:'#22c55e',lbl:'강함'},
+    {w:'100%',bg:'#15803d',lbl:'매우 강함'}
+  ];
+  var cfg=configs[Math.min(score,4)];
+  bar.style.width=cfg.w;bar.style.background=cfg.bg;
+  label.textContent=cfg.lbl;
+  if(pw.length>0&&pw.length<8){label.textContent='최소 8자리 이상 필요';label.style.color='#ef4444';}
+  else{label.style.color='#888';}
+}
+async function doChangePw(){
+  if(!sb||!window._authUser){alert('로그인 상태가 아닙니다.');return;}
+  var currentPw=(document.getElementById('cpw_current')||{}).value||'';
+  var newPw=(document.getElementById('cpw_new')||{}).value||'';
+  var confirmPw=(document.getElementById('cpw_confirm')||{}).value||'';
+  var errEl=document.getElementById('cpwErr');
+  function setErr(msg){if(errEl)errEl.textContent=msg||'';}
+  setErr('');
+  // 유효성 검사
+  if(!currentPw){setErr('현재 비밀번호를 입력하세요.');return;}
+  if(!newPw){setErr('새 비밀번호를 입력하세요.');return;}
+  if(newPw.length<8){setErr('❌ 새 비밀번호는 최소 8자리 이상이어야 합니다.');document.getElementById('cpw_new').focus();return;}
+  if(newPw!==confirmPw){setErr('❌ 새 비밀번호와 확인 비밀번호가 일치하지 않습니다.');document.getElementById('cpw_confirm').focus();return;}
+  if(currentPw===newPw){setErr('❌ 현재 비밀번호와 동일합니다. 다른 비밀번호를 사용하세요.');return;}
+  var btn=document.getElementById('cpwBtn');
+  if(btn){btn.disabled=true;btn.textContent='변경 중...';}
+  try{
+    // 현재 비밀번호 재인증 (signInWithPassword로 검증)
+    var email=window._authUser.email||'';
+    var reAuth=await sb.auth.signInWithPassword({email:email,password:currentPw});
+    if(reAuth.error){
+      setErr('❌ 현재 비밀번호가 올바르지 않습니다.');
+      if(btn){btn.disabled=false;btn.textContent='변경하기';}
+      document.getElementById('cpw_current').focus();
+      return;
+    }
+    // 비밀번호 업데이트
+    var upRes=await sb.auth.updateUser({password:newPw});
+    if(upRes.error){
+      setErr('❌ 변경 실패: '+upRes.error.message);
+      if(btn){btn.disabled=false;btn.textContent='변경하기';}
+      return;
+    }
+    // 성공
+    closeChangePwModal();
+    // 성공 토스트 표시
+    var toast=document.getElementById('execToast');
+    if(toast){toast.textContent='✅ 비밀번호가 성공적으로 변경되었습니다.';toast.classList.add('show');clearTimeout(window._exToastT);window._exToastT=setTimeout(function(){toast.classList.remove('show');},3000);}
+    else{alert('✅ 비밀번호가 성공적으로 변경되었습니다.');}
+  }catch(e){
+    setErr('❌ 오류: '+e.message);
+    if(btn){btn.disabled=false;btn.textContent='변경하기';}
+  }finally{
+    if(btn&&btn.disabled){btn.disabled=false;btn.textContent='변경하기';}
+  }
+}
+// 오버레이 바깥 클릭 시 닫기
+document.addEventListener('DOMContentLoaded',function(){
+  var cpwOv=document.getElementById('changePwOverlay');
+  if(cpwOv)cpwOv.addEventListener('click',function(e){if(e.target===cpwOv)closeChangePwModal();});
+});
 
 // ══════════════════════════════════════════════
 //  임원 일정 (exec_events 테이블 — 날짜별 일정 캘린더)
