@@ -1022,6 +1022,7 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
           <th style="min-width:80px;">직책</th>
           <th style="min-width:90px;">상태</th>
           <th style="min-width:80px;">입사일</th>
+          <th style="min-width:60px;">출생년도</th>
           <th style="min-width:120px;">비고</th>
         </tr>
       </thead>
@@ -1051,6 +1052,7 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
     <div class="fr"><label>팀</label><select id="f_team"></select></div>
     <div class="fr"><label>직책</label><input id="f_position" placeholder="팀장/법인장"></div>
     <div class="fr"><label>입사일</label><input type="date" id="f_joinDate"></div>
+    <div class="fr"><label>출생년도 <span style="font-weight:400;color:#aaa;font-size:11px;">(예: 87)</span></label><input id="f_birth_year" type="text" inputmode="numeric" maxlength="4" placeholder="87"></div>
   </div>
   <div class="row2">
     <div class="fr"><label>사업장</label>
@@ -1330,6 +1332,19 @@ const hrBarLabels={
 // 근속 서브라인 생성
 function _calcSubParts(e){
   var p=[];
+  // 출생년도 & 만 나이
+  if(e&&e.birth_year){
+    var by=parseInt(e.birth_year,10);
+    if(!isNaN(by)){
+      var fullYear=by<100?(by>=0&&by<=30?2000+by:1900+by):by;
+      var today=new Date();
+      var age=today.getFullYear()-fullYear;
+      // 아직 생일이 안 지난 경우 -1 (월일 모르므로 연도로만 계산)
+      p.push(String(by).padStart(2,'0')+'년');
+      p.push(age+'세');
+    }
+  }
+  // 근속년수
   if(e&&e.join_date){
     var jd=new Date(normalizeDate(e.join_date));
     if(!isNaN(jd)&&jd.getFullYear()>1970){
@@ -2228,7 +2243,9 @@ function renderMatrix(){
           return(!isNaN(jd)&&jd.getFullYear()>1970)?Math.floor((Date.now()-jd)/(365.25*864e5)):-1;
         }
         function byear(e){
-          return 9999;
+          if(!e.birth_year)return 9999;
+          var by=parseInt(e.birth_year,10);
+          return isNaN(by)?9999:(by<100?(by>=0&&by<=30?2000+by:1900+by):by);
         }
         var ta=tenure(a),tb=tenure(b);
         if(tb!==ta)return tb-ta;         // 근속 높은 순
@@ -2240,12 +2257,8 @@ function renderMatrix(){
       members.forEach(e=>{
       const bg=STATUS_COLOR[e.status]||'';
       const fc=e.status==='leave_abs'?'color:#1d4ed8;font-style:italic;':'';
-      const _jdStr=e.join_date?normalizeDate(e.join_date):'';
-      const _jd=_jdStr?new Date(_jdStr):null;
-      const tenure=(_jd&&!isNaN(_jd)&&_jd.getFullYear()>1970)?Math.floor((Date.now()-_jd)/(365.25*864e5)):'';
-      let subParts=[];
-      if(tenure!=='')if(tenure>=0)subParts.push(tenure+'년');
-      const subLine=subParts.length?`<span class="emp-sub">${subParts.join('·')}</span>`:'';
+      const subParts=_calcSubParts(e);
+      const subLine=subParts.length?`<span class="emp-sub">${subParts.join(' · ')}</span>`:'';
       c+=`<span class="emp-name" style="background:${filterText&&e.name.toLowerCase().includes(filterText)?'#dbeafe':bg};${filterText&&e.name.toLowerCase().includes(filterText)?'font-weight:700;color:#1d4ed8;':fc}" onclick="openEditEmpModal('${e.id}')"${e.note?' data-note="'+e.note.replace(/"/g,'&quot;')+ '"':''} >${e.name}${subLine}</span>`;
     });
       leavers.forEach(e=>{c+=`<span class="emp-name" style="background:#f8d7da;text-decoration:line-through;color:#999;" onclick="openEditEmpModal('${e.id}')">${e.name}</span>`;});
@@ -2566,7 +2579,7 @@ function openAddEmpModal(){
   if(!_requireDB())return;
   document.getElementById('empModalTitle').textContent='직원 추가';
   document.getElementById('delEmpBtn').style.display='none';
-  ['f_name','f_position','f_note','f_workplace','f_emp_type'].forEach(function(i){
+  ['f_name','f_position','f_note','f_workplace','f_emp_type','f_birth_year'].forEach(function(i){
     var el=document.getElementById(i);if(el)el.value='';
   });
   var fs=document.getElementById('f_status');if(fs)fs.value='normal';
@@ -2591,7 +2604,7 @@ function openEditEmpModal(id){
   var set=function(elId,val){var el=document.getElementById(elId);if(el)el.value=val||'';};
   set('f_name',e.name);set('f_position',e.position);set('f_joinDate',e.join_date);
   set('f_note',e.note);
-  set('f_workplace',e.workplace);set('f_emp_type',e.emp_type);
+  set('f_workplace',e.workplace);set('f_emp_type',e.emp_type);set('f_birth_year',e.birth_year||'');
   var fs=document.getElementById('f_status');if(fs)fs.value=e.status||'normal';
   buildGradeOptions(e.grade||'부장급');
   buildDivOptions(e.div_id||'');
@@ -2617,7 +2630,8 @@ async function saveEmp(){
     status:(document.getElementById('f_status')||{}).value||'normal',
     note:(document.getElementById('f_note')||{}).value||'',
     workplace:(document.getElementById('f_workplace')||{}).value||'',
-    emp_type:(document.getElementById('f_emp_type')||{}).value||''
+    emp_type:(document.getElementById('f_emp_type')||{}).value||'',
+    birth_year:(document.getElementById('f_birth_year')||{}).value||''
   };
   if(editingEmpId){
     var r=await sb.from('employees').update(data).eq('id',editingEmpId);
@@ -2843,6 +2857,7 @@ function makeBulkRow(n){
     +'<td><input type="text" placeholder="팀장"></td>'
     +'<td><select>'+statusOpts+'</select></td>'
     +'<td><input type="date"></td>'
+    +'<td><input type="text" inputmode="numeric" maxlength="4" placeholder="87" style="width:54px;"></td>'
     +'<td><input type="text" placeholder="비고"></td>';
   return tr;
 }
@@ -2892,7 +2907,8 @@ async function saveBulkInput(){
       position:cells[4].value.trim(),
       status:cells[5].value||'normal',
       join_date:cells[6].value||'',
-      note:cells[7].value.trim()
+      birth_year:cells[7].value.trim(),
+      note:cells[8].value.trim()
     });
   });
   if(!items.length){alert('입력된 데이터가 없습니다.');return;}
@@ -2911,6 +2927,7 @@ async function saveBulkInput(){
       position:item.position,
       status:item.status,
       note:item.note,
+      birth_year:item.birth_year||'',
       workplace:'',emp_type:''
     };
     if(item.join_date)payload.join_date=item.join_date;
@@ -2958,8 +2975,8 @@ function exportExcel(){
   const divMap=Object.fromEntries(divisions.map(d=>[d.id,d.name]));
   const teamMap={};const teamCenterMap={};
   divisions.forEach(d=>(d.teams||[]).forEach(t=>{teamMap[t.id]=t.name;teamCenterMap[t.id]=(t.center_name||'');}));
-  const empRows=[['이름','본부','센터/단/소','팀','직급','직책','입사일','사업장','근무직유형','상태','비고']];
-  employees.forEach(e=>empRows.push([e.name||'',divMap[e.div_id]||'',teamCenterMap[e.team_id]||'',teamMap[e.team_id]||'',e.grade||'',e.position||'',e.join_date||'',e.workplace||'',e.emp_type||'',({normal:'재직',join:'입사',leave:'퇴사',transfer:'인사이동',leave_abs:'휴직',dispatch:'파견'}[e.status]||'재직'),e.note||'']));
+  const empRows=[['이름','본부','센터/단/소','팀','직급','직책','입사일','출생년도','사업장','근무직유형','상태','비고']];
+  employees.forEach(e=>empRows.push([e.name||'',divMap[e.div_id]||'',teamCenterMap[e.team_id]||'',teamMap[e.team_id]||'',e.grade||'',e.position||'',e.join_date||'',e.birth_year||'',e.workplace||'',e.emp_type||'',({normal:'재직',join:'입사',leave:'퇴사',transfer:'인사이동',leave_abs:'휴직',dispatch:'파견'}[e.status]||'재직'),e.note||'']));
   const ws1=XLSX.utils.aoa_to_sheet(empRows);ws1['!cols']=[{wch:10},{wch:14},{wch:14},{wch:14},{wch:10},{wch:10},{wch:12},{wch:8},{wch:8},{wch:10},{wch:4},{wch:12},{wch:8},{wch:20}];
   XLSX.utils.book_append_sheet(wb,ws1,'인원현황');
   const execRows=[['직책','이름','임기 시작','임기 종료']];executives.forEach(e=>execRows.push([e.title||'',e.name||'',e.term_start||'',e.term_end||'']));
@@ -2997,7 +3014,7 @@ async function importExcel(event){
       const headers=rawAll[0].map(function(h){return String(h||'').trim();});
       const ci=function(name){return headers.indexOf(name);};
       const iNm=ci('이름'),iBu=ci('본부'),iCt=ci('센터/단/소'),iTm=ci('팀'),iGr=ci('직급'),iPo=ci('직책');
-      const iJd=ci('입사일'),iWp=ci('사업장'),iEt=ci('근무직유형'),iSt=ci('상태'),iNo=ci('비고');
+      const iJd=ci('입사일'),iBy=ci('출생년도'),iWp=ci('사업장'),iEt=ci('근무직유형'),iSt=ci('상태'),iNo=ci('비고');
       if(iNm<0||iTm<0){alert('필수 열(이름, 팀) 누락. 헤더: '+headers.join(', '));return;}
       const divByName={};
       divisions.forEach(function(d){divByName[d.name.trim()]=d;});
@@ -3029,7 +3046,8 @@ async function importExcel(event){
           status:statusMap[iSt>=0?String(r[iSt]||'').trim():'재직']||'normal',
           note:iNo>=0?String(r[iNo]||'').trim():'',
           workplace:iWp>=0?String(r[iWp]||'').trim():'',
-          emp_type:iEt>=0?String(r[iEt]||'').trim():''
+          emp_type:iEt>=0?String(r[iEt]||'').trim():'',
+          birth_year:iBy>=0?String(r[iBy]||'').trim():''
         });
       });
       const matched=newEmps.filter(function(e){return e.team_id;}).length;
