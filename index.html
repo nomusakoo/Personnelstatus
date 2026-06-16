@@ -1322,6 +1322,7 @@ const hrBarLabels={
   id:'hrBarLabels',
   afterDatasetsDraw:function(chart){
     var ctx=chart.ctx;
+    var isVertical=chart.options.plugins&&chart.options.plugins.hrBarLabels&&chart.options.plugins.hrBarLabels.vertical;
     chart.data.datasets.forEach(function(dataset,i){
       var meta=chart.getDatasetMeta(i);
       if(meta.hidden)return;
@@ -1331,9 +1332,17 @@ const hrBarLabels={
         ctx.save();
         ctx.fillStyle='#1e3a5f';
         ctx.font='bold 11px Malgun Gothic,sans-serif';
-        ctx.textBaseline='middle';
-        ctx.textAlign='left';
-        ctx.fillText(val, bar.x+5, bar.y);
+        if(isVertical){
+          // 세로 막대: 막대 상단 위 8px에 중앙 정렬
+          ctx.textBaseline='bottom';
+          ctx.textAlign='center';
+          ctx.fillText(val, bar.x, bar.y-4);
+        }else{
+          // 가로 막대: 막대 오른쪽 끝 옆
+          ctx.textBaseline='middle';
+          ctx.textAlign='left';
+          ctx.fillText(val, bar.x+5, bar.y);
+        }
         ctx.restore();
       });
     });
@@ -2146,13 +2155,14 @@ function renderAgeChart(){
         tooltip:{callbacks:{label:function(c){
           var pct=total?Math.round(c.parsed.y/total*100):0;
           return c.parsed.y+'명 ('+pct+'%)';
-        }}}
+        }}},
+        hrBarLabels:{vertical:true}
       },
       scales:{
         x:{ticks:{font:{size:11}},grid:{display:false}},
         y:{beginAtZero:true,ticks:{font:{size:11},stepSize:1},grid:{color:'#f0f0f0'}}
       },
-      layout:{padding:{top:20}}
+      layout:{padding:{top:24}}
     }
   });
 }
@@ -2196,13 +2206,14 @@ function renderTenureChart(){
         tooltip:{callbacks:{label:function(c){
           var pct=total?Math.round(c.parsed.y/total*100):0;
           return c.parsed.y+'명 ('+pct+'%)';
-        }}}
+        }}},
+        hrBarLabels:{vertical:true}
       },
       scales:{
         x:{ticks:{font:{size:11}},grid:{display:false}},
         y:{beginAtZero:true,ticks:{font:{size:11},stepSize:1},grid:{color:'#f0f0f0'}}
       },
-      layout:{padding:{top:20}}
+      layout:{padding:{top:24}}
     }
   });
 }
