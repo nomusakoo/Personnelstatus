@@ -1451,7 +1451,6 @@ function sbClearError(){
 async function connectSupabase(){
   var btn=document.getElementById('connectBtn');
   var errDiv=document.getElementById('sbError');
-  if(btn){btn.textContent='⟳ 연결 중...';btn.disabled=true;}
   if(errDiv)errDiv.style.display='none';
 
   var url=(document.getElementById('sb_url')||{}).value||'';
@@ -1465,17 +1464,26 @@ async function connectSupabase(){
     if(btn){btn.textContent='연결하기';btn.disabled=false;}
   }
 
-  if(!url||!key){showErr('❌ URL과 Key를 모두 입력하세요.');restoreBtn();return;}
+  if(!url||!key){showErr('❌ URL과 Key를 모두 입력하세요.');return;}
 
   var SBLib=window.supabase||(typeof supabase!=='undefined'?supabase:null);
   if(!SBLib||!SBLib.createClient){
     showErr('❌ Supabase 라이브러리 로드 실패. 새로고침하세요.');
-    restoreBtn();return;
+    return;
   }
 
   var savedUrl=localStorage.getItem('sb_url')||'';
   var savedKey=localStorage.getItem('sb_key')||'';
   var isSameClient=(sb && savedUrl===url && savedKey===key);
+
+  // 이미 동일 클라이언트로 연결 완료 상태면 모달만 닫고 종료
+  if(isSameClient){
+    document.getElementById('setupOverlay').classList.remove('show');
+    restoreBtn();
+    return;
+  }
+
+  if(btn){btn.textContent='⟳ 연결 중...';btn.disabled=true;}
 
   // ① DB 연결 테스트
   try{
@@ -3421,6 +3429,10 @@ async function init(){
           document.getElementById('setupOverlay').classList.remove('show');
           if(document.getElementById('sb_url'))document.getElementById('sb_url').value=savedUrl;
           if(document.getElementById('sb_key'))document.getElementById('sb_key').value=savedKey;
+          // Auth 상태 변화 리스너 등록
+          sb.auth.onAuthStateChange(function(event){
+            if(event==='SIGNED_OUT'){typeof showAuthScreen==='function'&&showAuthScreen();}
+          });
           setConnected(true);
           // Auth 세션 확인 → 로그인 화면 or 대시보드 진입
           await checkAuthSession();
