@@ -547,6 +547,11 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
           onkeydown="if(event.key==='Enter')doLogin()">
       </div>
       <button class="auth-btn" id="loginBtn" onclick="doLogin()">로그인</button>
+      <p style="text-align:center;margin-top:12px;">
+        <span onclick="showAuthStep('authStepResetPw')"
+          style="font-size:12px;color:#888;cursor:pointer;text-decoration:underline;"
+          onmouseover="this.style.color='#1e3a5f'" onmouseout="this.style.color='#888'">비밀번호를 잊으셨나요?</span>
+      </p>
     </div>
 
     <!-- STEP 2: MFA 코드 입력 (기등록자) -->
@@ -570,6 +575,28 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
       </div>
       <button class="auth-btn green" style="margin-top:14px;" onclick="doEnrollVerify()">등록 완료</button>
       <p class="auth-back" onclick="authGoBack()">← 로그인 화면으로</p>
+    </div>
+
+    <!-- STEP 4: 비밀번호 재설정 이메일 요청 -->
+    <div id="authStepResetPw" class="auth-step">
+      <p class="mfa-hint" style="margin-bottom:18px;">가입하신 <strong>이메일 주소</strong>를 입력하시면<br>비밀번호 재설정 링크를 보내드립니다.</p>
+      <div class="auth-field">
+        <label>이메일</label>
+        <input id="resetPwEmail" type="email" placeholder="example@nhagriculture.com" autocomplete="email"
+          onkeydown="if(event.key==='Enter')doResetPw()">
+      </div>
+      <button class="auth-btn" id="resetPwBtn" onclick="doResetPw()">재설정 링크 발송</button>
+      <p class="auth-back" onclick="authGoBack()">← 로그인 화면으로</p>
+    </div>
+
+    <!-- STEP 5: 재설정 이메일 발송 완료 -->
+    <div id="authStepResetDone" class="auth-step">
+      <div style="text-align:center;padding:10px 0 18px;">
+        <div style="font-size:40px;margin-bottom:12px;">📧</div>
+        <p style="font-size:14px;color:#1e3a5f;font-weight:700;margin-bottom:8px;">재설정 링크를 발송했습니다</p>
+        <p style="font-size:12px;color:#666;line-height:1.7;" id="resetDoneMsg">입력하신 이메일로 비밀번호 재설정 링크를 보냈습니다.<br>메일함을 확인해 주세요.<br><span style="color:#999;font-size:11px;">(스팸함도 확인해 보세요)</span></p>
+      </div>
+      <button class="auth-btn" onclick="authGoBack()">로그인 화면으로</button>
     </div>
 
     <div class="auth-err" id="authErr"></div>
@@ -712,17 +739,6 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
     <div class="chart-box">
       <h3>근무직유형 <span class="chart-total" id="total-emptype"></span></h3>
       <canvas id="empTypeChart" height="160"></canvas>
-    </div>
-  </div>
-  <!-- 연령 / 근속 통계 -->
-  <div class="charts-row3" id="agetenure-row" style="margin-bottom:0;">
-    <div class="chart-box">
-      <h3>연령대 분포 <span class="chart-total" id="total-age"></span></h3>
-      <canvas id="ageChart" height="200"></canvas>
-    </div>
-    <div class="chart-box">
-      <h3>근속년수 분포 <span class="chart-total" id="total-tenure"></span></h3>
-      <canvas id="tenureChart" height="200"></canvas>
     </div>
   </div>
 </div>
@@ -1033,7 +1049,6 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
           <th style="min-width:80px;">직책</th>
           <th style="min-width:90px;">상태</th>
           <th style="min-width:80px;">입사일</th>
-          <th style="min-width:60px;">출생년도</th>
           <th style="min-width:120px;">비고</th>
         </tr>
       </thead>
@@ -1063,7 +1078,6 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
     <div class="fr"><label>팀</label><select id="f_team"></select></div>
     <div class="fr"><label>직책</label><input id="f_position" placeholder="팀장/법인장"></div>
     <div class="fr"><label>입사일</label><input type="date" id="f_joinDate"></div>
-    <div class="fr"><label>출생년도 <span style="font-weight:400;color:#aaa;font-size:11px;">(예: 87)</span></label><input id="f_birth_year" type="text" inputmode="numeric" maxlength="4" placeholder="87"></div>
   </div>
   <div class="row2">
     <div class="fr"><label>사업장</label>
@@ -1322,7 +1336,6 @@ const hrBarLabels={
   id:'hrBarLabels',
   afterDatasetsDraw:function(chart){
     var ctx=chart.ctx;
-    var isVertical=chart.options.plugins&&chart.options.plugins.hrBarLabels&&chart.options.plugins.hrBarLabels.vertical;
     chart.data.datasets.forEach(function(dataset,i){
       var meta=chart.getDatasetMeta(i);
       if(meta.hidden)return;
@@ -1332,17 +1345,9 @@ const hrBarLabels={
         ctx.save();
         ctx.fillStyle='#1e3a5f';
         ctx.font='bold 11px Malgun Gothic,sans-serif';
-        if(isVertical){
-          // 세로 막대: 막대 상단 위 8px에 중앙 정렬
-          ctx.textBaseline='bottom';
-          ctx.textAlign='center';
-          ctx.fillText(val, bar.x, bar.y-4);
-        }else{
-          // 가로 막대: 막대 오른쪽 끝 옆
-          ctx.textBaseline='middle';
-          ctx.textAlign='left';
-          ctx.fillText(val, bar.x+5, bar.y);
-        }
+        ctx.textBaseline='middle';
+        ctx.textAlign='left';
+        ctx.fillText(val, bar.x+5, bar.y);
         ctx.restore();
       });
     });
@@ -1352,19 +1357,6 @@ const hrBarLabels={
 // 근속 서브라인 생성
 function _calcSubParts(e){
   var p=[];
-  // 출생년도 & 만 나이
-  if(e&&e.birth_year){
-    var by=parseInt(e.birth_year,10);
-    if(!isNaN(by)){
-      var fullYear=by<100?(by>=0&&by<=30?2000+by:1900+by):by;
-      var today=new Date();
-      var age=today.getFullYear()-fullYear;
-      // 아직 생일이 안 지난 경우 -1 (월일 모르므로 연도로만 계산)
-      p.push(String(by).padStart(2,'0')+'년');
-      p.push(age+'세');
-    }
-  }
-  // 근속년수
   if(e&&e.join_date){
     var jd=new Date(normalizeDate(e.join_date));
     if(!isNaN(jd)&&jd.getFullYear()>1970){
@@ -1429,7 +1421,7 @@ let employees=[],executives=[],divisions=[],snapshots={},execEvents=[],dispatchE
 let editingEmpId=null,editingExecId=null,viewSnap=null,execMonthOffset=0,execEditId=null,editingDispatchId=null;
 let execCollapsed=true;
 let chartTrend=null,chartGrade=null,chartDiv=null,chartStatus=null,chartPosition=null;
-let chartWorkplace=null,chartEmpType=null,chartAge=null,chartTenure=null;
+let chartWorkplace=null,chartEmpType=null;
 const WORKPLACES=['본사','지점','여주','밀양','김제','정읍','해외','지주파견'];
 const EMP_TYPES=['정규직','임원계약직','계약직','촉탁직'];
 const DEFAULT_DATA={"divisions":[{"id":"d_etc","name":"기타","teams":[{"id":"d_etc_지주등파견","name":"지주등파견"},{"id":"d_etc_노조","name":"노조"}]},{"id":"d_auditor","name":"감사실","teams":[{"id":"d_auditor_감사팀","name":"감사팀"}]},{"id":"d_plan","name":"기획조정실","teams":[{"id":"d_plan_기획팀","name":"기획팀"},{"id":"d_plan_전략팀","name":"전략팀"},{"id":"d_plan_재무회계팀","name":"재무회계팀"}]},{"id":"d_mgmt","name":"경영지원본부","teams":[{"id":"d_mgmt_경영지원팀","name":"경영지원팀"},{"id":"d_mgmt_인사노무팀","name":"인사노무팀"},{"id":"d_mgmt_IT관리팀","name":"IT관리팀"},{"id":"d_mgmt_장기휴직등","name":"장기휴직등"}]},{"id":"d_intl","name":"해외사업본부","teams":[{"id":"d_intl_해외영업1팀","name":"해외영업1팀"},{"id":"d_intl_해외영업2팀","name":"해외영업2팀"},{"id":"d_intl_해외영업지원팀","name":"해외영업지원팀"}]},{"id":"d_sub","name":"자회사","teams":[{"id":"d_sub_세농","name":"세농"},{"id":"d_sub_KSI","name":"KSI"},{"id":"d_sub_NSA","name":"NSA"},{"id":"d_sub_NST","name":"NST"},{"id":"d_sub_NSI","name":"NSI"},{"id":"d_sub_NSM","name":"NSM"}]},{"id":"d_dom","name":"국내사업본부","teams":[{"id":"d_dom_영업팀","name":"영업팀"},{"id":"d_dom_영업지원팀","name":"영업지원팀"},{"id":"d_dom_경기","name":"경기"},{"id":"d_dom_경남","name":"경남"},{"id":"d_dom_대구","name":"대구"},{"id":"d_dom_충남","name":"충남"},{"id":"d_dom_충북","name":"충북"},{"id":"d_dom_전남","name":"전남"},{"id":"d_dom_전북","name":"전북"},{"id":"d_dom_강원","name":"강원"},{"id":"d_dom_안동","name":"안동"},{"id":"d_dom_제주","name":"제주"}]},{"id":"d_mkt","name":"마케팅본부","teams":[{"id":"d_mkt_홍보파트","name":"홍보파트"},{"id":"d_mkt_PM1팀","name":"PM1팀"},{"id":"d_mkt_PM2팀","name":"PM2팀"},{"id":"d_mkt_대외마케팅팀","name":"대외마케팅팀"}]},{"id":"d_mat","name":"자재사업본부","teams":[{"id":"d_mat_자재팀","name":"자재팀"}]},{"id":"d_prod","name":"생산관리본부","teams":[{"id":"d_prod_상토생산관리팀","name":"상토생산관리팀"},{"id":"d_prod_해외위탁생산팀","name":"해외위탁생산팀"},{"id":"d_prod_직영생산지원팀","name":"직영생산지원팀"},{"id":"d_prod_자원관리팀","name":"자원관리팀"},{"id":"d_prod_증식팀","name":"증식팀"}]},{"id":"d_qa","name":"QA본부","teams":[{"id":"d_qa_종자관리기획팀","name":"종자관리기획팀"},{"id":"d_qa_품질보증팀","name":"품질보증팀"},{"id":"d_qa_포장관리팀","name":"포장관리팀"},{"id":"d_qa_품질관리팀","name":"품질관리팀"},{"id":"d_qa_종자기술팀","name":"종자기술팀"}]},{"id":"d_rnd","name":"R&D본부","teams":[{"id":"d_rnd_연구지원-여주","name":"연구지원-여주"},{"id":"d_rnd_연구지원-남부","name":"연구지원-남부"},{"id":"d_rnd_연구지원-김제","name":"연구지원-김제"},{"id":"d_rnd_대외병리파트","name":"대외병리파트"},{"id":"d_rnd_병리연구팀","name":"병리연구팀"},{"id":"d_rnd_분석연구팀","name":"분석연구팀"},{"id":"d_rnd_형질연구팀","name":"형질연구팀"},{"id":"d_rnd_순도검정팀","name":"순도검정팀"},{"id":"d_rnd_배추연구팀","name":"배추연구팀"},{"id":"d_rnd_무연구팀","name":"무연구팀"},{"id":"d_rnd_양배추연구팀","name":"양배추연구팀"},{"id":"d_rnd_토마토연구팀","name":"토마토연구팀"},{"id":"d_rnd_고추연구1팀","name":"고추연구1팀"},{"id":"d_rnd_고추연구2팀","name":"고추연구2팀"},{"id":"d_rnd_수박연구팀","name":"수박연구팀"},{"id":"d_rnd_참외연구팀","name":"참외연구팀"},{"id":"d_rnd_오이연구팀","name":"오이연구팀"},{"id":"d_rnd_양파연구팀","name":"양파연구팀"}]}],"employees":[{"id":"e1","name":"양경모","grade":"차장급","divId":"d_etc","teamId":"d_etc_지주등파견","position":"","joinDate":"","status":"normal","note":""},{"id":"e2","name":"음형주","grade":"과장급","divId":"d_etc","teamId":"d_etc_지주등파견","position":"","joinDate":"","status":"normal","note":""},{"id":"e3","name":"김성동","grade":"대리급","divId":"d_etc","teamId":"d_etc_지주등파견","position":"","joinDate":"","status":"normal","note":""},{"id":"e4","name":"이진호","grade":"대리급","divId":"d_etc","teamId":"d_etc_지주등파견","position":"","joinDate":"","status":"normal","note":""},{"id":"e5","name":"여상석","grade":"과장급","divId":"d_etc","teamId":"d_etc_노조","position":"","joinDate":"","status":"normal","note":""},{"id":"e6","name":"명승범","grade":"차장급","divId":"d_auditor","teamId":"d_auditor_감사팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e7","name":"이수진","grade":"과장급","divId":"d_auditor","teamId":"d_auditor_감사팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e8","name":"한유선","grade":"부장급","divId":"d_plan","teamId":"d_plan_기획팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e9","name":"박숙영","grade":"차장급","divId":"d_plan","teamId":"d_plan_기획팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e10","name":"이재균","grade":"대리급","divId":"d_plan","teamId":"d_plan_기획팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e11","name":"김지성","grade":"부장급","divId":"d_plan","teamId":"d_plan_전략팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e12","name":"임미경","grade":"과장급","divId":"d_plan","teamId":"d_plan_전략팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e13","name":"정준영","grade":"과장급","divId":"d_plan","teamId":"d_plan_전략팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e14","name":"박난영","grade":"과장급","divId":"d_plan","teamId":"d_plan_전략팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e15","name":"박지은","grade":"대리급","divId":"d_plan","teamId":"d_plan_전략팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e16","name":"정현재","grade":"차장급","divId":"d_plan","teamId":"d_plan_재무회계팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e17","name":"호철숙","grade":"과장급","divId":"d_plan","teamId":"d_plan_재무회계팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e18","name":"고영건","grade":"과장급","divId":"d_plan","teamId":"d_plan_재무회계팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e19","name":"박자윤","grade":"주임급","divId":"d_plan","teamId":"d_plan_재무회계팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e20","name":"하주혜","grade":"사원급","divId":"d_plan","teamId":"d_plan_재무회계팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e21","name":"김영상","grade":"부장급","divId":"d_mgmt","teamId":"d_mgmt_경영지원팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e22","name":"현임자","grade":"과장급","divId":"d_mgmt","teamId":"d_mgmt_경영지원팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e23","name":"김선은","grade":"과장급","divId":"d_mgmt","teamId":"d_mgmt_경영지원팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e24","name":"박지호","grade":"대리급","divId":"d_mgmt","teamId":"d_mgmt_경영지원팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e25","name":"김인화","grade":"주임급","divId":"d_mgmt","teamId":"d_mgmt_경영지원팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e26","name":"강영석","grade":"부장급","divId":"d_mgmt","teamId":"d_mgmt_인사노무팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e27","name":"이상원","grade":"과장급","divId":"d_mgmt","teamId":"d_mgmt_인사노무팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e28","name":"구우회","grade":"과장급","divId":"d_mgmt","teamId":"d_mgmt_인사노무팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e29","name":"이호동","grade":"대리급","divId":"d_mgmt","teamId":"d_mgmt_인사노무팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e30","name":"김수연","grade":"부장급","divId":"d_mgmt","teamId":"d_mgmt_IT관리팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e31","name":"이창연","grade":"차장급","divId":"d_mgmt","teamId":"d_mgmt_IT관리팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e32","name":"이주한","grade":"과장급","divId":"d_mgmt","teamId":"d_mgmt_IT관리팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e33","name":"박진우","grade":"과장급","divId":"d_mgmt","teamId":"d_mgmt_IT관리팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e34","name":"이발금","grade":"사원급","divId":"d_mgmt","teamId":"d_mgmt_장기휴직등","position":"","joinDate":"","status":"normal","note":""},{"id":"e35","name":"이관용","grade":"사원급","divId":"d_mgmt","teamId":"d_mgmt_장기휴직등","position":"","joinDate":"","status":"normal","note":""},{"id":"e36","name":"김현중","grade":"사원급","divId":"d_mgmt","teamId":"d_mgmt_장기휴직등","position":"","joinDate":"","status":"normal","note":""},{"id":"e37","name":"김제형","grade":"사원급","divId":"d_mgmt","teamId":"d_mgmt_장기휴직등","position":"","joinDate":"","status":"normal","note":""},{"id":"e38","name":"구경환","grade":"부장급","divId":"d_intl","teamId":"d_intl_해외영업1팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e39","name":"지현구","grade":"과장급","divId":"d_intl","teamId":"d_intl_해외영업1팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e40","name":"김동률","grade":"과장급","divId":"d_intl","teamId":"d_intl_해외영업1팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e41","name":"이선호","grade":"대리급","divId":"d_intl","teamId":"d_intl_해외영업1팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e42","name":"이준용","grade":"대리급","divId":"d_intl","teamId":"d_intl_해외영업1팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e43","name":"박경원","grade":"대리급","divId":"d_intl","teamId":"d_intl_해외영업1팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e44","name":"박지용","grade":"차장급","divId":"d_intl","teamId":"d_intl_해외영업2팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e45","name":"황승건","grade":"과장급","divId":"d_intl","teamId":"d_intl_해외영업2팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e46","name":"김재현","grade":"대리급","divId":"d_intl","teamId":"d_intl_해외영업2팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e47","name":"임동현","grade":"사원급","divId":"d_intl","teamId":"d_intl_해외영업2팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e48","name":"임숙영","grade":"부장급","divId":"d_intl","teamId":"d_intl_해외영업지원팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e49","name":"심수환","grade":"차장급","divId":"d_intl","teamId":"d_intl_해외영업지원팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e50","name":"김봉진","grade":"과장급","divId":"d_intl","teamId":"d_intl_해외영업지원팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e51","name":"남아영","grade":"과장급","divId":"d_intl","teamId":"d_intl_해외영업지원팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e52","name":"시경진","grade":"과장급","divId":"d_intl","teamId":"d_intl_해외영업지원팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e53","name":"신서하","grade":"대리급","divId":"d_intl","teamId":"d_intl_해외영업지원팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e54","name":"박상민","grade":"주임급","divId":"d_intl","teamId":"d_intl_해외영업지원팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e55","name":"신종섭","grade":"부장급","divId":"d_sub","teamId":"d_sub_세농","position":"","joinDate":"","status":"normal","note":""},{"id":"e56","name":"이형규","grade":"부장급","divId":"d_sub","teamId":"d_sub_세농","position":"","joinDate":"","status":"normal","note":""},{"id":"e57","name":"김한오","grade":"부장급","divId":"d_sub","teamId":"d_sub_세농","position":"","joinDate":"","status":"normal","note":""},{"id":"e58","name":"홍동오","grade":"부장급","divId":"d_sub","teamId":"d_sub_세농","position":"","joinDate":"","status":"normal","note":""},{"id":"e59","name":"백광현","grade":"과장급","divId":"d_sub","teamId":"d_sub_KSI","position":"","joinDate":"","status":"normal","note":""},{"id":"e60","name":"김준호","grade":"차장급","divId":"d_sub","teamId":"d_sub_NSA","position":"","joinDate":"","status":"normal","note":""},{"id":"e61","name":"이창호","grade":"과장급","divId":"d_sub","teamId":"d_sub_NSA","position":"","joinDate":"","status":"normal","note":""},{"id":"e62","name":"김다익","grade":"과장급","divId":"d_sub","teamId":"d_sub_NST","position":"","joinDate":"","status":"normal","note":""},{"id":"e63","name":"정희진","grade":"과장급","divId":"d_sub","teamId":"d_sub_NST","position":"","joinDate":"","status":"normal","note":""},{"id":"e64","name":"유영권","grade":"수석급","divId":"d_sub","teamId":"d_sub_NSI","position":"","joinDate":"","status":"normal","note":""},{"id":"e65","name":"김정훈","grade":"차장급","divId":"d_sub","teamId":"d_sub_NSI","position":"","joinDate":"","status":"normal","note":""},{"id":"e66","name":"김성배","grade":"부장급","divId":"d_dom","teamId":"d_dom_영업팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e67","name":"전익현","grade":"과장급","divId":"d_dom","teamId":"d_dom_영업팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e68","name":"최시내","grade":"대리급","divId":"d_dom","teamId":"d_dom_영업팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e69","name":"전은미","grade":"대리급","divId":"d_dom","teamId":"d_dom_영업팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e70","name":"한승민","grade":"대리급","divId":"d_dom","teamId":"d_dom_영업팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e71","name":"이성광","grade":"사원급","divId":"d_dom","teamId":"d_dom_영업팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e72","name":"정진우","grade":"사원급","divId":"d_dom","teamId":"d_dom_영업팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e73","name":"김우중","grade":"부장급","divId":"d_dom","teamId":"d_dom_영업지원팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e74","name":"전우용","grade":"부장급","divId":"d_dom","teamId":"d_dom_경기","position":"","joinDate":"","status":"normal","note":""},{"id":"e75","name":"최병수","grade":"차장급","divId":"d_dom","teamId":"d_dom_경기","position":"","joinDate":"","status":"normal","note":""},{"id":"e76","name":"김태훈","grade":"과장급","divId":"d_dom","teamId":"d_dom_경기","position":"","joinDate":"","status":"normal","note":""},{"id":"e77","name":"김기환","grade":"과장급","divId":"d_dom","teamId":"d_dom_경기","position":"","joinDate":"","status":"normal","note":""},{"id":"e78","name":"이관후","grade":"대리급","divId":"d_dom","teamId":"d_dom_경기","position":"","joinDate":"","status":"normal","note":""},{"id":"e79","name":"이구환","grade":"부장급","divId":"d_dom","teamId":"d_dom_경남","position":"","joinDate":"","status":"normal","note":""},{"id":"e80","name":"박창순","grade":"과장급","divId":"d_dom","teamId":"d_dom_경남","position":"","joinDate":"","status":"normal","note":""},{"id":"e81","name":"하태준","grade":"과장급","divId":"d_dom","teamId":"d_dom_경남","position":"","joinDate":"","status":"normal","note":""},{"id":"e82","name":"구원모","grade":"사원급","divId":"d_dom","teamId":"d_dom_경남","position":"","joinDate":"","status":"normal","note":""},{"id":"e83","name":"이성근","grade":"사원급","divId":"d_dom","teamId":"d_dom_경남","position":"","joinDate":"","status":"normal","note":""},{"id":"e84","name":"김판수","grade":"부장급","divId":"d_dom","teamId":"d_dom_대구","position":"","joinDate":"","status":"normal","note":""},{"id":"e85","name":"이동현","grade":"차장급","divId":"d_dom","teamId":"d_dom_대구","position":"","joinDate":"","status":"normal","note":""},{"id":"e86","name":"권태형","grade":"대리급","divId":"d_dom","teamId":"d_dom_대구","position":"","joinDate":"","status":"normal","note":""},{"id":"e87","name":"이원택","grade":"주임급","divId":"d_dom","teamId":"d_dom_대구","position":"","joinDate":"","status":"normal","note":""},{"id":"e88","name":"김종국","grade":"사원급","divId":"d_dom","teamId":"d_dom_대구","position":"","joinDate":"","status":"normal","note":""},{"id":"e89","name":"김지묵","grade":"부장급","divId":"d_dom","teamId":"d_dom_충남","position":"","joinDate":"","status":"normal","note":""},{"id":"e90","name":"유호승","grade":"차장급","divId":"d_dom","teamId":"d_dom_충남","position":"","joinDate":"","status":"normal","note":""},{"id":"e91","name":"엄진용","grade":"과장급","divId":"d_dom","teamId":"d_dom_충남","position":"","joinDate":"","status":"normal","note":""},{"id":"e92","name":"조준희","grade":"대리급","divId":"d_dom","teamId":"d_dom_충남","position":"","joinDate":"","status":"normal","note":""},{"id":"e93","name":"김정현","grade":"주임급","divId":"d_dom","teamId":"d_dom_충남","position":"","joinDate":"","status":"normal","note":""},{"id":"e94","name":"김종수","grade":"주임급","divId":"d_dom","teamId":"d_dom_충남","position":"","joinDate":"","status":"normal","note":""},{"id":"e95","name":"박세봉","grade":"부장급","divId":"d_dom","teamId":"d_dom_충북","position":"","joinDate":"","status":"normal","note":""},{"id":"e96","name":"백승배","grade":"과장급","divId":"d_dom","teamId":"d_dom_충북","position":"","joinDate":"","status":"normal","note":""},{"id":"e97","name":"김원범","grade":"주임급","divId":"d_dom","teamId":"d_dom_충북","position":"","joinDate":"","status":"normal","note":""},{"id":"e98","name":"배영준","grade":"사원급","divId":"d_dom","teamId":"d_dom_충북","position":"","joinDate":"","status":"normal","note":""},{"id":"e99","name":"김경호","grade":"차장급","divId":"d_dom","teamId":"d_dom_전남","position":"","joinDate":"","status":"normal","note":""},{"id":"e100","name":"고경옥","grade":"과장급","divId":"d_dom","teamId":"d_dom_전남","position":"","joinDate":"","status":"normal","note":""},{"id":"e101","name":"조광희","grade":"과장급","divId":"d_dom","teamId":"d_dom_전남","position":"","joinDate":"","status":"normal","note":""},{"id":"e102","name":"공나훈","grade":"주임급","divId":"d_dom","teamId":"d_dom_전남","position":"","joinDate":"","status":"normal","note":""},{"id":"e103","name":"김순종","grade":"주임급","divId":"d_dom","teamId":"d_dom_전남","position":"","joinDate":"","status":"normal","note":""},{"id":"e104","name":"임시온","grade":"사원급","divId":"d_dom","teamId":"d_dom_전남","position":"","joinDate":"","status":"normal","note":""},{"id":"e105","name":"고은호","grade":"부장급","divId":"d_dom","teamId":"d_dom_전북","position":"","joinDate":"","status":"normal","note":""},{"id":"e106","name":"김진웅","grade":"과장급","divId":"d_dom","teamId":"d_dom_전북","position":"","joinDate":"","status":"normal","note":""},{"id":"e107","name":"남호재","grade":"대리급","divId":"d_dom","teamId":"d_dom_전북","position":"","joinDate":"","status":"normal","note":""},{"id":"e108","name":"고건우","grade":"사원급","divId":"d_dom","teamId":"d_dom_전북","position":"","joinDate":"","status":"normal","note":""},{"id":"e109","name":"김강현","grade":"사원급","divId":"d_dom","teamId":"d_dom_전북","position":"","joinDate":"","status":"normal","note":""},{"id":"e110","name":"최종현","grade":"부장급","divId":"d_dom","teamId":"d_dom_강원","position":"","joinDate":"","status":"normal","note":""},{"id":"e111","name":"안성찬","grade":"차장급","divId":"d_dom","teamId":"d_dom_강원","position":"","joinDate":"","status":"normal","note":""},{"id":"e112","name":"허건","grade":"과장급","divId":"d_dom","teamId":"d_dom_강원","position":"","joinDate":"","status":"normal","note":""},{"id":"e113","name":"오재식","grade":"과장급","divId":"d_dom","teamId":"d_dom_강원","position":"","joinDate":"","status":"normal","note":""},{"id":"e114","name":"우경식","grade":"주임급","divId":"d_dom","teamId":"d_dom_강원","position":"","joinDate":"","status":"normal","note":""},{"id":"e115","name":"김재익","grade":"부장급","divId":"d_dom","teamId":"d_dom_안동","position":"","joinDate":"","status":"normal","note":""},{"id":"e116","name":"김문수","grade":"차장급","divId":"d_dom","teamId":"d_dom_안동","position":"","joinDate":"","status":"normal","note":""},{"id":"e117","name":"방시훈","grade":"주임급","divId":"d_dom","teamId":"d_dom_안동","position":"","joinDate":"","status":"normal","note":""},{"id":"e118","name":"전종하","grade":"부장급","divId":"d_dom","teamId":"d_dom_제주","position":"","joinDate":"","status":"normal","note":""},{"id":"e119","name":"박지웅","grade":"대리급","divId":"d_dom","teamId":"d_dom_제주","position":"","joinDate":"","status":"normal","note":""},{"id":"e120","name":"김남훈","grade":"차장급","divId":"d_mkt","teamId":"d_mkt_홍보파트","position":"","joinDate":"","status":"normal","note":""},{"id":"e121","name":"윤서정","grade":"과장급","divId":"d_mkt","teamId":"d_mkt_홍보파트","position":"","joinDate":"","status":"normal","note":""},{"id":"e122","name":"안재춘","grade":"부장급","divId":"d_mkt","teamId":"d_mkt_PM1팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e123","name":"박진화","grade":"차장급","divId":"d_mkt","teamId":"d_mkt_PM1팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e124","name":"진승빈","grade":"차장급","divId":"d_mkt","teamId":"d_mkt_PM1팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e125","name":"김재형","grade":"부장급","divId":"d_mkt","teamId":"d_mkt_PM2팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e126","name":"전봉수","grade":"과장급","divId":"d_mkt","teamId":"d_mkt_PM2팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e127","name":"문현구","grade":"과장급","divId":"d_mkt","teamId":"d_mkt_PM2팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e128","name":"김두선","grade":"부장급","divId":"d_mkt","teamId":"d_mkt_대외마케팅팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e129","name":"윤영현","grade":"과장급","divId":"d_mkt","teamId":"d_mkt_대외마케팅팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e130","name":"최병식","grade":"과장급","divId":"d_mkt","teamId":"d_mkt_대외마케팅팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e131","name":"김현아","grade":"대리급","divId":"d_mkt","teamId":"d_mkt_대외마케팅팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e132","name":"이진혁","grade":"부장급","divId":"d_mat","teamId":"d_mat_자재팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e133","name":"김학민","grade":"차장급","divId":"d_mat","teamId":"d_mat_자재팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e134","name":"서미연","grade":"과장급","divId":"d_mat","teamId":"d_mat_자재팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e135","name":"이상석","grade":"차장급","divId":"d_prod","teamId":"d_prod_상토생산관리팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e136","name":"이승복","grade":"과장급","divId":"d_prod","teamId":"d_prod_상토생산관리팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e137","name":"김종진","grade":"과장급","divId":"d_prod","teamId":"d_prod_상토생산관리팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e138","name":"배규리","grade":"대리급","divId":"d_prod","teamId":"d_prod_상토생산관리팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e139","name":"민경준","grade":"주임급","divId":"d_prod","teamId":"d_prod_상토생산관리팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e140","name":"문정욱","grade":"차장급","divId":"d_prod","teamId":"d_prod_해외위탁생산팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e141","name":"임규환","grade":"과장급","divId":"d_prod","teamId":"d_prod_해외위탁생산팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e142","name":"장재혁","grade":"과장급","divId":"d_prod","teamId":"d_prod_해외위탁생산팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e143","name":"김병완","grade":"과장급","divId":"d_prod","teamId":"d_prod_해외위탁생산팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e144","name":"박예찬","grade":"대리급","divId":"d_prod","teamId":"d_prod_해외위탁생산팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e145","name":"정하상","grade":"대리급","divId":"d_prod","teamId":"d_prod_해외위탁생산팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e146","name":"권오석","grade":"부장급","divId":"d_prod","teamId":"d_prod_직영생산지원팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e147","name":"이종혁","grade":"차장급","divId":"d_prod","teamId":"d_prod_직영생산지원팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e148","name":"박용세","grade":"대리급","divId":"d_prod","teamId":"d_prod_직영생산지원팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e149","name":"배한영","grade":"대리급","divId":"d_prod","teamId":"d_prod_직영생산지원팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e150","name":"김정원","grade":"대리급","divId":"d_prod","teamId":"d_prod_직영생산지원팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e151","name":"김원준","grade":"주임급","divId":"d_prod","teamId":"d_prod_직영생산지원팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e152","name":"이희봉","grade":"부장급","divId":"d_prod","teamId":"d_prod_자원관리팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e153","name":"신동화","grade":"대리급","divId":"d_prod","teamId":"d_prod_자원관리팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e154","name":"정서윤","grade":"사원급","divId":"d_prod","teamId":"d_prod_자원관리팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e155","name":"손덕선","grade":"부장급","divId":"d_prod","teamId":"d_prod_증식팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e156","name":"이설재","grade":"과장급","divId":"d_prod","teamId":"d_prod_증식팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e157","name":"박기현","grade":"대리급","divId":"d_prod","teamId":"d_prod_증식팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e158","name":"박철민","grade":"기능감급","divId":"d_prod","teamId":"d_prod_증식팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e159","name":"박상순","grade":"선임기사급","divId":"d_prod","teamId":"d_prod_증식팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e160","name":"곽길홍","grade":"선임기사급","divId":"d_prod","teamId":"d_prod_증식팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e161","name":"황재문","grade":"부장급","divId":"d_qa","teamId":"d_qa_종자관리기획팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e162","name":"김형석","grade":"차장급","divId":"d_qa","teamId":"d_qa_종자관리기획팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e163","name":"강은희","grade":"대리급","divId":"d_qa","teamId":"d_qa_종자관리기획팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e164","name":"김경현","grade":"대리급","divId":"d_qa","teamId":"d_qa_종자관리기획팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e165","name":"유병관","grade":"사원급","divId":"d_qa","teamId":"d_qa_종자관리기획팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e166","name":"오석근","grade":"기능감급","divId":"d_qa","teamId":"d_qa_종자관리기획팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e167","name":"서동진","grade":"기능감급","divId":"d_qa","teamId":"d_qa_종자관리기획팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e168","name":"고산옥","grade":"선임기사급","divId":"d_qa","teamId":"d_qa_종자관리기획팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e169","name":"방지훈","grade":"선임기사급","divId":"d_qa","teamId":"d_qa_종자관리기획팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e170","name":"김재훈","grade":"기사급","divId":"d_qa","teamId":"d_qa_종자관리기획팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e171","name":"이경은","grade":"기사급","divId":"d_qa","teamId":"d_qa_종자관리기획팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e172","name":"이우숙","grade":"기사급","divId":"d_qa","teamId":"d_qa_종자관리기획팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e173","name":"이재식","grade":"기타","divId":"d_qa","teamId":"d_qa_종자관리기획팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e174","name":"송선웅","grade":"기타","divId":"d_qa","teamId":"d_qa_종자관리기획팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e175","name":"김영탁","grade":"부장급","divId":"d_qa","teamId":"d_qa_품질보증팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e176","name":"김혜성","grade":"과장급","divId":"d_qa","teamId":"d_qa_품질보증팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e177","name":"이명환","grade":"과장급","divId":"d_qa","teamId":"d_qa_품질보증팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e178","name":"이지혜","grade":"과장급","divId":"d_qa","teamId":"d_qa_품질보증팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e179","name":"김덕현","grade":"기능감급","divId":"d_qa","teamId":"d_qa_품질보증팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e180","name":"김은혜","grade":"책임기사급","divId":"d_qa","teamId":"d_qa_품질보증팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e181","name":"정혜숙","grade":"책임기사급","divId":"d_qa","teamId":"d_qa_품질보증팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e182","name":"전미진","grade":"책임기사급","divId":"d_qa","teamId":"d_qa_품질보증팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e183","name":"박수정B","grade":"선임기사급","divId":"d_qa","teamId":"d_qa_품질보증팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e184","name":"박성숙","grade":"선임기사급","divId":"d_qa","teamId":"d_qa_품질보증팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e185","name":"이재선","grade":"선임기사급","divId":"d_qa","teamId":"d_qa_품질보증팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e186","name":"임정","grade":"선임기사급","divId":"d_qa","teamId":"d_qa_품질보증팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e187","name":"이순주","grade":"선임기사급","divId":"d_qa","teamId":"d_qa_품질보증팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e188","name":"전화복","grade":"선임기사급","divId":"d_qa","teamId":"d_qa_품질보증팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e189","name":"김승남","grade":"선임기사급","divId":"d_qa","teamId":"d_qa_품질보증팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e190","name":"윤세화","grade":"기사급","divId":"d_qa","teamId":"d_qa_품질보증팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e191","name":"정혜련","grade":"기사급","divId":"d_qa","teamId":"d_qa_품질보증팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e192","name":"김현남","grade":"기사급","divId":"d_qa","teamId":"d_qa_품질보증팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e193","name":"이상훈","grade":"부장급","divId":"d_qa","teamId":"d_qa_포장관리팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e194","name":"이승환","grade":"과장급","divId":"d_qa","teamId":"d_qa_포장관리팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e195","name":"이우종","grade":"과장급","divId":"d_qa","teamId":"d_qa_포장관리팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e196","name":"박가람","grade":"대리급","divId":"d_qa","teamId":"d_qa_포장관리팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e197","name":"정석교","grade":"기능감급","divId":"d_qa","teamId":"d_qa_포장관리팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e198","name":"한상미","grade":"책임기사급","divId":"d_qa","teamId":"d_qa_포장관리팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e199","name":"방정숙","grade":"선임기사급","divId":"d_qa","teamId":"d_qa_포장관리팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e200","name":"김석심","grade":"선임기사급","divId":"d_qa","teamId":"d_qa_포장관리팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e201","name":"김선희","grade":"선임기사급","divId":"d_qa","teamId":"d_qa_포장관리팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e202","name":"양숙이","grade":"선임기사급","divId":"d_qa","teamId":"d_qa_포장관리팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e203","name":"권혜옥","grade":"선임기사급","divId":"d_qa","teamId":"d_qa_포장관리팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e204","name":"이상덕","grade":"기사급","divId":"d_qa","teamId":"d_qa_포장관리팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e205","name":"박경자","grade":"기사급","divId":"d_qa","teamId":"d_qa_포장관리팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e206","name":"신태은","grade":"기사급","divId":"d_qa","teamId":"d_qa_포장관리팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e207","name":"조병윤","grade":"부장급","divId":"d_qa","teamId":"d_qa_품질관리팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e208","name":"신수창","grade":"과장급","divId":"d_qa","teamId":"d_qa_품질관리팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e209","name":"이병환","grade":"대리급","divId":"d_qa","teamId":"d_qa_품질관리팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e210","name":"채홍석","grade":"기능감급","divId":"d_qa","teamId":"d_qa_품질관리팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e211","name":"이원명","grade":"기능감급","divId":"d_qa","teamId":"d_qa_품질관리팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e212","name":"김현만","grade":"책임기사급","divId":"d_qa","teamId":"d_qa_품질관리팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e213","name":"원영범","grade":"책임기사급","divId":"d_qa","teamId":"d_qa_품질관리팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e214","name":"이송","grade":"선임기사급","divId":"d_qa","teamId":"d_qa_품질관리팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e215","name":"박종인","grade":"부장급","divId":"d_qa","teamId":"d_qa_종자기술팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e216","name":"김민근","grade":"대리급","divId":"d_qa","teamId":"d_qa_종자기술팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e217","name":"이준우","grade":"대리급","divId":"d_qa","teamId":"d_qa_종자기술팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e218","name":"이지하","grade":"책임기사급","divId":"d_qa","teamId":"d_qa_종자기술팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e219","name":"서민규","grade":"선임기사급","divId":"d_qa","teamId":"d_qa_종자기술팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e220","name":"강승현","grade":"기사급","divId":"d_qa","teamId":"d_qa_종자기술팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e221","name":"이현철","grade":"부장급","divId":"d_rnd","teamId":"d_rnd_연구지원-여주","position":"","joinDate":"","status":"normal","note":""},{"id":"e222","name":"문주연","grade":"과장급","divId":"d_rnd","teamId":"d_rnd_연구지원-여주","position":"","joinDate":"","status":"normal","note":""},{"id":"e223","name":"노진수","grade":"과장급","divId":"d_rnd","teamId":"d_rnd_연구지원-여주","position":"","joinDate":"","status":"normal","note":""},{"id":"e224","name":"이선희","grade":"과장급","divId":"d_rnd","teamId":"d_rnd_연구지원-여주","position":"","joinDate":"","status":"normal","note":""},{"id":"e225","name":"이형경","grade":"주임급","divId":"d_rnd","teamId":"d_rnd_연구지원-여주","position":"","joinDate":"","status":"normal","note":""},{"id":"e226","name":"이재교","grade":"기능감급","divId":"d_rnd","teamId":"d_rnd_연구지원-여주","position":"","joinDate":"","status":"normal","note":""},{"id":"e227","name":"유재천","grade":"기능감급","divId":"d_rnd","teamId":"d_rnd_연구지원-여주","position":"","joinDate":"","status":"normal","note":""},{"id":"e228","name":"표욱연","grade":"기능감급","divId":"d_rnd","teamId":"d_rnd_연구지원-여주","position":"","joinDate":"","status":"normal","note":""},{"id":"e229","name":"권혁용","grade":"기능감급","divId":"d_rnd","teamId":"d_rnd_연구지원-여주","position":"","joinDate":"","status":"normal","note":""},{"id":"e230","name":"이승해","grade":"책임기사급","divId":"d_rnd","teamId":"d_rnd_연구지원-여주","position":"","joinDate":"","status":"normal","note":""},{"id":"e231","name":"김욱환","grade":"기사급","divId":"d_rnd","teamId":"d_rnd_연구지원-여주","position":"","joinDate":"","status":"normal","note":""},{"id":"e232","name":"김영숙","grade":"기사급","divId":"d_rnd","teamId":"d_rnd_연구지원-여주","position":"","joinDate":"","status":"normal","note":""},{"id":"e233","name":"최선자","grade":"기사급","divId":"d_rnd","teamId":"d_rnd_연구지원-여주","position":"","joinDate":"","status":"normal","note":""},{"id":"e234","name":"문용순","grade":"영양보조","divId":"d_rnd","teamId":"d_rnd_연구지원-여주","position":"","joinDate":"","status":"normal","note":""},{"id":"e235","name":"강민숙","grade":"영양보조","divId":"d_rnd","teamId":"d_rnd_연구지원-여주","position":"","joinDate":"","status":"normal","note":""},{"id":"e236","name":"이은경","grade":"영양보조","divId":"d_rnd","teamId":"d_rnd_연구지원-여주","position":"","joinDate":"","status":"normal","note":""},{"id":"e237","name":"정원정","grade":"영양보조","divId":"d_rnd","teamId":"d_rnd_연구지원-여주","position":"","joinDate":"","status":"normal","note":""},{"id":"e238","name":"김유성","grade":"기타","divId":"d_rnd","teamId":"d_rnd_연구지원-여주","position":"","joinDate":"","status":"normal","note":""},{"id":"e239","name":"최은자","grade":"기타","divId":"d_rnd","teamId":"d_rnd_연구지원-여주","position":"","joinDate":"","status":"normal","note":""},{"id":"e240","name":"김영현","grade":"과장급","divId":"d_rnd","teamId":"d_rnd_연구지원-남부","position":"","joinDate":"","status":"normal","note":""},{"id":"e241","name":"김행기","grade":"기능감급","divId":"d_rnd","teamId":"d_rnd_연구지원-남부","position":"","joinDate":"","status":"normal","note":""},{"id":"e242","name":"이지용","grade":"책임기사급","divId":"d_rnd","teamId":"d_rnd_연구지원-남부","position":"","joinDate":"","status":"normal","note":""},{"id":"e243","name":"김명구","grade":"선임기사급","divId":"d_rnd","teamId":"d_rnd_연구지원-남부","position":"","joinDate":"","status":"normal","note":""},{"id":"e244","name":"이정무","grade":"기사급","divId":"d_rnd","teamId":"d_rnd_연구지원-남부","position":"","joinDate":"","status":"normal","note":""},{"id":"e245","name":"이동화","grade":"영양보조","divId":"d_rnd","teamId":"d_rnd_연구지원-남부","position":"","joinDate":"","status":"normal","note":""},{"id":"e246","name":"장화순","grade":"영양보조","divId":"d_rnd","teamId":"d_rnd_연구지원-남부","position":"","joinDate":"","status":"normal","note":""},{"id":"e247","name":"이새벌","grade":"대리급","divId":"d_rnd","teamId":"d_rnd_연구지원-김제","position":"","joinDate":"","status":"normal","note":""},{"id":"e248","name":"조해성","grade":"기사급","divId":"d_rnd","teamId":"d_rnd_연구지원-김제","position":"","joinDate":"","status":"normal","note":""},{"id":"e249","name":"김윤형","grade":"기사급","divId":"d_rnd","teamId":"d_rnd_연구지원-김제","position":"","joinDate":"","status":"normal","note":""},{"id":"e250","name":"박종영","grade":"부장급","divId":"d_rnd","teamId":"d_rnd_병리연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e251","name":"이재용","grade":"차장급","divId":"d_rnd","teamId":"d_rnd_병리연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e252","name":"전병기","grade":"과장급","divId":"d_rnd","teamId":"d_rnd_병리연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e253","name":"정선금","grade":"대리급","divId":"d_rnd","teamId":"d_rnd_병리연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e254","name":"조창영","grade":"주임급","divId":"d_rnd","teamId":"d_rnd_병리연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e255","name":"김묘정","grade":"기능감급","divId":"d_rnd","teamId":"d_rnd_병리연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e256","name":"최현우","grade":"책임기사급","divId":"d_rnd","teamId":"d_rnd_병리연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e257","name":"전선정","grade":"책임기사급","divId":"d_rnd","teamId":"d_rnd_병리연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e258","name":"유경애","grade":"기사급","divId":"d_rnd","teamId":"d_rnd_병리연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e259","name":"이경아","grade":"부장급","divId":"d_rnd","teamId":"d_rnd_분석연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e260","name":"현지영","grade":"과장급","divId":"d_rnd","teamId":"d_rnd_분석연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e261","name":"신선희","grade":"과장급","divId":"d_rnd","teamId":"d_rnd_분석연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e262","name":"박성연","grade":"대리급","divId":"d_rnd","teamId":"d_rnd_분석연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e263","name":"최시온","grade":"기사급","divId":"d_rnd","teamId":"d_rnd_분석연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e264","name":"이희정","grade":"차장급","divId":"d_rnd","teamId":"d_rnd_형질연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e265","name":"최준영B","grade":"과장급","divId":"d_rnd","teamId":"d_rnd_형질연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e266","name":"남민정","grade":"과장급","divId":"d_rnd","teamId":"d_rnd_형질연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e267","name":"김미진","grade":"과장급","divId":"d_rnd","teamId":"d_rnd_형질연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e268","name":"이은주","grade":"대리급","divId":"d_rnd","teamId":"d_rnd_형질연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e269","name":"김영인","grade":"사원급","divId":"d_rnd","teamId":"d_rnd_형질연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e270","name":"이민선","grade":"기능감급","divId":"d_rnd","teamId":"d_rnd_형질연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e271","name":"정민","grade":"부장급","divId":"d_rnd","teamId":"d_rnd_순도검정팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e272","name":"이흥렬","grade":"부장급","divId":"d_rnd","teamId":"d_rnd_순도검정팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e273","name":"황지현","grade":"과장급","divId":"d_rnd","teamId":"d_rnd_순도검정팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e274","name":"박다솜","grade":"대리급","divId":"d_rnd","teamId":"d_rnd_순도검정팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e275","name":"조성훈","grade":"주임급","divId":"d_rnd","teamId":"d_rnd_순도검정팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e276","name":"김진원","grade":"책임기사급","divId":"d_rnd","teamId":"d_rnd_순도검정팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e277","name":"박수정A","grade":"책임기사급","divId":"d_rnd","teamId":"d_rnd_순도검정팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e278","name":"서형석","grade":"과장급","divId":"d_rnd","teamId":"d_rnd_배추연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e279","name":"남동건","grade":"사원급","divId":"d_rnd","teamId":"d_rnd_배추연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e280","name":"피소정","grade":"기능감급","divId":"d_rnd","teamId":"d_rnd_배추연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e281","name":"이세은","grade":"책임기사급","divId":"d_rnd","teamId":"d_rnd_배추연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e282","name":"이순민","grade":"책임기사급","divId":"d_rnd","teamId":"d_rnd_배추연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e283","name":"김경옥","grade":"선임기사급","divId":"d_rnd","teamId":"d_rnd_배추연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e284","name":"백금선","grade":"선임기사급","divId":"d_rnd","teamId":"d_rnd_배추연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e285","name":"박상은","grade":"기사급","divId":"d_rnd","teamId":"d_rnd_배추연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e286","name":"손동민","grade":"기사급","divId":"d_rnd","teamId":"d_rnd_배추연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e287","name":"이혁근","grade":"차장급","divId":"d_rnd","teamId":"d_rnd_무연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e288","name":"황도연","grade":"대리급","divId":"d_rnd","teamId":"d_rnd_무연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e289","name":"김연화","grade":"기능감급","divId":"d_rnd","teamId":"d_rnd_무연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e290","name":"임미자","grade":"기능감급","divId":"d_rnd","teamId":"d_rnd_무연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e291","name":"박선미B","grade":"기사급","divId":"d_rnd","teamId":"d_rnd_무연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e292","name":"조은애","grade":"기사급","divId":"d_rnd","teamId":"d_rnd_무연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e293","name":"최성환","grade":"기사급","divId":"d_rnd","teamId":"d_rnd_무연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e294","name":"김대현","grade":"대리급","divId":"d_rnd","teamId":"d_rnd_양배추연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e295","name":"백은성","grade":"사원급","divId":"d_rnd","teamId":"d_rnd_양배추연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e296","name":"김여정","grade":"선임기사급","divId":"d_rnd","teamId":"d_rnd_양배추연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e297","name":"이보라","grade":"선임기사급","divId":"d_rnd","teamId":"d_rnd_양배추연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e298","name":"최승헌","grade":"기사급","divId":"d_rnd","teamId":"d_rnd_양배추연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e299","name":"소규리","grade":"기사급","divId":"d_rnd","teamId":"d_rnd_양배추연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e300","name":"오혜순","grade":"기사급","divId":"d_rnd","teamId":"d_rnd_양배추연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e301","name":"임병환","grade":"부장급","divId":"d_rnd","teamId":"d_rnd_토마토연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e302","name":"박경수","grade":"차장급","divId":"d_rnd","teamId":"d_rnd_토마토연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e303","name":"이재무","grade":"과장급","divId":"d_rnd","teamId":"d_rnd_토마토연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e304","name":"이현민","grade":"주임급","divId":"d_rnd","teamId":"d_rnd_토마토연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e305","name":"김병순","grade":"기능감급","divId":"d_rnd","teamId":"d_rnd_토마토연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e306","name":"김보람","grade":"책임기사급","divId":"d_rnd","teamId":"d_rnd_토마토연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e307","name":"박성준","grade":"책임기사급","divId":"d_rnd","teamId":"d_rnd_토마토연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e308","name":"성혜숙","grade":"선임기사급","divId":"d_rnd","teamId":"d_rnd_토마토연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e309","name":"김도현","grade":"기사급","divId":"d_rnd","teamId":"d_rnd_토마토연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e310","name":"박정자","grade":"기사급","divId":"d_rnd","teamId":"d_rnd_토마토연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e311","name":"김미경","grade":"기사급","divId":"d_rnd","teamId":"d_rnd_토마토연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e312","name":"양동철","grade":"부장급","divId":"d_rnd","teamId":"d_rnd_고추연구1팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e313","name":"정현석","grade":"과장급","divId":"d_rnd","teamId":"d_rnd_고추연구1팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e314","name":"전성찬","grade":"주임급","divId":"d_rnd","teamId":"d_rnd_고추연구1팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e315","name":"윤태문","grade":"책임기사급","divId":"d_rnd","teamId":"d_rnd_고추연구1팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e316","name":"박희정","grade":"책임기사급","divId":"d_rnd","teamId":"d_rnd_고추연구1팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e317","name":"김모란","grade":"책임기사급","divId":"d_rnd","teamId":"d_rnd_고추연구1팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e318","name":"송영서","grade":"기사급","divId":"d_rnd","teamId":"d_rnd_고추연구1팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e319","name":"김혜수","grade":"기사급","divId":"d_rnd","teamId":"d_rnd_고추연구1팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e320","name":"정영호","grade":"차장급","divId":"d_rnd","teamId":"d_rnd_고추연구2팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e321","name":"조선흠","grade":"대리급","divId":"d_rnd","teamId":"d_rnd_고추연구2팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e322","name":"이종옥","grade":"기능감급","divId":"d_rnd","teamId":"d_rnd_고추연구2팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e323","name":"이준성","grade":"책임기사급","divId":"d_rnd","teamId":"d_rnd_고추연구2팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e324","name":"배현주","grade":"선임기사급","divId":"d_rnd","teamId":"d_rnd_고추연구2팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e325","name":"이인기","grade":"선임기사급","divId":"d_rnd","teamId":"d_rnd_고추연구2팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e326","name":"김성훈","grade":"차장급","divId":"d_rnd","teamId":"d_rnd_수박연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e327","name":"안종욱","grade":"대리급","divId":"d_rnd","teamId":"d_rnd_수박연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e328","name":"이장희","grade":"주임급","divId":"d_rnd","teamId":"d_rnd_수박연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e329","name":"이계중","grade":"책임기사급","divId":"d_rnd","teamId":"d_rnd_수박연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e330","name":"안지영","grade":"책임기사급","divId":"d_rnd","teamId":"d_rnd_수박연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e331","name":"손용수","grade":"선임기사급","divId":"d_rnd","teamId":"d_rnd_수박연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e332","name":"이은정","grade":"선임기사급","divId":"d_rnd","teamId":"d_rnd_수박연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e333","name":"임록지","grade":"기사급","divId":"d_rnd","teamId":"d_rnd_수박연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e334","name":"이수민","grade":"차장급","divId":"d_rnd","teamId":"d_rnd_참외연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e335","name":"이준형","grade":"사원급","divId":"d_rnd","teamId":"d_rnd_참외연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e336","name":"이정구","grade":"선임기사급","divId":"d_rnd","teamId":"d_rnd_참외연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e337","name":"손범수","grade":"선임기사급","divId":"d_rnd","teamId":"d_rnd_참외연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e338","name":"이영화","grade":"선임기사급","divId":"d_rnd","teamId":"d_rnd_참외연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e339","name":"이혜수","grade":"기사급","divId":"d_rnd","teamId":"d_rnd_참외연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e340","name":"최준영A","grade":"대리급","divId":"d_rnd","teamId":"d_rnd_오이연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e341","name":"김민수","grade":"주임급","divId":"d_rnd","teamId":"d_rnd_오이연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e342","name":"최형욱","grade":"사원급","divId":"d_rnd","teamId":"d_rnd_오이연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e343","name":"송판용","grade":"선임기사급","divId":"d_rnd","teamId":"d_rnd_오이연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e344","name":"김순환","grade":"기사급","divId":"d_rnd","teamId":"d_rnd_오이연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e345","name":"손영두","grade":"기사급","divId":"d_rnd","teamId":"d_rnd_오이연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e346","name":"백은희","grade":"기사급","divId":"d_rnd","teamId":"d_rnd_오이연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e347","name":"이희경","grade":"기사급","divId":"d_rnd","teamId":"d_rnd_오이연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e348","name":"김규현","grade":"과장급","divId":"d_rnd","teamId":"d_rnd_양파연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e349","name":"황철환","grade":"과장급","divId":"d_rnd","teamId":"d_rnd_양파연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e350","name":"김예건","grade":"기사급","divId":"d_rnd","teamId":"d_rnd_양파연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e351","name":"김기영","grade":"기사급","divId":"d_rnd","teamId":"d_rnd_양파연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e352","name":"이정심","grade":"기사급","divId":"d_rnd","teamId":"d_rnd_양파연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e353","name":"박현미","grade":"기사급","divId":"d_rnd","teamId":"d_rnd_양파연구팀","position":"","joinDate":"","status":"normal","note":""},{"id":"e354","name":"양소연","grade":"기사급","divId":"d_rnd","teamId":"d_rnd_양파연구팀","position":"","joinDate":"","status":"normal","note":""}],"executives":[{"id":"x1","title":"대표이사","name":"양현구","grade":"","years":null},{"id":"x2","title":"전무이사","name":"최정훈","grade":"","years":null},{"id":"x3","title":"감사실장","name":"박병필","grade":"","years":null},{"id":"x4","title":"상무","name":"여찬두","grade":"","years":null},{"id":"x5","title":"SM부문장","name":"전성은","grade":"","years":null},{"id":"x6","title":"SC부문장","name":"정유성","grade":"","years":null}],"snapshots":{}};
@@ -1906,7 +1898,7 @@ function renderDashboard(){
     const diff=active.length-prev;
     document.getElementById('s-total-sub').textContent=(diff>=0?'▲'+diff:'▼'+Math.abs(diff))+' 전월대비';
   }else{document.getElementById('s-prev').textContent='-';document.getElementById('s-total-sub').textContent='';}
-  renderTrendChart();renderGradeChart();renderDivChart();renderStatusChart();renderPositionChart();renderWorkplaceChart();renderEmpTypeChart();renderAgeChart();renderTenureChart();
+  renderTrendChart();renderGradeChart();renderDivChart();renderStatusChart();renderPositionChart();renderWorkplaceChart();renderEmpTypeChart();
 }
 function renderTrendChart(){
   const ctx=document.getElementById('trendChart').getContext('2d');
@@ -2112,112 +2104,6 @@ function renderEmpTypeChart(){
   chartEmpType = _renderMultiColorCatChart('empTypeChart', chartEmpType, 'emp_type', EMP_TYPES, _EMPTYPE_COLORS, 'total-emptype');
 }
 
-// ── 연령대 분포 차트 ──
-function renderAgeChart(){
-  var ctx=document.getElementById('ageChart');
-  if(!ctx)return;
-  ctx=ctx.getContext('2d');
-  if(chartAge)chartAge.destroy();
-  var active=getActive();
-  var today=new Date();
-  var thisYear=today.getFullYear();
-  // 연령대 버킷 정의
-  var buckets=['20대','30대','40대','50대','60대 이상'];
-  var counts=[0,0,0,0,0];
-  var noData=0;
-  active.forEach(function(e){
-    if(!e.birth_year){noData++;return;}
-    var by=parseInt(e.birth_year,10);
-    if(isNaN(by)){noData++;return;}
-    var fullYear=by<100?(by>=0&&by<=30?2000+by:1900+by):by;
-    var age=thisYear-fullYear;
-    if(age<30)counts[0]++;
-    else if(age<40)counts[1]++;
-    else if(age<50)counts[2]++;
-    else if(age<60)counts[3]++;
-    else counts[4]++;
-  });
-  // 데이터 없는 버킷 제거
-  var labels=[],data=[],colors=[];
-  var palette=['#60a5fa','#3b82f6','#2563a8','#1e3a5f','#172b47'];
-  buckets.forEach(function(b,i){
-    if(counts[i]>0){labels.push(b);data.push(counts[i]);colors.push(palette[i]);}
-  });
-  if(noData>0){labels.push('미입력');data.push(noData);colors.push('#c8d3df');}
-  var total=active.length;
-  var el=document.getElementById('total-age');
-  if(el)el.textContent='대상: '+total+'명'+(noData?' (미입력 '+noData+'명)':'');
-  chartAge=new Chart(ctx,{
-    type:'bar',plugins:[hrBarLabels],
-    data:{labels:labels,datasets:[{label:'인원',data:data,backgroundColor:colors,borderRadius:5}]},
-    options:{responsive:true,
-      plugins:{legend:{display:false},
-        tooltip:{callbacks:{label:function(c){
-          var pct=total?Math.round(c.parsed.y/total*100):0;
-          return c.parsed.y+'명 ('+pct+'%)';
-        }}},
-        hrBarLabels:{vertical:true}
-      },
-      scales:{
-        x:{ticks:{font:{size:11}},grid:{display:false}},
-        y:{beginAtZero:true,ticks:{font:{size:11},stepSize:1},grid:{color:'#f0f0f0'}}
-      },
-      layout:{padding:{top:24}}
-    }
-  });
-}
-
-// ── 근속년수 분포 차트 ──
-function renderTenureChart(){
-  var ctx=document.getElementById('tenureChart');
-  if(!ctx)return;
-  ctx=ctx.getContext('2d');
-  if(chartTenure)chartTenure.destroy();
-  var active=getActive();
-  var buckets=['1년 미만','1~3년','3~5년','5~10년','10~15년','15년 이상'];
-  var counts=[0,0,0,0,0,0];
-  var noData=0;
-  active.forEach(function(e){
-    if(!e.join_date){noData++;return;}
-    var jd=new Date(normalizeDate(e.join_date));
-    if(isNaN(jd)||jd.getFullYear()<=1970){noData++;return;}
-    var yrs=(Date.now()-jd)/(365.25*864e5);
-    if(yrs<1)counts[0]++;
-    else if(yrs<3)counts[1]++;
-    else if(yrs<5)counts[2]++;
-    else if(yrs<10)counts[3]++;
-    else if(yrs<15)counts[4]++;
-    else counts[5]++;
-  });
-  var labels=[],data=[],colors=[];
-  var palette=['#d1fae5','#6ee7b7','#34d399','#10b981','#059669','#065f46'];
-  buckets.forEach(function(b,i){
-    if(counts[i]>0){labels.push(b);data.push(counts[i]);colors.push(palette[i]);}
-  });
-  if(noData>0){labels.push('미입력');data.push(noData);colors.push('#c8d3df');}
-  var total=active.length;
-  var el=document.getElementById('total-tenure');
-  if(el)el.textContent='대상: '+total+'명'+(noData?' (미입력 '+noData+'명)':'');
-  chartTenure=new Chart(ctx,{
-    type:'bar',plugins:[hrBarLabels],
-    data:{labels:labels,datasets:[{label:'인원',data:data,backgroundColor:colors,borderRadius:5}]},
-    options:{responsive:true,
-      plugins:{legend:{display:false},
-        tooltip:{callbacks:{label:function(c){
-          var pct=total?Math.round(c.parsed.y/total*100):0;
-          return c.parsed.y+'명 ('+pct+'%)';
-        }}},
-        hrBarLabels:{vertical:true}
-      },
-      scales:{
-        x:{ticks:{font:{size:11}},grid:{display:false}},
-        y:{beginAtZero:true,ticks:{font:{size:11},stepSize:1},grid:{color:'#f0f0f0'}}
-      },
-      layout:{padding:{top:24}}
-    }
-  });
-}
-
 function renderMatrix(){
   renderSnapBar();
   const{employees:emps}=getData();
@@ -2369,9 +2255,7 @@ function renderMatrix(){
           return(!isNaN(jd)&&jd.getFullYear()>1970)?Math.floor((Date.now()-jd)/(365.25*864e5)):-1;
         }
         function byear(e){
-          if(!e.birth_year)return 9999;
-          var by=parseInt(e.birth_year,10);
-          return isNaN(by)?9999:(by<100?(by>=0&&by<=30?2000+by:1900+by):by);
+          return 9999;
         }
         var ta=tenure(a),tb=tenure(b);
         if(tb!==ta)return tb-ta;         // 근속 높은 순
@@ -2383,8 +2267,12 @@ function renderMatrix(){
       members.forEach(e=>{
       const bg=STATUS_COLOR[e.status]||'';
       const fc=e.status==='leave_abs'?'color:#1d4ed8;font-style:italic;':'';
-      const subParts=_calcSubParts(e);
-      const subLine=subParts.length?`<span class="emp-sub">${subParts.join(' · ')}</span>`:'';
+      const _jdStr=e.join_date?normalizeDate(e.join_date):'';
+      const _jd=_jdStr?new Date(_jdStr):null;
+      const tenure=(_jd&&!isNaN(_jd)&&_jd.getFullYear()>1970)?Math.floor((Date.now()-_jd)/(365.25*864e5)):'';
+      let subParts=[];
+      if(tenure!=='')if(tenure>=0)subParts.push(tenure+'년');
+      const subLine=subParts.length?`<span class="emp-sub">${subParts.join('·')}</span>`:'';
       c+=`<span class="emp-name" style="background:${filterText&&e.name.toLowerCase().includes(filterText)?'#dbeafe':bg};${filterText&&e.name.toLowerCase().includes(filterText)?'font-weight:700;color:#1d4ed8;':fc}" onclick="openEditEmpModal('${e.id}')"${e.note?' data-note="'+e.note.replace(/"/g,'&quot;')+ '"':''} >${e.name}${subLine}</span>`;
     });
       leavers.forEach(e=>{c+=`<span class="emp-name" style="background:#f8d7da;text-decoration:line-through;color:#999;" onclick="openEditEmpModal('${e.id}')">${e.name}</span>`;});
@@ -2705,7 +2593,7 @@ function openAddEmpModal(){
   if(!_requireDB())return;
   document.getElementById('empModalTitle').textContent='직원 추가';
   document.getElementById('delEmpBtn').style.display='none';
-  ['f_name','f_position','f_note','f_workplace','f_emp_type','f_birth_year'].forEach(function(i){
+  ['f_name','f_position','f_note','f_workplace','f_emp_type'].forEach(function(i){
     var el=document.getElementById(i);if(el)el.value='';
   });
   var fs=document.getElementById('f_status');if(fs)fs.value='normal';
@@ -2730,7 +2618,7 @@ function openEditEmpModal(id){
   var set=function(elId,val){var el=document.getElementById(elId);if(el)el.value=val||'';};
   set('f_name',e.name);set('f_position',e.position);set('f_joinDate',e.join_date);
   set('f_note',e.note);
-  set('f_workplace',e.workplace);set('f_emp_type',e.emp_type);set('f_birth_year',e.birth_year||'');
+  set('f_workplace',e.workplace);set('f_emp_type',e.emp_type);
   var fs=document.getElementById('f_status');if(fs)fs.value=e.status||'normal';
   buildGradeOptions(e.grade||'부장급');
   buildDivOptions(e.div_id||'');
@@ -2756,8 +2644,7 @@ async function saveEmp(){
     status:(document.getElementById('f_status')||{}).value||'normal',
     note:(document.getElementById('f_note')||{}).value||'',
     workplace:(document.getElementById('f_workplace')||{}).value||'',
-    emp_type:(document.getElementById('f_emp_type')||{}).value||'',
-    birth_year:(document.getElementById('f_birth_year')||{}).value||''
+    emp_type:(document.getElementById('f_emp_type')||{}).value||''
   };
   if(editingEmpId){
     var r=await sb.from('employees').update(data).eq('id',editingEmpId);
@@ -2983,7 +2870,6 @@ function makeBulkRow(n){
     +'<td><input type="text" placeholder="팀장"></td>'
     +'<td><select>'+statusOpts+'</select></td>'
     +'<td><input type="date"></td>'
-    +'<td><input type="text" inputmode="numeric" maxlength="4" placeholder="87" style="width:54px;"></td>'
     +'<td><input type="text" placeholder="비고"></td>';
   return tr;
 }
@@ -3033,8 +2919,7 @@ async function saveBulkInput(){
       position:cells[4].value.trim(),
       status:cells[5].value||'normal',
       join_date:cells[6].value||'',
-      birth_year:cells[7].value.trim(),
-      note:cells[8].value.trim()
+      note:cells[7].value.trim()
     });
   });
   if(!items.length){alert('입력된 데이터가 없습니다.');return;}
@@ -3053,7 +2938,6 @@ async function saveBulkInput(){
       position:item.position,
       status:item.status,
       note:item.note,
-      birth_year:item.birth_year||'',
       workplace:'',emp_type:''
     };
     if(item.join_date)payload.join_date=item.join_date;
@@ -3101,8 +2985,8 @@ function exportExcel(){
   const divMap=Object.fromEntries(divisions.map(d=>[d.id,d.name]));
   const teamMap={};const teamCenterMap={};
   divisions.forEach(d=>(d.teams||[]).forEach(t=>{teamMap[t.id]=t.name;teamCenterMap[t.id]=(t.center_name||'');}));
-  const empRows=[['이름','본부','센터/단/소','팀','직급','직책','입사일','출생년도','사업장','근무직유형','상태','비고']];
-  employees.forEach(e=>empRows.push([e.name||'',divMap[e.div_id]||'',teamCenterMap[e.team_id]||'',teamMap[e.team_id]||'',e.grade||'',e.position||'',e.join_date||'',e.birth_year||'',e.workplace||'',e.emp_type||'',({normal:'재직',join:'입사',leave:'퇴사',transfer:'인사이동',leave_abs:'휴직',dispatch:'파견'}[e.status]||'재직'),e.note||'']));
+  const empRows=[['이름','본부','센터/단/소','팀','직급','직책','입사일','사업장','근무직유형','상태','비고']];
+  employees.forEach(e=>empRows.push([e.name||'',divMap[e.div_id]||'',teamCenterMap[e.team_id]||'',teamMap[e.team_id]||'',e.grade||'',e.position||'',e.join_date||'',e.workplace||'',e.emp_type||'',({normal:'재직',join:'입사',leave:'퇴사',transfer:'인사이동',leave_abs:'휴직',dispatch:'파견'}[e.status]||'재직'),e.note||'']));
   const ws1=XLSX.utils.aoa_to_sheet(empRows);ws1['!cols']=[{wch:10},{wch:14},{wch:14},{wch:14},{wch:10},{wch:10},{wch:12},{wch:8},{wch:8},{wch:10},{wch:4},{wch:12},{wch:8},{wch:20}];
   XLSX.utils.book_append_sheet(wb,ws1,'인원현황');
   const execRows=[['직책','이름','임기 시작','임기 종료']];executives.forEach(e=>execRows.push([e.title||'',e.name||'',e.term_start||'',e.term_end||'']));
@@ -3140,7 +3024,7 @@ async function importExcel(event){
       const headers=rawAll[0].map(function(h){return String(h||'').trim();});
       const ci=function(name){return headers.indexOf(name);};
       const iNm=ci('이름'),iBu=ci('본부'),iCt=ci('센터/단/소'),iTm=ci('팀'),iGr=ci('직급'),iPo=ci('직책');
-      const iJd=ci('입사일'),iBy=ci('출생년도'),iWp=ci('사업장'),iEt=ci('근무직유형'),iSt=ci('상태'),iNo=ci('비고');
+      const iJd=ci('입사일'),iWp=ci('사업장'),iEt=ci('근무직유형'),iSt=ci('상태'),iNo=ci('비고');
       if(iNm<0||iTm<0){alert('필수 열(이름, 팀) 누락. 헤더: '+headers.join(', '));return;}
       const divByName={};
       divisions.forEach(function(d){divByName[d.name.trim()]=d;});
@@ -3172,8 +3056,7 @@ async function importExcel(event){
           status:statusMap[iSt>=0?String(r[iSt]||'').trim():'재직']||'normal',
           note:iNo>=0?String(r[iNo]||'').trim():'',
           workplace:iWp>=0?String(r[iWp]||'').trim():'',
-          emp_type:iEt>=0?String(r[iEt]||'').trim():'',
-          birth_year:iBy>=0?String(r[iBy]||'').trim():''
+          emp_type:iEt>=0?String(r[iEt]||'').trim():''
         });
       });
       const matched=newEmps.filter(function(e){return e.team_id;}).length;
@@ -3574,7 +3457,7 @@ async function init(){
     btn.textContent=loading?'처리 중...':(label||btn.textContent);
   }
   function showAuthStep(stepId){
-    ['authStepLogin','authStepMFA','authStepEnroll'].forEach(function(id){
+    ['authStepLogin','authStepMFA','authStepEnroll','authStepResetPw','authStepResetDone'].forEach(function(id){
       var el=document.getElementById(id);
       if(el)el.className='auth-step'+(id===stepId?' active':'');
     });
@@ -3641,6 +3524,34 @@ async function init(){
       }
     }catch(e){
       showAuthScreen();
+    }
+  };
+
+  // ── 비밀번호 재설정 이메일 발송
+  window.doResetPw = async function(){
+    if(!sb){authErr('DB에 먼저 연결해주세요.');return;}
+    var email=((document.getElementById('resetPwEmail')||{}).value||'').trim();
+    authErr('');
+    if(!email){authErr('이메일을 입력하세요.');return;}
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){authErr('올바른 이메일 형식이 아닙니다.');return;}
+    var btn=document.getElementById('resetPwBtn');
+    if(btn){btn.disabled=true;btn.textContent='발송 중...';}
+    try{
+      // redirectTo: 재설정 링크 클릭 후 돌아올 앱 URL
+      var redirectUrl = window.location.href.split('#')[0].split('?')[0];
+      var res=await sb.auth.resetPasswordForEmail(email,{redirectTo:redirectUrl});
+      if(res.error){
+        authErr('❌ 발송 실패: '+res.error.message);
+        if(btn){btn.disabled=false;btn.textContent='재설정 링크 발송';}
+        return;
+      }
+      // 성공 — 이메일 존재 여부와 관계없이 성공 화면 표시 (보안상 구분 안 함)
+      var msgEl=document.getElementById('resetDoneMsg');
+      if(msgEl)msgEl.innerHTML='<strong>'+email+'</strong> 으로<br>비밀번호 재설정 링크를 보냈습니다.<br><span style="color:#999;font-size:11px;">(스팸함도 확인해 보세요)</span>';
+      showAuthStep('authStepResetDone');
+    }catch(e){
+      authErr('❌ 오류: '+e.message);
+      if(btn){btn.disabled=false;btn.textContent='재설정 링크 발송';}
     }
   };
 
@@ -3812,7 +3723,16 @@ async function init(){
 
   // ── 뒤로가기 (MFA/등록 → 로그인)
   window.authGoBack = async function(){
-    if(sb)await sb.auth.signOut();
+    // 비밀번호 재설정 스텝에서 돌아올 때는 signOut 불필요
+    var resetActive = ['authStepResetPw','authStepResetDone'].some(function(id){
+      var el=document.getElementById(id);
+      return el&&el.classList.contains('active');
+    });
+    if(!resetActive && sb) await sb.auth.signOut();
+    var resetEmail=document.getElementById('resetPwEmail');
+    if(resetEmail)resetEmail.value='';
+    var resetBtn=document.getElementById('resetPwBtn');
+    if(resetBtn){resetBtn.disabled=false;resetBtn.textContent='재설정 링크 발송';}
     showAuthStep('authStepLogin');
   };
 })();
