@@ -1474,6 +1474,11 @@ async function connectSupabase(){
   }
 
   try{
+    // 기존 클라이언트가 있으면 먼저 정리 (GoTrueClient 중복 방지)
+    if(sb){
+      try{ await sb.auth.signOut(); sb.removeAllChannels(); }catch(e){}
+      sb=null;
+    }
     sb=SBLib.createClient(url,key);
     var testRes=await sb.from('employees').select('id').limit(1);
     if(testRes.error){
