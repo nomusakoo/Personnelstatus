@@ -1651,6 +1651,11 @@ async function loadAll(){
 // ── 실시간 구독 ──
 function subscribeRealtime(){
   if(!sb)return;
+  // 기존 채널이 있으면 먼저 제거
+  try{
+    var existing=sb.getChannels().find(function(c){return c.topic==='realtime:hr-live';});
+    if(existing)sb.removeChannel(existing);
+  }catch(e){}
   sb.channel('hr-live')
     .on('postgres_changes',{event:'*',schema:'public',table:'employees'},async()=>{
       showSync();
