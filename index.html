@@ -1478,6 +1478,7 @@ async function connectSupabase(){
 
   // 이미 동일 클라이언트로 연결 완료 상태면 모달만 닫고 종료
   if(isSameClient){
+    setConnected(true);
     document.getElementById('setupOverlay').classList.remove('show');
     restoreBtn();
     return;
