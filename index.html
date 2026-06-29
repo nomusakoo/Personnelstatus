@@ -1511,9 +1511,9 @@ async function connectSupabase(){
   restoreBtn();
 
   // ③ Auth → 데이터 로드 → Realtime (각각 독립 try-catch)
-  try{ await checkAuthSession(); }catch(e){ console.warn('[connect] checkAuthSession 오류:',e.message); }
-  try{ await loadAll(); renderAll(); }catch(e){ console.warn('[connect] loadAll 오류:',e.message); }
-  try{ subscribeRealtime(); }catch(e){ console.warn('[connect] subscribeRealtime 오류:',e.message); }
+  try{ console.log('[connect] checkAuthSession 시작'); await checkAuthSession(); console.log('[connect] checkAuthSession 완료'); }catch(e){ console.warn('[connect] checkAuthSession 오류:',e.message); }
+  try{ console.log('[connect] loadAll 시작'); await loadAll(); renderAll(); console.log('[connect] loadAll 완료'); }catch(e){ console.warn('[connect] loadAll 오류:',e.message); }
+  try{ console.log('[connect] subscribeRealtime 시작'); subscribeRealtime(); console.log('[connect] subscribeRealtime 완료'); }catch(e){ console.warn('[connect] subscribeRealtime 오류:',e.message); }
   if(isFrozen)setTimeout(applyFreeze,100);
   if(showMemo&&window.innerWidth>768)setTimeout(_initMemoTip,200);
 }
@@ -1787,6 +1787,7 @@ function getHeadExtras(){
 }
 
 // ── 대시보드 ──
+// 사용자 액션용: DB 없으면 설정 모달 오픈
 function _requireDB(){
   if(!sb){
     document.getElementById('setupOverlay').classList.add('show');
@@ -1794,8 +1795,10 @@ function _requireDB(){
   }
   return true;
 }
+// 내부 렌더링용: DB 없으면 조용히 false 반환 (모달 열지 않음)
+function _hasDB(){ return !!sb; }
 function renderAll(){
-  if(!_requireDB())return;
+  if(!_hasDB())return;
   updateDivFilter();
   const activeTab=document.querySelector('.tab.active');
   if(!activeTab)return;
