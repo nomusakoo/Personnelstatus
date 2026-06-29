@@ -1474,12 +1474,19 @@ async function connectSupabase(){
   }
 
   try{
-    // 기존 클라이언트가 있으면 먼저 정리 (GoTrueClient 중복 방지)
-    if(sb){
-      try{ await sb.auth.signOut(); sb.removeAllChannels(); }catch(e){}
-      sb=null;
+    // 동일한 URL/Key면 재생성 불필요 — 기존 클라이언트 그대로 사용
+    var savedUrl=localStorage.getItem('sb_url')||'';
+    var savedKey=localStorage.getItem('sb_key')||'';
+    if(sb && savedUrl===url && savedKey===key){
+      // 클라이언트 재사용: 연결 테스트만 다시 수행
+    } else {
+      // URL/Key가 바뀌었거나 클라이언트 없음 → 기존 정리 후 새로 생성
+      if(sb){
+        try{ sb.removeAllChannels(); }catch(e){}
+        sb=null;
+      }
+      sb=SBLib.createClient(url,key);
     }
-    sb=SBLib.createClient(url,key);
     var testRes=await sb.from('employees').select('id').limit(1);
     if(testRes.error){
       sb=null;
