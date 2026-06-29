@@ -3456,7 +3456,7 @@ async function init(){
     btn.disabled=loading;
     btn.textContent=loading?'처리 중...':(label||btn.textContent);
   }
-  function showAuthStep(stepId){
+  window.showAuthStep = function showAuthStep(stepId){
     ['authStepLogin','authStepMFA','authStepEnroll','authStepResetPw','authStepResetDone'].forEach(function(id){
       var el=document.getElementById(id);
       if(el)el.className='auth-step'+(id===stepId?' active':'');
