@@ -728,7 +728,10 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
   </div>
   <div class="charts-row">
     <div class="chart-box" style="min-width:0;">
-    <h3>인턴사원 현황 <span class="chart-total" id="total-intern"></span></h3>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px;">
+      <h3 style="margin-bottom:0;">인턴사원 현황 <span class="chart-total" id="total-intern"></span></h3>
+      <label id="internMemoLabel" style="display:flex;align-items:center;gap:5px;font-size:11px;font-weight:normal;color:#555;cursor:pointer;user-select:none;white-space:nowrap;"><input type="checkbox" id="internMemoToggle" onchange="toggleInternMemo(this.checked)"> 메모보기</label>
+    </div>
     <div style="max-height:260px;overflow:auto;">
     <table style="width:100%;min-width:460px;border-collapse:collapse;font-size:12px;">
       <thead><tr style="border-bottom:2px solid #e5e7eb;">
@@ -1538,7 +1541,8 @@ async function connectSupabase(){
   try{ console.log('[connect] loadAll 시작'); await loadAll(); renderAll(); console.log('[connect] loadAll 완료'); }catch(e){ console.warn('[connect] loadAll 오류:',e.message); }
   try{ console.log('[connect] subscribeRealtime 시작'); subscribeRealtime(); console.log('[connect] subscribeRealtime 완료'); }catch(e){ console.warn('[connect] subscribeRealtime 오류:',e.message); }
   if(isFrozen)setTimeout(applyFreeze,100);
-  if(showMemo&&window.innerWidth>768)setTimeout(_initMemoTip,200);
+  if(showMemo&&window.innerWidth>768)setTimeout(function(){_bindMemoTooltip(document.getElementById('orgTable'),function(){return showMemo;});},200);
+  if(showInternMemo&&window.innerWidth>768)setTimeout(function(){var t=document.getElementById('internTbody');_bindMemoTooltip(t&&t.closest('table'),function(){return showInternMemo;});},200);
 }
 
 // ── 외부 Supabase 연동 ──
@@ -1963,7 +1967,7 @@ function renderInternStatus(){
     var team=(div.teams||[]).find(function(t){return t.id===(e.team_id||e.teamId);})||{};
     var bg=i%2===0?'#fff':'#f8fafc';
     return '<tr style="border-bottom:1px solid #f0f0f0;background:'+bg+';">'
-      +'<td style="padding:6px 10px;font-weight:600;">'+escHtml(e.name||'-')+'</td>'
+      +'<td style="padding:6px 10px;font-weight:600;"'+(e.note?' data-note="'+escHtml(e.note)+'"':'')+'>'+escHtml(e.name||'-')+'</td>'
       +'<td style="padding:6px 10px;">'+escHtml(div.name||'-')+'</td>'
       +'<td style="padding:6px 10px;">'+escHtml(team.name||'-')+'</td>'
       +'<td style="padding:6px 10px;">'+escHtml(e.position||'-')+'</td>'
@@ -3320,36 +3324,41 @@ window.onafterprint=cleanupPrintTables;
 
 // ── 메모 툴팁 ──
 var _memoTip=null;
-var showMemo=false;
-function _initMemoTip(){
-  if(_memoTip)return;
+function _ensureMemoTip(){
+  if(_memoTip)return _memoTip;
   _memoTip=document.createElement('div');
   _memoTip.id='memoTooltip';
   document.body.appendChild(_memoTip);
-  var tbl=document.getElementById('orgTable');
+  return _memoTip;
+}
+function _bindMemoTooltip(tbl,isEnabled){
+  if(!tbl||tbl._memoBound)return;
+  tbl._memoBound=true;
+  var tip=_ensureMemoTip();
   tbl.addEventListener('mouseover',function(ev){
-    if(!showMemo||window.innerWidth<=768)return;
+    if(!isEnabled()||window.innerWidth<=768)return;
     var t=ev.target.closest('[data-note]');
     if(!t)return;
-    _memoTip.textContent=t.getAttribute('data-note');
-    _memoTip.style.display='block';
+    tip.textContent=t.getAttribute('data-note');
+    tip.style.display='block';
   });
   tbl.addEventListener('mousemove',function(ev){
-    if(!showMemo||_memoTip.style.display==='none')return;
-    _memoTip.style.left=(ev.clientX+14)+'px';
-    _memoTip.style.top=Math.max(10,ev.clientY-44)+'px';
+    if(!isEnabled()||tip.style.display==='none')return;
+    tip.style.left=(ev.clientX+14)+'px';
+    tip.style.top=Math.max(10,ev.clientY-44)+'px';
   });
   tbl.addEventListener('mouseleave',function(){
-    if(_memoTip)_memoTip.style.display='none';
+    tip.style.display='none';
   });
   tbl.addEventListener('mouseout',function(ev){
     var t=ev.target.closest('[data-note]');
     if(!t)return;
     if(!ev.relatedTarget||!t.contains(ev.relatedTarget)){
-      if(_memoTip)_memoTip.style.display='none';
+      tip.style.display='none';
     }
   });
 }
+var showMemo=false;
 function toggleMemo(enabled){
   // 모바일에서는 비활성화
   if(window.innerWidth<=768){
@@ -3358,13 +3367,27 @@ function toggleMemo(enabled){
   }
   showMemo=enabled;
   if(!enabled&&_memoTip)_memoTip.style.display='none';
-  _initMemoTip();
+  _bindMemoTooltip(document.getElementById('orgTable'),function(){return showMemo;});
+}
+var showInternMemo=false;
+function toggleInternMemo(enabled){
+  // 모바일에서는 비활성화
+  if(window.innerWidth<=768){
+    document.getElementById('internMemoToggle').checked=false;
+    return;
+  }
+  showInternMemo=enabled;
+  if(!enabled&&_memoTip)_memoTip.style.display='none';
+  var internTbl=document.getElementById('internTbody')&&document.getElementById('internTbody').closest('table');
+  _bindMemoTooltip(internTbl,function(){return showInternMemo;});
 }
 // 모바일에서 메모보기 라벨 숨김
 (function(){
   if(window.innerWidth<=768){
     var ml=document.getElementById('memoLabel');
     if(ml)ml.style.display='none';
+    var iml=document.getElementById('internMemoLabel');
+    if(iml)iml.style.display='none';
   }
 })();
 
@@ -3397,7 +3420,11 @@ async function init(){
     showMemo=true;
     var mt=document.getElementById('memoToggle');
     if(mt){mt.checked=true;}
-    setTimeout(function(){_initMemoTip();},500);
+    setTimeout(function(){_bindMemoTooltip(document.getElementById('orgTable'),function(){return showMemo;});},500);
+    showInternMemo=true;
+    var imt=document.getElementById('internMemoToggle');
+    if(imt){imt.checked=true;}
+    setTimeout(function(){var t=document.getElementById('internTbody');_bindMemoTooltip(t&&t.closest('table'),function(){return showInternMemo;});},500);
   }
 
   const savedUrl=localStorage.getItem('sb_url');
