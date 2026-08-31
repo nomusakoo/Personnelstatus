@@ -225,6 +225,7 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
   .add-btn,.tbtn,.btn,
   #filterDiv,#filterText,
   input[type=checkbox],label:has(#freezeToggle),
+  #internMemoLabel,
   .overlay,.modal,
   #tab-exec{display:none !important;}
   /* 대시보드 탭에서 인쇄한 경우가 아니면 대시보드 내용은 숨김 */
@@ -303,15 +304,26 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
   /* ── sticky 해제 (인쇄에서 position:sticky 제거) ── */
   table.org td{position:static !important;}
 
-  /* ── 대시보드 인쇄: 한 페이지에 더 많이 담기도록 축소 ── */
-  body[data-print-mode="dashboard"] #tab-dashboard{padding:0 !important;}
+  /* ── 대시보드 인쇄: 차트가 최소 2개 이상 나란히 놓이도록 하나의 그리드로 재배치 ── */
+  body[data-print-mode="dashboard"] #tab-dashboard{
+    padding:0 !important;
+    display:grid !important;
+    grid-template-columns:repeat(4,1fr) !important;
+    gap:4mm !important;
+  }
+  /* charts-row/2/3 래퍼는 레이아웃에서 빠지고 내부 박스들이 위 그리드에 직접 배치됨 */
+  body[data-print-mode="dashboard"] .charts-row,
+  body[data-print-mode="dashboard"] .charts-row2,
+  body[data-print-mode="dashboard"] .charts-row3{display:contents;}
+  body[data-print-mode="dashboard"] .summary-cards{grid-column:1/-1;}
+  body[data-print-mode="dashboard"] .chart-box{min-width:0;grid-column:span 1;}
+  /* 인턴사원 현황 / 직급·직책별 인원 박스는 다른 차트 2개분 너비를 차지 */
+  body[data-print-mode="dashboard"] .chart-box.chart-box-wide{grid-column:span 2;}
+  body[data-print-mode="dashboard"] .summary-cards,
+  body[data-print-mode="dashboard"] .chart-box{page-break-inside:avoid;}
   body[data-print-mode="dashboard"] .scard,
   body[data-print-mode="dashboard"] .chart-box{box-shadow:none !important;border:1px solid #ddd;}
   body[data-print-mode="dashboard"] .intern-table-wrap{max-height:none !important;overflow:visible !important;}
-  body[data-print-mode="dashboard"] .summary-cards,
-  body[data-print-mode="dashboard"] .charts-row,
-  body[data-print-mode="dashboard"] .charts-row2,
-  body[data-print-mode="dashboard"] .charts-row3{page-break-inside:avoid;gap:6px !important;margin-bottom:5mm !important;}
   body[data-print-mode="dashboard"] .scard{padding:6px 8px !important;border-radius:5px !important;}
   body[data-print-mode="dashboard"] .scard .lbl{font-size:8px !important;margin-bottom:2px !important;}
   body[data-print-mode="dashboard"] .scard .val{font-size:15px !important;}
@@ -322,6 +334,8 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
   body[data-print-mode="dashboard"] .intern-table-wrap table{font-size:8px !important;}
   body[data-print-mode="dashboard"] .intern-table-wrap th,
   body[data-print-mode="dashboard"] .intern-table-wrap td{padding:2px 5px !important;}
+  /* 차트 캔버스는 Chart.js가 지정한 픽셀 크기 대신, 좁아진 그리드 칸 너비에 맞춰 종횡비를 유지하며 다시 채워짐 */
+  body[data-print-mode="dashboard"] canvas{width:100% !important;height:auto !important;max-width:100%;}
 }
 /* ══════════════════════════════════
    모바일 최적화 (@media max-width)
@@ -749,7 +763,7 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
     <div class="scard" style="border-color:#7c3aed;cursor:pointer;" onclick="openScardModal('dispatch')"><div class="lbl">파견</div><div class="val" style="color:#7c3aed;" id="s-dispatch">0</div></div>
   </div>
   <div class="charts-row">
-    <div class="chart-box" style="min-width:0;">
+    <div class="chart-box chart-box-wide" style="min-width:0;">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px;">
       <h3 style="margin-bottom:0;">인턴사원 현황 <span class="chart-total" id="total-intern"></span></h3>
       <label id="internMemoLabel" style="display:flex;align-items:center;gap:5px;font-size:11px;font-weight:normal;color:#555;cursor:pointer;user-select:none;white-space:nowrap;"><input type="checkbox" id="internMemoToggle" onchange="toggleInternMemo(this.checked)"> 메모보기</label>
@@ -767,7 +781,7 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
     </table>
     </div>
     </div>
-    <div class="chart-box">
+    <div class="chart-box chart-box-wide">
     <h3>직급별 인원 <span class="chart-total" id="total-grade"></span></h3>
     <canvas id="gradeChart" height="200"></canvas>
     <hr style="border:none;border-top:1px solid #eee;margin:14px 0 10px;">
