@@ -3393,6 +3393,7 @@ function toggleInternMemo(enabled){
 
 function doPrint(){
   if(!_requireDB())return;
+  var m=document.getElementById('curMonth').value||new Date().toISOString().slice(0,7);
   var parts=m.split('-');
   var label=parts[0]+'년 '+parseInt(parts[1])+'월 기준 조직 인원현황 보고서';
   document.getElementById('printTitleText').textContent=label;
