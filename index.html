@@ -2179,19 +2179,20 @@ function renderMatrix(){
   var headerRows=hasCenters?6:5;
   html='<thead><tr><td class="grade-hdr" rowspan="'+(hasCenters?6:4)+'">직급</td>';
   // 행1: 본부명
-  divs.forEach(d=>{html+=`<td class="div-hdr" colspan="${d.teams?d.teams.length:1}">${d.name}</td>`;});
+  divs.forEach(d=>{html+=`<td class="div-hdr" colspan="${d.teams?d.teams.length:1}">${escHtml(d.name)}</td>`;});
   html+='</tr>';
   // 행2: 본부장
   html+='<tr>';
   divs.forEach(d=>{
     var ht=d.head_title||'본부장',hn=d.head_name||'';
+    var htE=escHtml(ht),hnE=escHtml(hn);
     var hdEmp=hn?emps.find(function(e){return e.name===hn;}):null;
     var hdSub=makeHeadSub(hdEmp);
     var hdMatch=filterText&&hn&&hn.toLowerCase().includes(filterText);
     var hdStyle=hdMatch?'background:#dbeafe;color:#1d4ed8;':'';
-    var hnSpan=hdMatch?'<span class="emp-name" style="'+hdStyle+'font-weight:700;">'+hn+'</span>':hn;
-    var hl=hn?ht+': <strong>'+hnSpan+'</strong>'+hdSub:'<span style="color:#aaa;">'+ht+' 미입력 (클릭하여 추가)</span>';
-    html+='<td class="head-hdr" colspan="'+(d.teams?d.teams.length:1)+'" onclick="openDivHeadModal(\''+d.id+'\')">'+(viewSnap?(hn||'-')+hdSub:hl)+'</td>';
+    var hnSpan=hdMatch?'<span class="emp-name" style="'+hdStyle+'font-weight:700;">'+hnE+'</span>':hnE;
+    var hl=hn?htE+': <strong>'+hnSpan+'</strong>'+hdSub:'<span style="color:#aaa;">'+htE+' 미입력 (클릭하여 추가)</span>';
+    html+='<td class="head-hdr" colspan="'+(d.teams?d.teams.length:1)+'" onclick="openDivHeadModal(\''+d.id+'\')">'+(viewSnap?(hnE||'-')+hdSub:hl)+'</td>';
   });
   html+='</tr>';
   if(hasCenters){
@@ -2205,12 +2206,12 @@ function renderMatrix(){
         var cn=(td[i].team.center_name||'').trim();
         if(!cn){
           skipSet[td[i].team.id]=true;
-          html+='<td class="team-hdr" rowspan="3" style="vertical-align:middle;">'+td[i].team.name+'</td>';
+          html+='<td class="team-hdr" rowspan="3" style="vertical-align:middle;">'+escHtml(td[i].team.name)+'</td>';
           i++;
         }else{
           var j=i;
           while(j<td.length&&(td[j].team.center_name||'').trim()===cn)j++;
-          html+='<td class="center-grp-hdr" colspan="'+(j-i)+'">'+cn+'</td>';
+          html+='<td class="center-grp-hdr" colspan="'+(j-i)+'">'+escHtml(cn)+'</td>';
           i=j;
         }
       }
@@ -2229,16 +2230,17 @@ function renderMatrix(){
         var rt=td[i].team;
         var cht=rt.center_head_title||'연구소장';
         var chn=rt.center_head_name||'';
-        var chl=chn?(cht+': <strong>'+chn+'</strong>'):('<span style="color:#aaa;">'+cht+' 미입력 (클릭하여 추가)</span>');
+        var chtE=escHtml(cht),chnE=escHtml(chn);
+        var chl=chn?(chtE+': <strong>'+chnE+'</strong>'):('<span style="color:#aaa;">'+chtE+' 미입력 (클릭하여 추가)</span>');
         var safeId=d.id.replace(/'/g,"\\'");
         var safeCn=cn.replace(/'/g,"\\'");
         var chEmpR=chn?emps.find(function(e){return e.name===chn;}):null;
         var chSubR=makeHeadSub(chEmpR);
         var chnMatch=filterText&&chn&&chn.toLowerCase().includes(filterText);
         var chnStyle=chnMatch?'background:#dbeafe;color:#1d4ed8;font-weight:700;':'';
-        var chnSpan=chnMatch?'<span class="emp-name" style="'+chnStyle+'">'+chn+chSubR+'</span>':chn+chSubR;
-        var chlFinal=chn?(cht+': <strong>'+chnSpan+'</strong>'):('<span style="color:#aaa;">'+cht+' 미입력 (클릭하여 추가)</span>');
-        html+='<td class="head2-hdr" colspan="'+(j-i)+'" onclick="openCenterHeadModal(\''+safeId+'\',\''+safeCn+'\')">'+(viewSnap?(chnMatch?'<span class="emp-name" style="'+chnStyle+'">'+chn+chSubR+'</span>':(chn||'-')+chSubR):chlFinal)+'</td>';
+        var chnSpan=chnMatch?'<span class="emp-name" style="'+chnStyle+'">'+chnE+chSubR+'</span>':chnE+chSubR;
+        var chlFinal=chn?(chtE+': <strong>'+chnSpan+'</strong>'):('<span style="color:#aaa;">'+chtE+' 미입력 (클릭하여 추가)</span>');
+        html+='<td class="head2-hdr" colspan="'+(j-i)+'" onclick="openCenterHeadModal(\''+safeId+'\',\''+safeCn+'\')">'+(viewSnap?(chnMatch?'<span class="emp-name" style="'+chnStyle+'">'+chnE+chSubR+'</span>':(chnE||'-')+chSubR):chlFinal)+'</td>';
         i=j;
       }
     });
@@ -2246,13 +2248,13 @@ function renderMatrix(){
     // 행5: 팀명 — 센터있는 팀만
     html+='<tr>';
     allTeams.forEach(function(x){
-      if(!skipSet[x.team.id])html+='<td class="team-hdr">'+x.team.name+'</td>';
+      if(!skipSet[x.team.id])html+='<td class="team-hdr">'+escHtml(x.team.name)+'</td>';
     });
     html+='</tr>';
   }else{
     // 센터없음: 팀명 바로
     html+='<tr>';
-    allTeams.forEach(function(x){html+='<td class="team-hdr">'+x.team.name+'</td>';});
+    allTeams.forEach(function(x){html+='<td class="team-hdr">'+escHtml(x.team.name)+'</td>';});
     html+='</tr>';
   }
   // 마지막 행: 팀장
@@ -2260,11 +2262,11 @@ function renderMatrix(){
   allTeams.forEach(({div,team})=>{
     var ldr=emps.find(e=>e.team_id===team.id&&isLeaderPos(e));
     var lSub=ldr?makeHeadSub(ldr):'';
-    var lNote=ldr&&ldr.note?(' data-note="'+ldr.note.replace(/"/g,'&quot;')+'"'):'';
+    var lNote=ldr&&ldr.note?(' data-note="'+escHtml(ldr.note)+'"'):'';
     var lMatch=filterText&&ldr&&ldr.name.toLowerCase().includes(filterText);
     var lStyle=lMatch?'background:#dbeafe;color:#1d4ed8;font-weight:700;':'';
     var lClass=lMatch?' class="emp-name"':'';
-    var lName=ldr?('<span'+lClass+' style="'+lStyle+'"'+lNote+'>'+ldr.name+lSub+'</span>'):'<span style="color:#bbb;font-size:10px;">+ 추가</span>';
+    var lName=ldr?('<span'+lClass+' style="'+lStyle+'"'+lNote+'>'+escHtml(ldr.name)+lSub+'</span>'):'<span style="color:#bbb;font-size:10px;">+ 추가</span>';
     var ll=lName;
     var ca=viewSnap?'':`onclick="openLeaderCell('${div.id}','${team.id}')"`;
     html+=`<td class="role-hdr clickable" ${ca}>${ll}</td>`;
@@ -2332,9 +2334,9 @@ function renderMatrix(){
       let subParts=[];
       if(tenure!=='')if(tenure>=0)subParts.push(tenure+'년');
       const subLine=subParts.length?`<span class="emp-sub">${subParts.join('·')}</span>`:'';
-      c+=`<span class="emp-name" style="background:${filterText&&e.name.toLowerCase().includes(filterText)?'#dbeafe':bg};${filterText&&e.name.toLowerCase().includes(filterText)?'font-weight:700;color:#1d4ed8;':fc}" onclick="openEditEmpModal('${e.id}')"${e.note?' data-note="'+e.note.replace(/"/g,'&quot;')+ '"':''} >${e.name}${subLine}</span>`;
+      c+=`<span class="emp-name" style="background:${filterText&&e.name.toLowerCase().includes(filterText)?'#dbeafe':bg};${filterText&&e.name.toLowerCase().includes(filterText)?'font-weight:700;color:#1d4ed8;':fc}" onclick="openEditEmpModal('${e.id}')"${e.note?' data-note="'+escHtml(e.note)+ '"':''} >${escHtml(e.name)}${subLine}</span>`;
     });
-      leavers.forEach(e=>{c+=`<span class="emp-name" style="background:#f8d7da;text-decoration:line-through;color:#999;" onclick="openEditEmpModal('${e.id}')">${e.name}</span>`;});
+      leavers.forEach(e=>{c+=`<span class="emp-name" style="background:#f8d7da;text-decoration:line-through;color:#999;" onclick="openEditEmpModal('${e.id}')">${escHtml(e.name)}</span>`;});
       const addAct=viewSnap?'':`<span class="add-btn" onclick="openAddEmpInCell('${div.id}','${team.id}','${grade}')">+추가</span>`;
       html+=`<td class="emp-cell">${c}${addAct}</td>`;
     });
@@ -2412,7 +2414,7 @@ async function deleteSnap(month){
 }
 function setSnap(k){viewSnap=viewSnap===k?null:k;renderMatrix();}
 function clearSnap(){viewSnap=null;renderMatrix();}
-function updateDivFilter(){const sel=document.getElementById('filterDiv');const cur=sel.value;sel.innerHTML='<option value="">본부 전체</option>'+divisions.map(d=>`<option value="${d.id}"${d.id===cur?' selected':''}>${d.name}</option>`).join('');}
+function updateDivFilter(){const sel=document.getElementById('filterDiv');const cur=sel.value;sel.innerHTML='<option value="">본부 전체</option>'+divisions.map(d=>`<option value="${d.id}"${d.id===cur?' selected':''}>${escHtml(d.name)}</option>`).join('');}
 
 // ── 임원 탭 ──
 function renderExecTab(){
@@ -2424,10 +2426,10 @@ function renderExecTab(){
     const visible=executives.slice(0,FOLD);
     const hidden=executives.slice(FOLD);
     const makeRow=e=>`<tr style="border-bottom:1px solid #f0f0f0;">
-      <td style="padding:8px 12px;">${e.title||''}</td>
-      <td style="padding:8px 12px;font-weight:600;">${e.name||''}</td>
-      <td style="padding:8px 12px;text-align:center;font-size:12px;">${e.term_start||'-'}</td>
-      <td style="padding:8px 12px;text-align:center;font-size:12px;">${e.term_end||'-'}</td>
+      <td style="padding:8px 12px;">${escHtml(e.title||'')}</td>
+      <td style="padding:8px 12px;font-weight:600;">${escHtml(e.name||'')}</td>
+      <td style="padding:8px 12px;text-align:center;font-size:12px;">${escHtml(e.term_start||'-')}</td>
+      <td style="padding:8px 12px;text-align:center;font-size:12px;">${escHtml(e.term_end||'-')}</td>
       <td style="padding:8px 12px;text-align:center;"><button onclick="openEditExecModal('${e.id}')" style="padding:3px 10px;font-size:11px;background:#e8ecf0;border:none;border-radius:3px;cursor:pointer;">수정</button></td>
     </tr>`;
     let html=visible.map(makeRow).join('');
@@ -2567,21 +2569,21 @@ document.addEventListener('keydown',function(e){
 });
 
 // ── 조직 관리 ──
-function openStructModal(){if(!_requireDB())return;renderDivList();renderStructTeamList();const sel=document.getElementById('s_divSel');sel.innerHTML=divisions.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');document.getElementById('structOverlay').classList.add('show');}
+function openStructModal(){if(!_requireDB())return;renderDivList();renderStructTeamList();const sel=document.getElementById('s_divSel');sel.innerHTML=divisions.map(d=>`<option value="${d.id}">${escHtml(d.name)}</option>`).join('');document.getElementById('structOverlay').classList.add('show');}
 function closeStructModal(){document.getElementById('structOverlay').classList.remove('show');renderAll();}
-function renderDivList(){document.getElementById('divList').innerHTML=divisions.map(d=>`<div class="struct-item"><span>${d.name} <small style="color:#aaa">(${(d.teams||[]).length}팀)</small></span><button onclick="removeDiv('${d.id}')">삭제</button></div>`).join('')||'<div style="padding:8px;color:#aaa;font-size:12px;">본부 없음</div>';}
-function renderStructTeamList(){const divId=document.getElementById('s_divSel').value;const div=divisions.find(d=>d.id===divId);document.getElementById('teamList').innerHTML=(div&&div.teams||[]).map(t=>`<div class="struct-item"><span>${t.name}</span><button onclick="removeTeam('${divId}','${t.id}')">삭제</button></div>`).join('')||'<div style="padding:8px;color:#aaa;font-size:12px;">팀 없음</div>';}
+function renderDivList(){document.getElementById('divList').innerHTML=divisions.map(d=>`<div class="struct-item"><span>${escHtml(d.name)} <small style="color:#aaa">(${(d.teams||[]).length}팀)</small></span><button onclick="removeDiv('${d.id}')">삭제</button></div>`).join('')||'<div style="padding:8px;color:#aaa;font-size:12px;">본부 없음</div>';}
+function renderStructTeamList(){const divId=document.getElementById('s_divSel').value;const div=divisions.find(d=>d.id===divId);document.getElementById('teamList').innerHTML=(div&&div.teams||[]).map(t=>`<div class="struct-item"><span>${escHtml(t.name)}</span><button onclick="removeTeam('${divId}','${t.id}')">삭제</button></div>`).join('')||'<div style="padding:8px;color:#aaa;font-size:12px;">팀 없음</div>';}
 document.getElementById('s_divSel').addEventListener('change',renderStructTeamList);
 async function addDiv(){
   if(!sb)return;const name=document.getElementById('s_div').value.trim();if(!name)return;
   const id='d_'+uid();await sb.from('divisions').insert({id,name,sort_order:divisions.length});
   document.getElementById('s_div').value='';await loadAll();renderDivList();
-  const sel=document.getElementById('s_divSel');sel.innerHTML=divisions.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');sel.value=id;renderStructTeamList();
+  const sel=document.getElementById('s_divSel');sel.innerHTML=divisions.map(d=>`<option value="${d.id}">${escHtml(d.name)}</option>`).join('');sel.value=id;renderStructTeamList();
 }
 async function removeDiv(id){
   if(!sb||!confirm('본부를 삭제합니다. 소속 팀도 삭제됩니다.'))return;
   await sb.from('divisions').delete().eq('id',id);await loadAll();renderDivList();
-  const sel=document.getElementById('s_divSel');sel.innerHTML=divisions.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');renderStructTeamList();
+  const sel=document.getElementById('s_divSel');sel.innerHTML=divisions.map(d=>`<option value="${d.id}">${escHtml(d.name)}</option>`).join('');renderStructTeamList();
 }
 async function addTeam(){
   if(!sb)return;const name=document.getElementById('s_team').value.trim();const divId=document.getElementById('s_divSel').value;if(!name||!divId)return;
@@ -2637,7 +2639,7 @@ function buildGradeOptions(sel){
 function buildDivOptions(selId){
   var el=document.getElementById('f_div');
   if(!el)return;
-  el.innerHTML='<option value="">-- 본부 선택 --</option>'+divisions.map(function(d){return'<option value="'+d.id+'"'+(d.id===selId?' selected':'')+'>'+d.name+'</option>';}).join('');
+  el.innerHTML='<option value="">-- 본부 선택 --</option>'+divisions.map(function(d){return'<option value="'+d.id+'"'+(d.id===selId?' selected':'')+'>'+escHtml(d.name)+'</option>';}).join('');
   buildTeamOptions(selId,'');
 }
 function onDivChange(){buildTeamOptions(document.getElementById('f_div').value,'');}
@@ -2645,7 +2647,7 @@ function buildTeamOptions(divId,selId){
   var el=document.getElementById('f_team');
   if(!el)return;
   var div=divisions.find(function(d){return d.id===divId;});
-  el.innerHTML='<option value="">-- 팀 선택 --</option>'+(div?(div.teams||[]).map(function(t){return'<option value="'+t.id+'"'+(t.id===selId?' selected':'')+'>'+t.name+'</option>';}).join(''):'');
+  el.innerHTML='<option value="">-- 팀 선택 --</option>'+(div?(div.teams||[]).map(function(t){return'<option value="'+t.id+'"'+(t.id===selId?' selected':'')+'>'+escHtml(t.name)+'</option>';}).join(''):'');
 }
 
 function openAddEmpModal(){
@@ -2917,7 +2919,7 @@ async function resetMonthlyStatuses(){
 var BULK_STATUSES={normal:'재직',leave_abs:'휴직',dispatch:'파견',join:'입사(이번달)',leave:'퇴사(이번달)',transfer:'인사이동(이번달)'};
 
 function makeBulkRow(n){
-  var divOpts='<option value=""></option>'+divisions.map(function(d){return'<option value="'+d.name+'">'+d.name+'</option>';}).join('');
+  var divOpts='<option value=""></option>'+divisions.map(function(d){return'<option value="'+escHtml(d.name)+'">'+escHtml(d.name)+'</option>';}).join('');
   var gradeOpts='<option value=""></option>'+GRADES.map(function(g){return'<option value="'+g+'">'+g+'</option>';}).join('');
   var statusOpts=Object.entries(BULK_STATUSES).map(function(kv){return'<option value="'+kv[0]+'">'+kv[1]+'</option>';}).join('');
   var tr=document.createElement('tr');
@@ -2937,10 +2939,10 @@ function openBulkModal(){
   if(!_requireDB())return;
   var dl1=document.getElementById('bulkDivList');
   if(!dl1){dl1=document.createElement('datalist');dl1.id='bulkDivList';document.body.appendChild(dl1);}
-  dl1.innerHTML=divisions.map(function(d){return'<option value="'+d.name+'">';}).join('');
+  dl1.innerHTML=divisions.map(function(d){return'<option value="'+escHtml(d.name)+'">';}).join('');
   var dl2=document.getElementById('bulkTeamList');
   if(!dl2){dl2=document.createElement('datalist');dl2.id='bulkTeamList';document.body.appendChild(dl2);}
-  dl2.innerHTML=divisions.reduce(function(a,d){return a+(d.teams||[]).map(function(t){return'<option value="'+t.name+'">';}).join('');}, '');
+  dl2.innerHTML=divisions.reduce(function(a,d){return a+(d.teams||[]).map(function(t){return'<option value="'+escHtml(t.name)+'">';}).join('');}, '');
   // 초기 5행
   var tbody=document.getElementById('bulkBody');
   tbody.innerHTML='';
@@ -3247,11 +3249,11 @@ function buildOrgTableHTML(groupDivs,emps,hasCenters){
   if(!allT.length)return'';
   var hr=hasCenters?6:4;
   var h='<thead><tr><td class="grade-hdr" rowspan="'+hr+'" style="min-width:44px;">직급</td>';
-  groupDivs.forEach(function(d){h+='<td class="div-hdr" colspan="'+(d.teams?d.teams.length:1)+'">'+d.name+'</td>';});
+  groupDivs.forEach(function(d){h+='<td class="div-hdr" colspan="'+(d.teams?d.teams.length:1)+'">'+escHtml(d.name)+'</td>';});
   h+='</tr><tr>';
   groupDivs.forEach(function(d){
     var ht=d.head_title||'본부장',hn=d.head_name||'';
-    h+='<td class="head-hdr" colspan="'+(d.teams?d.teams.length:1)+'">'+(hn?ht+': '+hn:'-')+'</td>';
+    h+='<td class="head-hdr" colspan="'+(d.teams?d.teams.length:1)+'">'+(hn?escHtml(ht)+': '+escHtml(hn):'-')+'</td>';
   });
   h+='</tr>';
   if(hasCenters){
@@ -3262,10 +3264,10 @@ function buildOrgTableHTML(groupDivs,emps,hasCenters){
       var i=0;
       while(i<td.length){
         var cn=(td[i].team.center_name||'').trim();
-        if(!cn){sk[td[i].team.id]=true;h+='<td class="team-hdr" rowspan="3" style="vertical-align:middle;">'+td[i].team.name+'</td>';i++;}
+        if(!cn){sk[td[i].team.id]=true;h+='<td class="team-hdr" rowspan="3" style="vertical-align:middle;">'+escHtml(td[i].team.name)+'</td>';i++;}
         else{
           var j=i;while(j<td.length&&(td[j].team.center_name||'').trim()===cn)j++;
-          h+='<td class="center-grp-hdr" colspan="'+(j-i)+'">'+cn+'</td>';i=j;
+          h+='<td class="center-grp-hdr" colspan="'+(j-i)+'">'+escHtml(cn)+'</td>';i=j;
         }
       }
     });
@@ -3283,20 +3285,20 @@ function buildOrgTableHTML(groupDivs,emps,hasCenters){
         var cht=rt.center_head_title||h2t||'센터장';
         var chEmp=chn?emps.find(function(e){return e.name===chn;}):null;
         var chSub=makeHeadSub(chEmp);
-        h+='<td class="head2-hdr" colspan="'+(j-i)+'">'+(chn?cht+': '+chn+chSub:'-')+'</td>';i=j;
+        h+='<td class="head2-hdr" colspan="'+(j-i)+'">'+(chn?escHtml(cht)+': '+escHtml(chn)+chSub:'-')+'</td>';i=j;
       }
     });
     h+='</tr><tr>';
-    allT.forEach(function(x){if(!sk[x.team.id])h+='<td class="team-hdr">'+x.team.name+'</td>';});
+    allT.forEach(function(x){if(!sk[x.team.id])h+='<td class="team-hdr">'+escHtml(x.team.name)+'</td>';});
     h+='</tr><tr>';
   }else{
     h+='<tr>';
-    allT.forEach(function(x){h+='<td class="team-hdr">'+x.team.name+'</td>';});
+    allT.forEach(function(x){h+='<td class="team-hdr">'+escHtml(x.team.name)+'</td>';});
     h+='</tr><tr>';
   }
   allT.forEach(function(x){
     var ldr=emps.find(function(e){return e.team_id===x.team.id&&isLeaderPos(e);});
-    h+='<td class="role-hdr">'+(ldr?ldr.name:'-')+'</td>';
+    h+='<td class="role-hdr">'+(ldr?escHtml(ldr.name):'-')+'</td>';
   });
   h+='</tr></thead><tbody>';
   GRADES.forEach(function(grade){
@@ -3306,7 +3308,7 @@ function buildOrgTableHTML(groupDivs,emps,hasCenters){
     allT.forEach(function(x){
       var mem=emps.filter(function(e){return e.grade===grade&&e.team_id===x.team.id&&e.status!=='leave'&&!isLeaderPos(e);});
       h+='<td class="emp-cell">'+(mem.map(function(e){
-        return'<span class="emp-name">'+e.name+'</span>';
+        return'<span class="emp-name">'+escHtml(e.name)+'</span>';
       }).join(''))+'</td>';
     });
     h+='</tr>';
@@ -4503,11 +4505,12 @@ function _simRenderMatrix(){
 
   var hasCenters = allTeams.some(function(x){ return x.team.center_name && x.team.center_name.trim(); });
   var html = '<thead><tr><td class="grade-hdr" rowspan="'+(hasCenters?6:4)+'">직급</td>';
-  simDivs.forEach(function(d){ html += '<td class="div-hdr" colspan="'+(d.teams?d.teams.length:1)+'">'+d.name+'</td>'; });
+  simDivs.forEach(function(d){ html += '<td class="div-hdr" colspan="'+(d.teams?d.teams.length:1)+'">'+escHtml(d.name)+'</td>'; });
   html += '</tr><tr>';
   simDivs.forEach(function(d){
     var ht = d.head_title||'본부장', hn = d.head_name||'';
-    html += '<td class="head-hdr" colspan="'+(d.teams?d.teams.length:1)+'">'+(hn?ht+': <strong>'+hn+'</strong>':ht+' 미입력')+'</td>';
+    var htE=escHtml(ht),hnE=escHtml(hn);
+    html += '<td class="head-hdr" colspan="'+(d.teams?d.teams.length:1)+'">'+(hn?htE+': <strong>'+hnE+'</strong>':htE+' 미입력')+'</td>';
   });
   html += '</tr>';
   if(hasCenters){
@@ -4518,10 +4521,10 @@ function _simRenderMatrix(){
       var i = 0;
       while(i < td.length){
         var cn = (td[i].team.center_name||'').trim();
-        if(!cn){ skipSet[td[i].team.id]=true; html+='<td class="team-hdr" rowspan="3" style="vertical-align:middle;">'+td[i].team.name+'</td>'; i++; }
+        if(!cn){ skipSet[td[i].team.id]=true; html+='<td class="team-hdr" rowspan="3" style="vertical-align:middle;">'+escHtml(td[i].team.name)+'</td>'; i++; }
         else {
           var j=i; while(j<td.length&&(td[j].team.center_name||'').trim()===cn)j++;
-          html+='<td class="center-grp-hdr" colspan="'+(j-i)+'">'+cn+'</td>'; i=j;
+          html+='<td class="center-grp-hdr" colspan="'+(j-i)+'">'+escHtml(cn)+'</td>'; i=j;
         }
       }
     });
@@ -4535,16 +4538,17 @@ function _simRenderMatrix(){
         var j=i; while(j<td.length&&!skipSet[td[j].team.id]&&(td[j].team.center_name||'').trim()===cn)j++;
         var rt=td[i].team;
         var cht=rt.center_head_title||'센터장', chn=rt.center_head_name||'';
-        html+='<td class="head2-hdr" colspan="'+(j-i)+'">'+(chn?cht+': <strong>'+chn+'</strong>':cht+' 미입력')+'</td>';
+        var chtE=escHtml(cht),chnE=escHtml(chn);
+        html+='<td class="head2-hdr" colspan="'+(j-i)+'">'+(chn?chtE+': <strong>'+chnE+'</strong>':chtE+' 미입력')+'</td>';
         i=j;
       }
     });
     html += '</tr><tr>';
-    allTeams.forEach(function(x){ if(!skipSet[x.team.id]) html+='<td class="team-hdr">'+x.team.name+'</td>'; });
+    allTeams.forEach(function(x){ if(!skipSet[x.team.id]) html+='<td class="team-hdr">'+escHtml(x.team.name)+'</td>'; });
     html += '</tr>';
   } else {
     html += '<tr>';
-    allTeams.forEach(function(x){ html+='<td class="team-hdr">'+x.team.name+'</td>'; });
+    allTeams.forEach(function(x){ html+='<td class="team-hdr">'+escHtml(x.team.name)+'</td>'; });
     html += '</tr>';
   }
   // 팀장 행 (드롭 가능 — data-isleader="1" 로 팀장 영역 식별)
@@ -4553,7 +4557,7 @@ function _simRenderMatrix(){
     var ldr = empsArr.find(function(e){ return e.team_id===x.team.id && isLeaderPos(e); });
     var changed = ldr && simOrigMap[ldr.id] && (simOrigMap[ldr.id].team_id !== ldr.team_id || simOrigMap[ldr.id].grade !== ldr.grade || simOrigMap[ldr.id].position !== ldr.position);
     html += '<td class="role-hdr sim-drop-cell" data-divid="'+x.div.id+'" data-teamid="'+x.team.id+'" data-grade="" data-isleader="1">'
-      +(ldr?'<span class="sim-chip'+(changed?' changed':'')+'" draggable="true" data-empid="'+ldr.id+'">'+ldr.name+'</span>':'<span style="color:#bbb;font-size:10px;">-</span>')
+      +(ldr?'<span class="sim-chip'+(changed?' changed':'')+'" draggable="true" data-empid="'+ldr.id+'">'+escHtml(ldr.name)+'</span>':'<span style="color:#bbb;font-size:10px;">-</span>')
       +'</td>';
   });
   html += '</tr></thead><tbody>';
@@ -4568,7 +4572,7 @@ function _simRenderMatrix(){
       var chips = members.map(function(e){
         var changed = simOrigMap[e.id] && (simOrigMap[e.id].team_id!==e.team_id || simOrigMap[e.id].grade!==e.grade);
         var bg = STATUS_COLOR[e.status]||'';
-        return '<span class="sim-chip'+(changed?' changed':'')+'" draggable="true" data-empid="'+e.id+'" style="background:'+(changed?'':bg)+';">'+e.name+'</span>';
+        return '<span class="sim-chip'+(changed?' changed':'')+'" draggable="true" data-empid="'+e.id+'" style="background:'+(changed?'':bg)+';">'+escHtml(e.name)+'</span>';
       }).join('');
       html += '<td class="sim-drop-cell emp-cell" data-divid="'+x.div.id+'" data-teamid="'+x.team.id+'" data-grade="'+grade+'" data-isleader="0">'+chips+'</td>';
     });
@@ -4750,14 +4754,14 @@ function _simRenderDiff(){
   wrap.style.display='block';
   tbody.innerHTML = diff.map(function(d){
     return '<tr style="border-bottom:1px solid #f0f0f0;">'
-      +'<td style="padding:5px 10px;font-weight:600;">'+d.name+'</td>'
-      +'<td style="padding:5px 10px;color:#b12c2c;">'+d.from_div+'</td>'
-      +'<td style="padding:5px 10px;color:#b12c2c;">'+d.from_team+'</td>'
-      +'<td style="padding:5px 10px;color:#b12c2c;">'+d.from_grade+'</td>'
-      +'<td style="padding:5px 10px;color:#2d7a3a;">'+d.to_div+'</td>'
-      +'<td style="padding:5px 10px;color:#2d7a3a;">'+d.to_team+'</td>'
-      +'<td style="padding:5px 10px;color:#2d7a3a;">'+d.to_grade+'</td>'
-      +'<td style="padding:5px 10px;color:#555;font-size:11px;">'+d.changes+'</td>'
+      +'<td style="padding:5px 10px;font-weight:600;">'+escHtml(d.name)+'</td>'
+      +'<td style="padding:5px 10px;color:#b12c2c;">'+escHtml(d.from_div)+'</td>'
+      +'<td style="padding:5px 10px;color:#b12c2c;">'+escHtml(d.from_team)+'</td>'
+      +'<td style="padding:5px 10px;color:#b12c2c;">'+escHtml(d.from_grade)+'</td>'
+      +'<td style="padding:5px 10px;color:#2d7a3a;">'+escHtml(d.to_div)+'</td>'
+      +'<td style="padding:5px 10px;color:#2d7a3a;">'+escHtml(d.to_team)+'</td>'
+      +'<td style="padding:5px 10px;color:#2d7a3a;">'+escHtml(d.to_grade)+'</td>'
+      +'<td style="padding:5px 10px;color:#555;font-size:11px;">'+escHtml(d.changes)+'</td>'
       +'</tr>';
   }).join('');
 }
