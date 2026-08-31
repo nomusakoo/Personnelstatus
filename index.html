@@ -3588,15 +3588,15 @@ async function generateOfflineFile(password){
   html=html.replace(/<script src="https:\/\/cdn\.jsdelivr\.net\/npm\/@supabase\/supabase-js@2\/dist\/umd\/supabase\.js"><\/script>\s*/,'');
   // Chart.js / xlsx.js는 인라인으로 삽입해 인터넷 없이도 동작하도록 처리
   html=html.replace(
-    '<script src="'+OFFLINE_LIB_URLS.xlsx+'"></script>',
-    '<script>'+xlsxSrc+'</script>'
+    '<script src="'+OFFLINE_LIB_URLS.xlsx+'"><\/script>',
+    '<script>'+xlsxSrc+'<\/script>'
   );
   html=html.replace(
-    '<script src="'+OFFLINE_LIB_URLS.chart+'"></script>',
-    '<script>'+chartSrc+'</script>'
+    '<script src="'+OFFLINE_LIB_URLS.chart+'"><\/script>',
+    '<script>'+chartSrc+'<\/script>'
   );
   // 암호화된 데이터 블록 삽입
-  var dataScript='<script>window.__OFFLINE_SNAPSHOT_ENC__='+JSON.stringify(enc)+';</script>\n';
+  var dataScript='<script>window.__OFFLINE_SNAPSHOT_ENC__='+JSON.stringify(enc)+';<\/script>\n';
   html=html.replace('</head>',dataScript+'</head>');
 
   var blob=new Blob([html],{type:'text/html'});
