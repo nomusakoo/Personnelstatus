@@ -226,9 +226,11 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
   #filterDiv,#filterText,
   input[type=checkbox],label:has(#freezeToggle),
   .overlay,.modal,
-  .charts-row,.charts-row2,
-  .summary-cards,
-  #tab-dashboard,#tab-exec{display:none !important;}
+  #tab-exec{display:none !important;}
+  /* 대시보드 탭에서 인쇄한 경우가 아니면 대시보드 내용은 숨김 */
+  body:not([data-print-mode="dashboard"]) #tab-dashboard{display:none !important;}
+  /* 대시보드 탭에서 인쇄한 경우엔 매트릭스용 인쇄 표를 숨김 */
+  body[data-print-mode="dashboard"] #printTables{display:none !important;}
 
   /* ── body/layout ── */
   html,body{background:white !important;font-size:10px;margin:0;padding:0;}
@@ -300,6 +302,16 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
 
   /* ── sticky 해제 (인쇄에서 position:sticky 제거) ── */
   table.org td{position:static !important;}
+
+  /* ── 대시보드 인쇄 ── */
+  body[data-print-mode="dashboard"] #tab-dashboard{padding:0 !important;}
+  body[data-print-mode="dashboard"] .scard,
+  body[data-print-mode="dashboard"] .chart-box{box-shadow:none !important;border:1px solid #ddd;}
+  body[data-print-mode="dashboard"] .intern-table-wrap{max-height:none !important;overflow:visible !important;}
+  body[data-print-mode="dashboard"] .summary-cards,
+  body[data-print-mode="dashboard"] .charts-row,
+  body[data-print-mode="dashboard"] .charts-row2,
+  body[data-print-mode="dashboard"] .charts-row3{page-break-inside:avoid;margin-bottom:8mm;}
 }
 /* ══════════════════════════════════
    모바일 최적화 (@media max-width)
@@ -732,7 +744,7 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
       <h3 style="margin-bottom:0;">인턴사원 현황 <span class="chart-total" id="total-intern"></span></h3>
       <label id="internMemoLabel" style="display:flex;align-items:center;gap:5px;font-size:11px;font-weight:normal;color:#555;cursor:pointer;user-select:none;white-space:nowrap;"><input type="checkbox" id="internMemoToggle" onchange="toggleInternMemo(this.checked)"> 메모보기</label>
     </div>
-    <div style="max-height:260px;overflow:auto;">
+    <div class="intern-table-wrap" style="max-height:260px;overflow:auto;">
     <table style="width:100%;min-width:460px;border-collapse:collapse;font-size:12px;">
       <thead><tr style="border-bottom:2px solid #e5e7eb;">
         <th style="padding:6px 10px;text-align:left;">이름</th>
@@ -3320,7 +3332,10 @@ function preparePrintTables(){
 function cleanupPrintTables(){
   var el=document.getElementById('printTables');if(el)el.remove();
 }
-window.onafterprint=cleanupPrintTables;
+window.onafterprint=function(){
+  cleanupPrintTables();
+  document.body.removeAttribute('data-print-mode');
+};
 
 // ── 메모 툴팁 ──
 var _memoTip=null;
@@ -3393,12 +3408,19 @@ function toggleInternMemo(enabled){
 
 function doPrint(){
   if(!_requireDB())return;
+  var activePage=document.querySelector('.page.active');
+  var isDashboard=activePage&&activePage.id==='tab-dashboard';
+  document.body.setAttribute('data-print-mode',isDashboard?'dashboard':'matrix');
   var m=document.getElementById('curMonth').value||new Date().toISOString().slice(0,7);
   var parts=m.split('-');
-  var label=parts[0]+'년 '+parseInt(parts[1])+'월 기준 조직 인원현황 보고서';
+  var label=parts[0]+'년 '+parseInt(parts[1])+'월 기준 '+(isDashboard?'인원현황 대시보드 보고서':'조직 인원현황 보고서');
   document.getElementById('printTitleText').textContent=label;
   document.getElementById('printTitleSub').textContent='작성일: '+new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'});
-  preparePrintTables();
+  if(isDashboard){
+    cleanupPrintTables();
+  } else {
+    preparePrintTables();
+  }
   window.print();
 }
 
