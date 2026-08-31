@@ -303,7 +303,7 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
   /* ── sticky 해제 (인쇄에서 position:sticky 제거) ── */
   table.org td{position:static !important;}
 
-  /* ── 대시보드 인쇄 ── */
+  /* ── 대시보드 인쇄: 한 페이지에 더 많이 담기도록 축소 ── */
   body[data-print-mode="dashboard"] #tab-dashboard{padding:0 !important;}
   body[data-print-mode="dashboard"] .scard,
   body[data-print-mode="dashboard"] .chart-box{box-shadow:none !important;border:1px solid #ddd;}
@@ -311,7 +311,17 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
   body[data-print-mode="dashboard"] .summary-cards,
   body[data-print-mode="dashboard"] .charts-row,
   body[data-print-mode="dashboard"] .charts-row2,
-  body[data-print-mode="dashboard"] .charts-row3{page-break-inside:avoid;margin-bottom:8mm;}
+  body[data-print-mode="dashboard"] .charts-row3{page-break-inside:avoid;gap:6px !important;margin-bottom:5mm !important;}
+  body[data-print-mode="dashboard"] .scard{padding:6px 8px !important;border-radius:5px !important;}
+  body[data-print-mode="dashboard"] .scard .lbl{font-size:8px !important;margin-bottom:2px !important;}
+  body[data-print-mode="dashboard"] .scard .val{font-size:15px !important;}
+  body[data-print-mode="dashboard"] .scard .sub{font-size:7px !important;}
+  body[data-print-mode="dashboard"] .chart-box{padding:8px 10px !important;border-radius:5px !important;}
+  body[data-print-mode="dashboard"] .chart-box h3{font-size:10px !important;margin-bottom:5px !important;}
+  body[data-print-mode="dashboard"] .chart-total{font-size:8px !important;}
+  body[data-print-mode="dashboard"] .intern-table-wrap table{font-size:8px !important;}
+  body[data-print-mode="dashboard"] .intern-table-wrap th,
+  body[data-print-mode="dashboard"] .intern-table-wrap td{padding:2px 5px !important;}
 }
 /* ══════════════════════════════════
    모바일 최적화 (@media max-width)
@@ -3332,8 +3342,23 @@ function preparePrintTables(){
 function cleanupPrintTables(){
   var el=document.getElementById('printTables');if(el)el.remove();
 }
+// 대시보드 인쇄 시 차트를 축소해 한 페이지에 더 많이 담기도록 처리
+// (Chart.js가 캔버스에 직접 픽셀 크기를 지정하므로 CSS만으로는 줄어들지 않음)
+function _resizeDashboardChartsForPrint(shrink){
+  [chartGrade,chartPosition,chartDiv,chartStatus,chartWorkplace,chartEmpType].forEach(function(c){
+    if(!c)return;
+    if(shrink){
+      if(c._printOrigH==null)c._printOrigH=c.height;
+      c.resize(c.width,Math.max(60,Math.round(c._printOrigH*0.6)));
+    } else if(c._printOrigH!=null){
+      c.resize();
+      c._printOrigH=null;
+    }
+  });
+}
 window.onafterprint=function(){
   cleanupPrintTables();
+  _resizeDashboardChartsForPrint(false);
   document.body.removeAttribute('data-print-mode');
 };
 
@@ -3418,6 +3443,7 @@ function doPrint(){
   document.getElementById('printTitleSub').textContent='작성일: '+new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'});
   if(isDashboard){
     cleanupPrintTables();
+    _resizeDashboardChartsForPrint(true);
   } else {
     preparePrintTables();
   }
