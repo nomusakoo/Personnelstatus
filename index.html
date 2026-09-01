@@ -25,8 +25,6 @@ body{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;font-size:12px
 
 /* 연결 상태 */
 .conn-badge{display:flex;align-items:center;gap:5px;font-size:11px;padding:4px 10px;border-radius:12px;border:1px solid rgba(255,255,255,.3);}
-/* 오프라인 스냅샷 파일: 쓰기/DB 연동 기능은 숨김 */
-body.offline-mode .req-online{display:none !important;}
 .conn-dot{width:7px;height:7px;border-radius:50%;background:#aaa;}
 .conn-dot.ok{background:#4ade80;box-shadow:0 0 4px #4ade80;}
 .conn-dot.err{background:#f87171;}
@@ -232,8 +230,10 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
   #tab-exec{display:none !important;}
   /* 대시보드 탭에서 인쇄한 경우가 아니면 대시보드 내용은 숨김 */
   body:not([data-print-mode="dashboard"]) #tab-dashboard{display:none !important;}
-  /* 대시보드 탭에서 인쇄한 경우엔 매트릭스용 인쇄 표를 숨김 */
+  /* 대시보드 탭에서 인쇄한 경우엔 매트릭스용 인쇄 표를 숨김 (단, PDF 종합 저장 시에는 함께 표시) */
   body[data-print-mode="dashboard"] #printTables{display:none !important;}
+  body[data-print-mode="dashboard"].print-include-matrix #printTables{display:block !important;}
+  body[data-print-mode="dashboard"].print-include-matrix #tab-dashboard{page-break-after:always;}
 
   /* ── body/layout ── */
   html,body{background:white !important;font-size:10px;margin:0;padding:0;}
@@ -724,35 +724,34 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
 <!-- 툴바 -->
 <div class="toolbar">
   <h1>📊 인원현황 대시보드</h1>
-  <div class="conn-badge req-online" id="connBadge"><div class="conn-dot" id="connDot"></div><span id="connText">연결 중...</span></div>
-  <span id="offlineBadge" style="display:none;font-size:11px;font-weight:600;color:#fef3c7;background:rgba(255,180,0,.25);border:1px solid rgba(255,180,0,.6);border-radius:12px;padding:3px 10px;white-space:nowrap;">🔒 오프라인 스냅샷</span>
+  <div class="conn-badge" id="connBadge"><div class="conn-dot" id="connDot"></div><span id="connText">연결 중...</span></div>
   <input type="month" id="curMonth" onchange="onMonthChange()">
-  <button class="tbtn req-online" id="resetStatusBtn" onclick="resetMonthlyStatuses()" title="입사→재직 / 인사이동→재직 / 퇴사→삭제 처리" style="background:rgba(255,180,0,.25);border-color:rgba(255,180,0,.6);font-size:14px;padding:4px 10px;" >↺</button>
-  <div class="sep req-online"></div>
-  <button class="tbtn green req-online" onclick="openAddEmpModal()">+ 직원 추가</button>
-  <button class="tbtn req-online" onclick="openBulkModal()" style="background:#c2410c;border-color:#c2410c;color:white;">+ 대량 추가</button>
-  <button class="tbtn req-online" onclick="openStructModal()">⚙ 조직 관리</button>
-  <button class="tbtn accent req-online" onclick="openSnapModal()">💾 월별인원 저장</button>
+  <button class="tbtn" id="resetStatusBtn" onclick="resetMonthlyStatuses()" title="입사→재직 / 인사이동→재직 / 퇴사→삭제 처리" style="background:rgba(255,180,0,.25);border-color:rgba(255,180,0,.6);font-size:14px;padding:4px 10px;" >↺</button>
+  <div class="sep"></div>
+  <button class="tbtn green" onclick="openAddEmpModal()">+ 직원 추가</button>
+  <button class="tbtn" onclick="openBulkModal()" style="background:#c2410c;border-color:#c2410c;color:white;">+ 대량 추가</button>
+  <button class="tbtn" onclick="openStructModal()">⚙ 조직 관리</button>
+  <button class="tbtn accent" onclick="openSnapModal()">💾 월별인원 저장</button>
   <div class="sep"></div>
   <button class="tbtn" onclick="exportExcel()">📥 엑셀 내보내기</button>
-  <button class="tbtn req-online" onclick="document.getElementById('xlsxInput').click()">📤 엑셀 불러오기</button>
+  <button class="tbtn" onclick="document.getElementById('xlsxInput').click()">📤 엑셀 불러오기</button>
   <input type="file" id="xlsxInput" accept=".xlsx,.xls" style="display:none" onchange="importExcel(event)">
-  <div class="sep req-online"></div>
-  <button class="tbtn req-online" style="background:rgba(255,180,0,.2);border-color:rgba(255,180,0,.5);" onclick="openSetupModal()">⚙ DB 설정</button>
+  <div class="sep"></div>
+  <button class="tbtn" style="background:rgba(255,180,0,.2);border-color:rgba(255,180,0,.5);" onclick="openSetupModal()">⚙ DB 설정</button>
   <button class="tbtn ml" onclick="doPrint()">🖨 인쇄</button>
-  <button class="tbtn req-online" onclick="openDownloadModal()">📥 파일 다운로드</button>
-  <div class="sep req-online"></div>
-  <div class="auth-user-info req-online" id="authUserInfo">👤 <span id="authUserEmail"></span></div>
-  <button class="tbtn req-online" onclick="openChangePwModal()" id="changePwBtn" style="background:rgba(37,99,168,.35);border-color:rgba(37,99,168,.6);" title="비밀번호 변경">🔑 비밀번호 변경</button>
-  <button class="tbtn req-online" onclick="doLogout()" id="logoutBtn" style="background:rgba(177,44,44,.3);border-color:rgba(177,44,44,.5);" title="로그아웃">🔓 로그아웃</button>
+  <button class="tbtn" onclick="downloadFullPdf()" title="대시보드+인원현황표를 PDF로 저장 (오프라인 조회용)">📄 PDF로 저장</button>
+  <div class="sep"></div>
+  <div class="auth-user-info" id="authUserInfo">👤 <span id="authUserEmail"></span></div>
+  <button class="tbtn" onclick="openChangePwModal()" id="changePwBtn" style="background:rgba(37,99,168,.35);border-color:rgba(37,99,168,.6);" title="비밀번호 변경">🔑 비밀번호 변경</button>
+  <button class="tbtn" onclick="doLogout()" id="logoutBtn" style="background:rgba(177,44,44,.3);border-color:rgba(177,44,44,.5);" title="로그아웃">🔓 로그아웃</button>
 </div>
 
 <div class="tabs">
   <div class="tab active" onclick="switchTab('dashboard')">📊 대시보드</div>
   <div class="tab" onclick="switchTab('matrix')">📋 인원현황표</div>
-  <div class="tab req-online" onclick="switchTab('execcal')">📅 임원 일정</div>
-  <div class="tab req-online" onclick="switchTab('exec')">👔 임원 등 관리</div>
-  <div class="tab req-online" onclick="switchTab('sim')">🔀 인사발령 시뮬레이션</div>
+  <div class="tab" onclick="switchTab('execcal')">📅 임원 일정</div>
+  <div class="tab" onclick="switchTab('exec')">👔 임원 등 관리</div>
+  <div class="tab" onclick="switchTab('sim')">🔀 인사발령 시뮬레이션</div>
 </div>
 
 <!-- 대시보드 -->
@@ -1324,25 +1323,6 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
 </div>
 </div>
 
-<!-- 오프라인 파일 다운로드 모달 -->
-<div class="overlay" id="downloadOverlay">
-<div class="modal" style="max-width:380px;">
-  <h2>📥 오프라인 파일 다운로드</h2>
-  <p style="font-size:12px;color:#666;margin:-4px 0 16px;line-height:1.6;">
-    현재 대시보드·인원현황표 데이터를 담은 HTML 파일을 만듭니다.<br>
-    인터넷이 없어도 이 파일을 열어 조회할 수 있어요 (수정·저장은 안 됨).<br>
-    파일은 비밀번호로 암호화되어, 열 때 이 비밀번호를 입력해야 내용이 보입니다.
-  </p>
-  <div class="fr"><label>비밀번호 설정 (8자 이상)</label><input id="dlPw1" type="password" placeholder="비밀번호" autocomplete="new-password"></div>
-  <div class="fr"><label>비밀번호 확인</label><input id="dlPw2" type="password" placeholder="다시 입력" autocomplete="new-password" onkeydown="if(event.key==='Enter')startOfflineDownload()"></div>
-  <div id="dlErr" style="color:#b12c2c;font-size:12px;min-height:16px;margin-bottom:4px;"></div>
-  <div class="mact">
-    <button class="btn btn-g" onclick="closeDownloadModal()">취소</button>
-    <button class="btn btn-p" id="dlGoBtn" onclick="startOfflineDownload()">다운로드</button>
-  </div>
-</div>
-</div>
-
 <!-- 임원 일정 붙여넣기 입력 모달 -->
 <div class="overlay" id="execPasteOverlay">
 <div class="modal" style="width:680px;">
@@ -1875,7 +1855,6 @@ function getHeadExtras(){
 // ── 대시보드 ──
 // 사용자 액션용: DB 없으면 설정 모달 오픈
 function _requireDB(){
-  if(window.__OFFLINE_MODE__)return true;
   if(!sb){
     document.getElementById('setupOverlay').classList.add('show');
     return false;
@@ -1883,7 +1862,7 @@ function _requireDB(){
   return true;
 }
 // 내부 렌더링용: DB 없으면 조용히 false 반환 (모달 열지 않음)
-function _hasDB(){ return !!sb || !!window.__OFFLINE_MODE__; }
+function _hasDB(){ return !!sb; }
 function renderAll(){
   if(!_hasDB())return;
   updateDivFilter();
@@ -3263,7 +3242,7 @@ async function importExcel(event){
   event.target.value='';
 }
 
-['empOverlay','execOverlay','structOverlay','snapOverlay','setupOverlay','divHead2Overlay','centerHeadOverlay','scardOverlay','downloadOverlay'].forEach(id=>{document.getElementById(id).addEventListener('click',function(e){if(e.target===this)this.classList.remove('show');});});
+['empOverlay','execOverlay','structOverlay','snapOverlay','setupOverlay','divHead2Overlay','centerHeadOverlay','scardOverlay'].forEach(id=>{document.getElementById(id).addEventListener('click',function(e){if(e.target===this)this.classList.remove('show');});});
 
 // ── 인쇄용 분할 테이블 생성 ──
 var MAX_PRINT_TEAMS=9; // 페이지당 최대 팀 컬럼 수
@@ -3400,6 +3379,7 @@ window.onafterprint=function(){
   cleanupPrintTables();
   _resizeDashboardChartsForPrint(false);
   document.body.removeAttribute('data-print-mode');
+  document.body.classList.remove('print-include-matrix');
 };
 
 // ── 메모 툴팁 ──
@@ -3490,180 +3470,20 @@ function doPrint(){
   window.print();
 }
 
-// ══════════════════════════════════
-// 오프라인 파일 다운로드 (암호화된 스냅샷)
-// ══════════════════════════════════
-var OFFLINE_LIB_URLS={
-  chart:'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js',
-  xlsx:'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
-};
-function _u8ToB64(bytes){
-  var chunk=0x8000,binary='';
-  for(var i=0;i<bytes.length;i+=chunk){
-    binary+=String.fromCharCode.apply(null,bytes.subarray(i,i+chunk));
-  }
-  return btoa(binary);
-}
-function _b64ToU8(b64){
-  var bin=atob(b64),arr=new Uint8Array(bin.length);
-  for(var i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);
-  return arr;
-}
-async function _deriveAesKey(password,saltBytes){
-  var enc=new TextEncoder();
-  var keyMaterial=await crypto.subtle.importKey('raw',enc.encode(password),{name:'PBKDF2'},false,['deriveKey']);
-  return crypto.subtle.deriveKey(
-    {name:'PBKDF2',salt:saltBytes,iterations:200000,hash:'SHA-256'},
-    keyMaterial,
-    {name:'AES-GCM',length:256},
-    false,
-    ['encrypt','decrypt']
-  );
-}
-async function _encryptOfflineData(password,dataObj){
-  var salt=crypto.getRandomValues(new Uint8Array(16));
-  var iv=crypto.getRandomValues(new Uint8Array(12));
-  var key=await _deriveAesKey(password,salt);
-  var plaintext=new TextEncoder().encode(JSON.stringify(dataObj));
-  var ciphertext=await crypto.subtle.encrypt({name:'AES-GCM',iv:iv},key,plaintext);
-  return{salt:_u8ToB64(salt),iv:_u8ToB64(iv),data:_u8ToB64(new Uint8Array(ciphertext))};
-}
-async function _decryptOfflineData(password,encObj){
-  var salt=_b64ToU8(encObj.salt),iv=_b64ToU8(encObj.iv),ciphertext=_b64ToU8(encObj.data);
-  var key=await _deriveAesKey(password,salt);
-  var plainBuf=await crypto.subtle.decrypt({name:'AES-GCM',iv:iv},key,ciphertext);
-  return JSON.parse(new TextDecoder().decode(plainBuf));
-}
-
-function openDownloadModal(){
+// 대시보드+인원현황표를 한 번에 인쇄해 PDF로 저장할 수 있게 함 (오프라인 조회용)
+// PC/모바일 어디서든 기본 인쇄 대화상자의 "PDF로 저장"만 쓰면 되므로 브라우저/OS 호환성 문제가 없음
+function downloadFullPdf(){
   if(!_requireDB())return;
-  document.getElementById('dlPw1').value='';
-  document.getElementById('dlPw2').value='';
-  document.getElementById('dlErr').textContent='';
-  document.getElementById('downloadOverlay').classList.add('show');
-}
-function closeDownloadModal(){document.getElementById('downloadOverlay').classList.remove('show');}
-
-async function startOfflineDownload(){
-  var pw1=document.getElementById('dlPw1').value;
-  var pw2=document.getElementById('dlPw2').value;
-  var errEl=document.getElementById('dlErr');
-  errEl.textContent='';
-  if(pw1.length<8){errEl.textContent='비밀번호는 8자 이상으로 설정해주세요.';return;}
-  if(pw1!==pw2){errEl.textContent='비밀번호가 일치하지 않습니다.';return;}
-  var btn=document.getElementById('dlGoBtn');
-  var origLabel=btn.textContent;
-  btn.disabled=true;btn.textContent='생성 중...';
-  try{
-    await generateOfflineFile(pw1);
-    closeDownloadModal();
-  }catch(e){
-    console.error('[오프라인 다운로드] 실패:',e);
-    errEl.textContent='파일 생성에 실패했습니다: '+(e.message||e)+' (인터넷 연결을 확인해주세요)';
-  }finally{
-    btn.disabled=false;btn.textContent=origLabel;
-  }
-}
-
-async function generateOfflineFile(password){
-  var curMonthVal=(document.getElementById('curMonth')||{}).value||'';
-  var snapshotData={
-    generatedAt:new Date().toISOString(),
-    curMonth:curMonthVal,
-    employees:employees,
-    executives:executives,
-    divisions:divisions,
-    snapshots:snapshots
-  };
-  var enc=await _encryptOfflineData(password,snapshotData);
-
-  var pageRes=await fetch(location.href,{cache:'no-store'});
-  if(!pageRes.ok)throw new Error('페이지 원본을 가져오지 못했습니다');
-  var html=await pageRes.text();
-
-  var chartSrc=await (await fetch(OFFLINE_LIB_URLS.chart)).text();
-  var xlsxSrc=await (await fetch(OFFLINE_LIB_URLS.xlsx)).text();
-
-  // Supabase 라이브러리는 오프라인에서 쓰지 않으므로 제거
-  html=html.replace(/<script src="https:\/\/cdn\.jsdelivr\.net\/npm\/@supabase\/supabase-js@2\/dist\/umd\/supabase\.js"><\/script>\s*/,'');
-  // Chart.js / xlsx.js는 인라인으로 삽입해 인터넷 없이도 동작하도록 처리
-  html=html.replace(
-    '<script src="'+OFFLINE_LIB_URLS.xlsx+'"><\/script>',
-    '<script>'+xlsxSrc+'<\/script>'
-  );
-  html=html.replace(
-    '<script src="'+OFFLINE_LIB_URLS.chart+'"><\/script>',
-    '<script>'+chartSrc+'<\/script>'
-  );
-  // 암호화된 데이터 블록 삽입
-  var dataScript='<script>window.__OFFLINE_SNAPSHOT_ENC__='+JSON.stringify(enc)+';<\/script>\n';
-  html=html.replace('</head>',dataScript+'</head>');
-
-  var blob=new Blob([html],{type:'text/html'});
-  var url=URL.createObjectURL(blob);
-  var a=document.createElement('a');
-  var dateStr=new Date().toISOString().slice(0,10);
-  a.href=url;a.download='인원현황_스냅샷_'+dateStr+'.html';
-  document.body.appendChild(a);a.click();a.remove();
-  setTimeout(function(){URL.revokeObjectURL(url);},2000);
-}
-
-function initOfflineMode(){
-  var authScreen=document.getElementById('authScreen');
-  if(authScreen)authScreen.classList.remove('active');
-
-  var gate=document.createElement('div');
-  gate.id='offlineGate';
-  gate.style.cssText='position:fixed;inset:0;z-index:100000;background:linear-gradient(135deg,#0f2240 0%,#1e3a5f 60%,#16305a 100%);display:flex;align-items:center;justify-content:center;';
-  gate.innerHTML=
-    '<div style="background:white;border-radius:16px;padding:32px;width:320px;max-width:90vw;box-shadow:0 12px 48px rgba(0,0,0,.5);">'
-    +'<div style="text-align:center;margin-bottom:20px;">'
-      +'<div style="font-size:18px;font-weight:700;color:#1e3a5f;">🔒 오프라인 스냅샷</div>'
-      +'<div style="font-size:11px;color:#888;margin-top:4px;">비밀번호를 입력해 열어주세요</div>'
-    +'</div>'
-    +'<input id="offlineGatePw" type="password" placeholder="비밀번호" autocomplete="current-password" '
-      +'style="width:100%;padding:10px 12px;border:1.5px solid #dde1e7;border-radius:8px;font-size:13px;box-sizing:border-box;margin-bottom:12px;">'
-    +'<button id="offlineGateBtn" style="width:100%;padding:11px;background:#1e3a5f;color:white;border:none;border-radius:8px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;">열기</button>'
-    +'<div id="offlineGateErr" style="color:#ff6b6b;font-size:12px;margin-top:10px;text-align:center;min-height:16px;"></div>';
-  document.body.appendChild(gate);
-
-  var pwEl=document.getElementById('offlineGatePw');
-  var errEl=document.getElementById('offlineGateErr');
-  var btnEl=document.getElementById('offlineGateBtn');
-
-  async function attemptUnlock(){
-    var pw=pwEl.value;
-    errEl.textContent='';
-    if(!pw)return;
-    btnEl.disabled=true;btnEl.textContent='확인 중...';
-    try{
-      var data=await _decryptOfflineData(pw,window.__OFFLINE_SNAPSHOT_ENC__);
-      window.__OFFLINE_MODE__=true;
-      employees=data.employees||[];
-      executives=data.executives||[];
-      divisions=data.divisions||[];
-      snapshots=data.snapshots||{};
-      var mEl=document.getElementById('curMonth');
-      if(mEl)mEl.value=data.curMonth||new Date().toISOString().slice(0,7);
-      document.body.classList.add('offline-mode');
-      var badge=document.getElementById('offlineBadge');
-      if(badge){
-        badge.style.display='inline-flex';
-        var genDate=data.generatedAt?new Date(data.generatedAt).toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'}):'';
-        badge.textContent='🔒 오프라인 스냅샷'+(genDate?' ('+genDate+' 기준)':'');
-      }
-      gate.remove();
-      renderAll();
-    }catch(e){
-      console.warn('[오프라인 잠금 해제] 실패:',e.message);
-      errEl.textContent='비밀번호가 올바르지 않습니다.';
-      btnEl.disabled=false;btnEl.textContent='열기';
-      pwEl.value='';pwEl.focus();
-    }
-  }
-  btnEl.addEventListener('click',attemptUnlock);
-  pwEl.addEventListener('keydown',function(ev){if(ev.key==='Enter')attemptUnlock();});
-  setTimeout(function(){pwEl.focus();},50);
+  document.body.setAttribute('data-print-mode','dashboard');
+  document.body.classList.add('print-include-matrix');
+  var m=document.getElementById('curMonth').value||new Date().toISOString().slice(0,7);
+  var parts=m.split('-');
+  var label=parts[0]+'년 '+parseInt(parts[1])+'월 기준 인원현황 종합 보고서';
+  document.getElementById('printTitleText').textContent=label;
+  document.getElementById('printTitleSub').textContent='작성일: '+new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'});
+  _resizeDashboardChartsForPrint(true);
+  preparePrintTables();
+  window.print();
 }
 
 // ── 페이지 초기화 ──
@@ -3688,12 +3508,6 @@ async function init(){
     var imt=document.getElementById('internMemoToggle');
     if(imt){imt.checked=true;}
     setTimeout(function(){var t=document.getElementById('internTbody');_bindMemoTooltip(t&&t.closest('table'),function(){return showInternMemo;});},500);
-  }
-
-  // 오프라인 스냅샷 파일이면 Supabase 연결을 건너뛰고 잠금 해제 화면으로 진입
-  if(window.__OFFLINE_SNAPSHOT_ENC__){
-    initOfflineMode();
-    return;
   }
 
   const savedUrl=localStorage.getItem('sb_url');
