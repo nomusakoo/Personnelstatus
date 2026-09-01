@@ -306,24 +306,24 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
   /* ── sticky 해제 (인쇄에서 position:sticky 제거) ── */
   table.org td{position:static !important;}
 
-  /* ── 대시보드 인쇄: 차트가 최소 2개 이상 나란히 놓이도록 하나의 그리드로 재배치 ── */
-  body[data-print-mode="dashboard"] #tab-dashboard{
-    padding:0 !important;
-    display:grid !important;
-    grid-template-columns:repeat(4,1fr) !important;
-    gap:4mm !important;
-    align-items:start !important;
-  }
-  /* charts-row/2/3 래퍼는 레이아웃에서 빠지고 내부 박스들이 위 그리드에 직접 배치됨 */
+  /* ── 대시보드 인쇄: 화면과 동일하게 줄마다 2개씩(정상 블록 흐름) 배치 ──
+     (CSS Grid + display:contents로 하나의 그리드에 몰아넣는 방식은 인쇄 시
+     페이지 나누기가 불안정하게 깨져서, 안정적인 기존 2단 레이아웃으로 되돌림) */
+  body[data-print-mode="dashboard"] #tab-dashboard{padding:0 !important;}
   body[data-print-mode="dashboard"] .charts-row,
   body[data-print-mode="dashboard"] .charts-row2,
-  body[data-print-mode="dashboard"] .charts-row3{display:contents;}
-  body[data-print-mode="dashboard"] .summary-cards{grid-column:1/-1;grid-template-columns:max-content !important;}
+  body[data-print-mode="dashboard"] .charts-row3{
+    display:grid !important;
+    grid-template-columns:1fr 1fr !important;
+    gap:4mm !important;
+    margin-bottom:4mm !important;
+    align-items:start !important;
+    page-break-inside:avoid;
+  }
+  body[data-print-mode="dashboard"] .summary-cards{grid-template-columns:max-content !important;}
   /* 인쇄 시에는 "현재 총 인원"만 남기고 나머지 요약 카드는 숨김 */
   body[data-print-mode="dashboard"] .scard:not(.total){display:none !important;}
-  body[data-print-mode="dashboard"] .chart-box{min-width:0;grid-column:span 1;align-self:start;}
-  /* 인턴사원 현황 / 직급·직책별 인원 박스는 다른 차트 2개분 너비를 차지 */
-  body[data-print-mode="dashboard"] .chart-box.chart-box-wide{grid-column:span 2;}
+  body[data-print-mode="dashboard"] .chart-box{min-width:0;align-self:start;}
   body[data-print-mode="dashboard"] .summary-cards,
   body[data-print-mode="dashboard"] .chart-box{page-break-inside:avoid;}
   body[data-print-mode="dashboard"] .scard,
