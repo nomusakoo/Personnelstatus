@@ -1451,30 +1451,6 @@ function makeHeadSub(e){
   return p.length?'<div style="display:block;font-size:9px;color:#444;line-height:1.4;margin-top:2px;">'+p.join('·')+'</div>':'';
 }
 
-// 도넛 차트 데이터 레이블 플러그인
-var hrDoughnutLabels={
-  id:'hrDoughnutLabels',
-  afterDatasetsDraw:function(chart){
-    var ctx=chart.ctx;
-    chart.data.datasets.forEach(function(dataset,i){
-      var meta=chart.getDatasetMeta(i);
-      if(meta.hidden)return;
-      meta.data.forEach(function(arc,index){
-        var val=dataset.data[index];
-        if(!val)return;
-        var pos=arc.tooltipPosition();
-        ctx.save();
-        ctx.fillStyle='#fff';
-        ctx.font='bold 11px Malgun Gothic,sans-serif';
-        ctx.textAlign='center';
-        ctx.textBaseline='middle';
-        ctx.fillText(val,pos.x,pos.y);
-        ctx.restore();
-      });
-    });
-  }
-};
-
 const LEADER_POSITIONS=['팀장','법인장','지점장','실장','본부장','센터장','단장','부문장','소장','연구소장','대표이사','지회장'];
 const isLeaderPos=e=>e.position&&LEADER_POSITIONS.some(p=>e.position.includes(p));
 // 전역 오류 캐처 (디버그용)
@@ -2048,7 +2024,7 @@ function renderStatusChart(){
   if(stTotal)stTotal.textContent='합계: '+getTotalCount()+'명';
   var statusKeys=['normal','join','leave','transfer','leave_abs','dispatch'];
   var statusKorMap={normal:'재직',join:'입사',leave:'퇴사',transfer:'인사이동',leave_abs:'휴직',dispatch:'파견'};
-  chartStatus=new Chart(ctx,{type:'doughnut',plugins:[hrDoughnutLabels],data:{labels:['재직','입사','퇴사','인사이동','휴직','파견'],datasets:[{data:[employees.filter(e=>e.status==='normal').length,employees.filter(e=>e.status==='join').length,employees.filter(e=>e.status==='leave').length,employees.filter(e=>e.status==='transfer').length,employees.filter(e=>e.status==='leave_abs').length,employees.filter(e=>e.status==='dispatch').length],backgroundColor:['#2563a8','#2d7a3a','#b12c2c','#c17d11','#0891b2','#7c3aed'],borderColor:['#ffffff','#ffffff','#ffffff','#ffffff','#ffffff','#ffffff'],borderWidth:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11}}}},onClick:function(_,els){if(els.length){var key=statusKeys[els[0].index];var kor=statusKorMap[key];openScardModal('status_chart',key,kor+' 인원');}}}});
+  chartStatus=new Chart(ctx,{type:'bar',plugins:[hrBarLabels],data:{labels:['재직','입사','퇴사','인사이동','휴직','파견'],datasets:[{label:'인원',data:[employees.filter(e=>e.status==='normal').length,employees.filter(e=>e.status==='join').length,employees.filter(e=>e.status==='leave').length,employees.filter(e=>e.status==='transfer').length,employees.filter(e=>e.status==='leave_abs').length,employees.filter(e=>e.status==='dispatch').length],backgroundColor:['#2563a8','#2d7a3a','#b12c2c','#c17d11','#0891b2','#7c3aed'],borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',layout:{padding:{right:36}},plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{font:{size:10}},grid:{display:false}},y:{ticks:{font:{size:10}}}},onClick:function(_,els){if(els.length){var key=statusKeys[els[0].index];var kor=statusKorMap[key];openScardModal('status_chart',key,kor+' 인원');}}}});
   document.getElementById('statusChart').style.cursor='pointer';
 }
 
