@@ -315,8 +315,8 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
   body[data-print-mode="dashboard"] .charts-row3{
     display:grid !important;
     grid-template-columns:1fr 1fr !important;
-    gap:4mm !important;
-    margin-bottom:4mm !important;
+    gap:2mm !important;
+    margin-bottom:2mm !important;
     align-items:start !important;
     page-break-inside:avoid;
   }
@@ -332,8 +332,9 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
   body[data-print-mode="dashboard"] .scard .lbl{font-size:8px !important;margin-bottom:2px !important;}
   body[data-print-mode="dashboard"] .scard .val{font-size:15px !important;}
   body[data-print-mode="dashboard"] .scard .sub{font-size:7px !important;}
-  body[data-print-mode="dashboard"] .chart-box{padding:8px 10px !important;border-radius:5px !important;}
-  body[data-print-mode="dashboard"] .chart-box h3{font-size:10px !important;margin-bottom:5px !important;}
+  body[data-print-mode="dashboard"] .chart-box{padding:5px 8px !important;border-radius:5px !important;}
+  body[data-print-mode="dashboard"] .chart-box h3{font-size:9px !important;margin-bottom:3px !important;}
+  body[data-print-mode="dashboard"] .chart-box hr{margin:4px 0 !important;}
   body[data-print-mode="dashboard"] .chart-total{font-size:8px !important;}
   body[data-print-mode="dashboard"] .intern-table-wrap table{font-size:8px !important;}
   body[data-print-mode="dashboard"] .intern-table-wrap th,
@@ -3377,7 +3378,7 @@ function _resizeDashboardChartsForPrint(shrink){
     if(!c)return;
     if(shrink){
       if(c._printOrigH==null)c._printOrigH=c.height;
-      c.resize(c.width,Math.max(60,Math.round(c._printOrigH*0.6)));
+      c.resize(c.width,Math.max(50,Math.round(c._printOrigH*0.4)));
     } else if(c._printOrigH!=null){
       c.resize();
       c._printOrigH=null;
