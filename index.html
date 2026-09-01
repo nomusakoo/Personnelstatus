@@ -3380,6 +3380,9 @@ function _resizeDashboardChartsForPrint(shrink){
       c.resize();
       c._printOrigH=null;
     }
+    // resize()의 재렌더가 다음 프레임으로 미뤄지는 경우가 있어, 인쇄 스냅샷 전에
+    // 캔버스가 빈 채로 찍히지 않도록 애니메이션 없이 즉시 다시 그리게 함
+    c.update('none');
   });
 }
 window.onafterprint=function(){
@@ -3474,7 +3477,8 @@ function doPrint(){
   } else {
     preparePrintTables();
   }
-  window.print();
+  // 차트가 다시 그려질 시간을 준 뒤 인쇄 (바로 인쇄하면 캔버스가 빈 채로 찍히는 경우가 있음)
+  setTimeout(function(){window.print();},150);
 }
 
 // 대시보드+인원현황표를 한 번에 인쇄해 PDF로 저장할 수 있게 함 (오프라인 조회용)
@@ -3490,7 +3494,8 @@ function downloadFullPdf(){
   document.getElementById('printTitleSub').textContent='작성일: '+new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'});
   _resizeDashboardChartsForPrint(true);
   preparePrintTables();
-  window.print();
+  // 차트가 다시 그려질 시간을 준 뒤 인쇄 (바로 인쇄하면 캔버스가 빈 채로 찍히는 경우가 있음)
+  setTimeout(function(){window.print();},150);
 }
 
 // ── 페이지 초기화 ──
