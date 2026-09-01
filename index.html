@@ -192,6 +192,9 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
 .struct-item:hover{background:#f5f5f5;}
 .struct-item span{flex:1;font-size:12px;}
 .struct-item button{padding:2px 7px;font-size:11px;border:none;border-radius:3px;cursor:pointer;background:#f8d7da;color:#721c24;}
+.struct-item .move-btns{flex:0 0 auto;display:flex;gap:4px;}
+.struct-item .move-btn{background:#e8ecf0;color:#333;}
+.struct-item .move-btn:disabled{opacity:.35;cursor:default;}
 
 /* @media print → 아래 통합 버전 사용 */
 #printTables{display:none;}
@@ -2638,7 +2641,21 @@ document.addEventListener('keydown',function(e){
 // ── 조직 관리 ──
 function openStructModal(){if(!_requireDB())return;renderDivList();renderStructTeamList();const sel=document.getElementById('s_divSel');sel.innerHTML=divisions.map(d=>`<option value="${d.id}">${escHtml(d.name)}</option>`).join('');document.getElementById('structOverlay').classList.add('show');}
 function closeStructModal(){document.getElementById('structOverlay').classList.remove('show');renderAll();}
-function renderDivList(){document.getElementById('divList').innerHTML=divisions.map(d=>`<div class="struct-item"><span>${escHtml(d.name)} <small style="color:#aaa">(${(d.teams||[]).length}팀)</small></span><button onclick="removeDiv('${d.id}')">삭제</button></div>`).join('')||'<div style="padding:8px;color:#aaa;font-size:12px;">본부 없음</div>';}
+function renderDivList(){document.getElementById('divList').innerHTML=divisions.map((d,i)=>`<div class="struct-item"><span>${escHtml(d.name)} <small style="color:#aaa">(${(d.teams||[]).length}팀)</small></span><span class="move-btns"><button class="move-btn" onclick="moveDiv('${d.id}',-1)" ${i===0?'disabled':''} title="위로">▲</button><button class="move-btn" onclick="moveDiv('${d.id}',1)" ${i===divisions.length-1?'disabled':''} title="아래로">▼</button></span><button onclick="removeDiv('${d.id}')">삭제</button></div>`).join('')||'<div style="padding:8px;color:#aaa;font-size:12px;">본부 없음</div>';}
+async function moveDiv(id,dir){
+  if(!sb)return;
+  var idx=divisions.findIndex(function(d){return d.id===id;});
+  var swapIdx=idx+dir;
+  if(idx<0||swapIdx<0||swapIdx>=divisions.length)return;
+  var a=divisions[idx],b=divisions[swapIdx];
+  var aOrder=a.sort_order,bOrder=b.sort_order;
+  await Promise.all([
+    sb.from('divisions').update({sort_order:bOrder}).eq('id',a.id),
+    sb.from('divisions').update({sort_order:aOrder}).eq('id',b.id)
+  ]);
+  await loadAll();
+  renderDivList();
+}
 function renderStructTeamList(){const divId=document.getElementById('s_divSel').value;const div=divisions.find(d=>d.id===divId);document.getElementById('teamList').innerHTML=(div&&div.teams||[]).map(t=>`<div class="struct-item"><span>${escHtml(t.name)}</span><button onclick="removeTeam('${divId}','${t.id}')">삭제</button></div>`).join('')||'<div style="padding:8px;color:#aaa;font-size:12px;">팀 없음</div>';}
 document.getElementById('s_divSel').addEventListener('change',renderStructTeamList);
 async function addDiv(){
