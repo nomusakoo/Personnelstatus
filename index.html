@@ -320,9 +320,8 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
     align-items:start !important;
     page-break-inside:avoid;
   }
-  body[data-print-mode="dashboard"] .summary-cards{grid-template-columns:max-content !important;}
-  /* 인쇄 시에는 "현재 총 인원"만 남기고 나머지 요약 카드는 숨김 */
-  body[data-print-mode="dashboard"] .scard:not(.total){display:none !important;}
+  /* 요약 카드 박스는 인쇄에서 전부 숨기고, 총 인원 수는 제목 옆에 괄호로 표기 (doPrint/downloadFullPdf 참고) */
+  body[data-print-mode="dashboard"] .summary-cards{display:none !important;}
   body[data-print-mode="dashboard"] .chart-box{min-width:0;align-self:start;}
   body[data-print-mode="dashboard"] .summary-cards,
   body[data-print-mode="dashboard"] .chart-box{page-break-inside:avoid;}
@@ -3472,6 +3471,7 @@ function doPrint(){
   var m=document.getElementById('curMonth').value||new Date().toISOString().slice(0,7);
   var parts=m.split('-');
   var label=parts[0]+'년 '+parseInt(parts[1])+'월 기준 '+(isDashboard?'인원현황 대시보드 보고서':'조직 인원현황 보고서');
+  if(isDashboard)label+=' (현재 총 인원 '+getTotalCount()+'명)';
   document.getElementById('printTitleText').textContent=label;
   document.getElementById('printTitleSub').textContent='작성일: '+new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'});
   if(isDashboard){
@@ -3492,7 +3492,7 @@ function downloadFullPdf(){
   document.body.classList.add('print-include-matrix');
   var m=document.getElementById('curMonth').value||new Date().toISOString().slice(0,7);
   var parts=m.split('-');
-  var label=parts[0]+'년 '+parseInt(parts[1])+'월 기준 인원현황 종합 보고서';
+  var label=parts[0]+'년 '+parseInt(parts[1])+'월 기준 인원현황 종합 보고서 (현재 총 인원 '+getTotalCount()+'명)';
   document.getElementById('printTitleText').textContent=label;
   document.getElementById('printTitleSub').textContent='작성일: '+new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'});
   _resizeDashboardChartsForPrint(true);
