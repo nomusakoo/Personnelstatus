@@ -327,7 +327,8 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
   body[data-print-mode="dashboard"] .chart-box{min-width:0;align-self:start;}
   body[data-print-mode="dashboard"] .scard,
   body[data-print-mode="dashboard"] .chart-box{box-shadow:none !important;border:1px solid #ddd;}
-  body[data-print-mode="dashboard"] .intern-table-wrap{max-height:none !important;overflow:visible !important;}
+  body[data-print-mode="dashboard"] .intern-table-wrap,
+  body[data-print-mode="dashboard"] .exec-dash-table-wrap{flex:none !important;max-height:none !important;overflow:visible !important;}
   body[data-print-mode="dashboard"] .scard{padding:6px 8px !important;border-radius:5px !important;}
   body[data-print-mode="dashboard"] .scard .lbl{font-size:8px !important;margin-bottom:2px !important;}
   body[data-print-mode="dashboard"] .scard .val{font-size:15px !important;}
@@ -336,9 +337,12 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
   body[data-print-mode="dashboard"] .chart-box h3{font-size:9px !important;margin-bottom:3px !important;}
   body[data-print-mode="dashboard"] .chart-box hr{margin:4px 0 !important;}
   body[data-print-mode="dashboard"] .chart-total{font-size:8px !important;}
-  body[data-print-mode="dashboard"] .intern-table-wrap table{font-size:8px !important;}
+  body[data-print-mode="dashboard"] .intern-table-wrap table,
+  body[data-print-mode="dashboard"] .exec-dash-table-wrap table{font-size:8px !important;}
   body[data-print-mode="dashboard"] .intern-table-wrap th,
-  body[data-print-mode="dashboard"] .intern-table-wrap td{padding:2px 5px !important;}
+  body[data-print-mode="dashboard"] .intern-table-wrap td,
+  body[data-print-mode="dashboard"] .exec-dash-table-wrap th,
+  body[data-print-mode="dashboard"] .exec-dash-table-wrap td{padding:2px 5px !important;}
   /* 차트 캔버스는 Chart.js가 지정한 픽셀 크기 대신, 좁아진 그리드 칸 너비에 맞춰 종횡비를 유지하며 다시 채워짐 */
   body[data-print-mode="dashboard"] canvas{width:100% !important;height:auto !important;max-width:100%;}
   /* 화면용 고정 높이 래퍼는 인쇄 시 해제 (JS의 chart.resize()가 실제 인쇄 크기를 지정함) */
@@ -771,12 +775,27 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
     <div class="scard" style="border-color:#7c3aed;cursor:pointer;" onclick="openScardModal('dispatch')"><div class="lbl">파견</div><div class="val" style="color:#7c3aed;" id="s-dispatch">0</div></div>
   </div>
   <div class="charts-row">
-    <div class="chart-box chart-box-wide" style="min-width:0;">
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px;">
+    <div class="chart-box chart-box-wide" style="min-width:0;display:flex;flex-direction:column;">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;">
+      <h3 style="margin-bottom:0;">임원 현황 <span class="chart-total" id="total-exec-dash"></span></h3>
+    </div>
+    <div class="exec-dash-table-wrap" style="flex:1;min-height:0;overflow:auto;">
+    <table style="width:100%;min-width:320px;border-collapse:collapse;font-size:12px;">
+      <thead><tr style="border-bottom:2px solid #e5e7eb;">
+        <th style="padding:6px 10px;text-align:left;">직책</th>
+        <th style="padding:6px 10px;text-align:left;">이름</th>
+        <th style="padding:6px 10px;text-align:left;">임기 시작</th>
+        <th style="padding:6px 10px;text-align:left;">임기 종료</th>
+      </tr></thead>
+      <tbody id="execDashTbody"></tbody>
+    </table>
+    </div>
+    <hr style="border:none;border-top:1px solid #eee;margin:10px 0;">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;">
       <h3 style="margin-bottom:0;">인턴사원 현황 <span class="chart-total" id="total-intern"></span></h3>
       <label id="internMemoLabel" style="display:flex;align-items:center;gap:5px;font-size:11px;font-weight:normal;color:#555;cursor:pointer;user-select:none;white-space:nowrap;"><input type="checkbox" id="internMemoToggle" onchange="toggleInternMemo(this.checked)"> 메모보기</label>
     </div>
-    <div class="intern-table-wrap" style="max-height:260px;overflow:auto;">
+    <div class="intern-table-wrap" style="flex:1;min-height:0;overflow:auto;">
     <table style="width:100%;min-width:460px;border-collapse:collapse;font-size:12px;">
       <thead><tr style="border-bottom:2px solid #e5e7eb;">
         <th style="padding:6px 10px;text-align:left;">이름</th>
@@ -1973,7 +1992,26 @@ function renderDashboard(){
     const diff=active.length-prev;
     document.getElementById('s-total-sub').textContent=(diff>=0?'▲'+diff:'▼'+Math.abs(diff))+' 전월대비';
   }else{document.getElementById('s-prev').textContent='-';document.getElementById('s-total-sub').textContent='';}
-  renderInternStatus();renderGradeChart();renderDivChart();renderStatusChart();renderPositionChart();renderWorkplaceChart();renderEmpTypeChart();
+  renderExecDashStatus();renderInternStatus();renderGradeChart();renderDivChart();renderStatusChart();renderPositionChart();renderWorkplaceChart();renderEmpTypeChart();
+}
+function renderExecDashStatus(){
+  var totalEl=document.getElementById('total-exec-dash');
+  if(totalEl)totalEl.textContent='총 '+executives.length+'명';
+  var tbody=document.getElementById('execDashTbody');
+  if(!tbody)return;
+  if(!executives.length){
+    tbody.innerHTML='<tr><td colspan="4" style="padding:20px;text-align:center;color:#aaa;">임원 정보 없음</td></tr>';
+    return;
+  }
+  tbody.innerHTML=executives.map(function(e,i){
+    var bg=i%2===0?'#fff':'#f8fafc';
+    return '<tr style="border-bottom:1px solid #f0f0f0;background:'+bg+';">'
+      +'<td style="padding:6px 10px;">'+escHtml(e.title||'-')+'</td>'
+      +'<td style="padding:6px 10px;font-weight:600;">'+escHtml(e.name||'-')+'</td>'
+      +'<td style="padding:6px 10px;">'+escHtml(e.term_start||'-')+'</td>'
+      +'<td style="padding:6px 10px;">'+escHtml(e.term_end||'-')+'</td>'
+    +'</tr>';
+  }).join('');
 }
 function renderInternStatus(){
   var list=sortByOrgOrder(getActive().filter(function(e){return (e.emp_type||'').trim()==='인턴';}));
