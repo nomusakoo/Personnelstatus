@@ -29,7 +29,6 @@ body{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;font-size:12px
 .tbtn.green{background:#2d7a3a;border-color:#2d7a3a;}
 .tbtn.accent{background:#2563a8;border-color:#2563a8;}
 .sep{width:1px;height:18px;background:rgba(255,255,255,.25);flex-shrink:0;}
-.ml{margin-left:auto;}
 
 /* 연결 상태 */
 .conn-badge{display:flex;align-items:center;gap:5px;font-size:11px;padding:4px 10px;border-radius:12px;border:1px solid rgba(255,255,255,.3);}
@@ -767,7 +766,7 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
   <input type="file" id="xlsxInput" accept=".xlsx,.xls" style="display:none" onchange="importExcel(event)">
   <div class="sep"></div>
   <button class="tbtn" style="background:rgba(255,180,0,.2);border-color:rgba(255,180,0,.5);" onclick="openSetupModal()">⚙ DB 설정</button>
-  <button class="tbtn ml" onclick="doPrint()">🖨 인쇄</button>
+  <button class="tbtn" onclick="doPrint()">🖨 인쇄</button>
   <button class="tbtn" onclick="downloadFullPdf()" title="대시보드+인원현황표를 PDF로 저장 (오프라인 조회용)">📄 PDF로 저장</button>
   <div class="sep"></div>
   <div class="auth-user-info" id="authUserInfo">👤 <span id="authUserEmail"></span></div>
