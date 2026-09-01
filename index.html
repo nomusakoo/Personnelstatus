@@ -312,13 +312,16 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
     display:grid !important;
     grid-template-columns:repeat(4,1fr) !important;
     gap:4mm !important;
+    align-items:start !important;
   }
   /* charts-row/2/3 래퍼는 레이아웃에서 빠지고 내부 박스들이 위 그리드에 직접 배치됨 */
   body[data-print-mode="dashboard"] .charts-row,
   body[data-print-mode="dashboard"] .charts-row2,
   body[data-print-mode="dashboard"] .charts-row3{display:contents;}
-  body[data-print-mode="dashboard"] .summary-cards{grid-column:1/-1;}
-  body[data-print-mode="dashboard"] .chart-box{min-width:0;grid-column:span 1;}
+  body[data-print-mode="dashboard"] .summary-cards{grid-column:1/-1;grid-template-columns:max-content !important;}
+  /* 인쇄 시에는 "현재 총 인원"만 남기고 나머지 요약 카드는 숨김 */
+  body[data-print-mode="dashboard"] .scard:not(.total){display:none !important;}
+  body[data-print-mode="dashboard"] .chart-box{min-width:0;grid-column:span 1;align-self:start;}
   /* 인턴사원 현황 / 직급·직책별 인원 박스는 다른 차트 2개분 너비를 차지 */
   body[data-print-mode="dashboard"] .chart-box.chart-box-wide{grid-column:span 2;}
   body[data-print-mode="dashboard"] .summary-cards,
