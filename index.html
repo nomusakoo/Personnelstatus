@@ -310,6 +310,8 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
      (CSS Grid + display:contents로 하나의 그리드에 몰아넣는 방식은 인쇄 시
      페이지 나누기가 불안정하게 깨져서, 안정적인 기존 2단 레이아웃으로 되돌림) */
   body[data-print-mode="dashboard"] #tab-dashboard{padding:0 !important;}
+  /* page-break-inside:avoid는 "이 블록이 남은 공간에 안 맞으면 통째로 다음 페이지로"
+     동작이라, 실제 내용보다 훨씬 큰 빈 공간을 만드는 경우가 있어 의도적으로 넣지 않음 */
   body[data-print-mode="dashboard"] .charts-row,
   body[data-print-mode="dashboard"] .charts-row2,
   body[data-print-mode="dashboard"] .charts-row3{
@@ -318,13 +320,10 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
     gap:2mm !important;
     margin-bottom:2mm !important;
     align-items:start !important;
-    page-break-inside:avoid;
   }
   /* 요약 카드 박스는 인쇄에서 전부 숨기고, 총 인원 수는 제목 옆에 괄호로 표기 (doPrint/downloadFullPdf 참고) */
   body[data-print-mode="dashboard"] .summary-cards{display:none !important;}
   body[data-print-mode="dashboard"] .chart-box{min-width:0;align-self:start;}
-  body[data-print-mode="dashboard"] .summary-cards,
-  body[data-print-mode="dashboard"] .chart-box{page-break-inside:avoid;}
   body[data-print-mode="dashboard"] .scard,
   body[data-print-mode="dashboard"] .chart-box{box-shadow:none !important;border:1px solid #ddd;}
   body[data-print-mode="dashboard"] .intern-table-wrap{max-height:none !important;overflow:visible !important;}
