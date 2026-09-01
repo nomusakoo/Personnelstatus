@@ -3373,17 +3373,30 @@ function preparePrintTables(){
 function cleanupPrintTables(){
   var el=document.getElementById('printTables');if(el)el.remove();
 }
-// 대시보드 인쇄 시 차트를 축소해 한 페이지에 더 많이 담기도록 처리
+// 대시보드 인쇄 시 차트를 인쇄용 고정 크기로 맞춰 한 페이지에 담기도록 처리
 // (Chart.js가 캔버스에 직접 픽셀 크기를 지정하므로 CSS만으로는 줄어들지 않음)
+// 화면용 크기(chart-canvas-wrap의 고정 높이)를 기준으로 축소 비율을 곱하면
+// 화면 크기를 줄일 때마다 인쇄 크기도 같이 줄어버려 차트가 찌그러지므로,
+// 인쇄 전용 목표 크기를 화면 크기와 무관하게 고정값으로 지정한다.
+// (가로:세로 비율만 의미가 있음 - 실제 표시 폭은 인쇄 CSS의 width:100%가 결정)
+var PRINT_CHART_DIMS={
+  gradeChart:[500,120],
+  positionChart:[500,95],
+  divChart:[500,130],
+  statusChart:[500,130],
+  workplaceChart:[500,115],
+  empTypeChart:[500,95]
+};
 function _resizeDashboardChartsForPrint(shrink){
   [chartGrade,chartPosition,chartDiv,chartStatus,chartWorkplace,chartEmpType].forEach(function(c){
     if(!c)return;
-    if(shrink){
-      if(c._printOrigH==null)c._printOrigH=c.height;
-      c.resize(c.width,Math.max(50,Math.round(c._printOrigH*0.4)));
-    } else if(c._printOrigH!=null){
+    var dims=PRINT_CHART_DIMS[c.canvas.id];
+    if(shrink&&dims){
+      c._printShrunk=true;
+      c.resize(dims[0],dims[1]);
+    } else if(c._printShrunk){
       c.resize();
-      c._printOrigH=null;
+      c._printShrunk=false;
     }
     // resize()의 재렌더가 다음 프레임으로 미뤄지는 경우가 있어, 인쇄 스냅샷 전에
     // 캔버스가 빈 채로 찍히지 않도록 애니메이션 없이 즉시 다시 그리게 함
