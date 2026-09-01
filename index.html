@@ -343,6 +343,11 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
   body[data-print-mode="dashboard"] .intern-table-wrap td,
   body[data-print-mode="dashboard"] .exec-dash-table-wrap th,
   body[data-print-mode="dashboard"] .exec-dash-table-wrap td{padding:2px 5px !important;}
+  /* 인쇄/PDF에서는 임원 현황에서 사외이사·기타비상무이사 제외 (화면 표시는 그대로 유지) */
+  body[data-print-mode="dashboard"] #execDashTbody tr[data-title="사외이사"],
+  body[data-print-mode="dashboard"] #execDashTbody tr[data-title="기타비상무이사"]{display:none !important;}
+  body[data-print-mode="dashboard"] .exec-total-screen{display:none !important;}
+  body[data-print-mode="dashboard"] .exec-total-print{display:inline !important;}
   /* 차트 캔버스는 Chart.js가 지정한 픽셀 크기 대신, 좁아진 그리드 칸 너비에 맞춰 종횡비를 유지하며 다시 채워짐 */
   body[data-print-mode="dashboard"] canvas{width:100% !important;height:auto !important;max-width:100%;}
   /* 화면용 고정 높이 래퍼는 인쇄 시 해제 (JS의 chart.resize()가 실제 인쇄 크기를 지정함) */
@@ -777,7 +782,7 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
   <div class="charts-row">
     <div class="chart-box chart-box-wide" style="min-width:0;display:flex;flex-direction:column;">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;">
-      <h3 style="margin-bottom:0;">임원 현황 <span class="chart-total" id="total-exec-dash"></span></h3>
+      <h3 style="margin-bottom:0;">임원 현황 <span class="chart-total exec-total-screen" id="total-exec-dash"></span><span class="chart-total exec-total-print" id="total-exec-dash-print" style="display:none;"></span></h3>
     </div>
     <div class="exec-dash-table-wrap" style="flex:1;min-height:0;overflow:auto;">
     <table style="width:100%;min-width:320px;border-collapse:collapse;font-size:12px;">
@@ -2007,9 +2012,16 @@ function renderDashboard(){
   }else{document.getElementById('s-prev').textContent='-';document.getElementById('s-total-sub').textContent='';}
   renderExecDashStatus();renderInternStatus();renderGradeChart();renderDivChart();renderStatusChart();renderPositionChart();renderWorkplaceChart();renderEmpTypeChart();
 }
+// 인쇄/PDF에서는 임원 현황에서 제외되는 직함 (화면에는 계속 표시됨)
+var EXEC_PRINT_EXCLUDE_TITLES=['사외이사','기타비상무이사'];
 function renderExecDashStatus(){
   var totalEl=document.getElementById('total-exec-dash');
   if(totalEl)totalEl.textContent='총 '+executives.length+'명';
+  var printTotalEl=document.getElementById('total-exec-dash-print');
+  if(printTotalEl){
+    var printCount=executives.filter(function(e){return EXEC_PRINT_EXCLUDE_TITLES.indexOf(e.title)===-1;}).length;
+    printTotalEl.textContent='총 '+printCount+'명';
+  }
   var tbody=document.getElementById('execDashTbody');
   if(!tbody)return;
   if(!executives.length){
@@ -2018,7 +2030,7 @@ function renderExecDashStatus(){
   }
   tbody.innerHTML=executives.map(function(e,i){
     var bg=i%2===0?'#fff':'#f8fafc';
-    return '<tr style="border-bottom:1px solid #f0f0f0;background:'+bg+';">'
+    return '<tr data-title="'+escHtml(e.title||'')+'" style="border-bottom:1px solid #f0f0f0;background:'+bg+';">'
       +'<td style="padding:6px 10px;">'+escHtml(e.title||'-')+'</td>'
       +'<td style="padding:6px 10px;font-weight:600;">'+escHtml(e.name||'-')+'</td>'
       +'<td style="padding:6px 10px;">'+escHtml(e.term_start||'-')+'</td>'
