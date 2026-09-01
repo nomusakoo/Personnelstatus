@@ -1818,6 +1818,19 @@ function getIncludedExecs(){
     return EXEC_INCLUDE_TITLES.indexOf(e.title)!==-1;
   });
 }
+// getActive()에 대표이사/전무이사(직원 미등록자만)를 가상 인원으로 추가
+// - 사업장/근무직유형 필드가 없으므로 두 차트에서는 '미입력'으로 집계됨
+function _activeWithIncludedExecs(){
+  var list=getActive();
+  var names=new Set(list.map(function(e){return e.name;}));
+  getIncludedExecs().forEach(function(x){
+    if(x.name&&!names.has(x.name)){
+      names.add(x.name);
+      list=list.concat([{name:x.name,div_id:'',team_id:'',grade:x.grade||'',position:x.title||'',join_date:'',status:'normal',workplace:'',emp_type:'',_isExec:true}]);
+    }
+  });
+  return list;
+}
 function getTotalCount(empsData){
   empsData=empsData||employees;
   var seen=new Set();
@@ -1928,9 +1941,9 @@ function openScardModal(type, filterValue, filterLabel){
   } else if(type==='position'){
     list=getActive().filter(function(e){return (e.position||'').trim()===(filterValue||'');});
   } else if(type==='workplace'){
-    list=getActive().filter(function(e){return (e.workplace||'').trim()===(filterValue||'');});
+    list=_activeWithIncludedExecs().filter(function(e){return (e.workplace||'').trim()===(filterValue||'');});
   } else if(type==='emp_type'){
-    list=getActive().filter(function(e){return (e.emp_type||'').trim()===(filterValue||'');});
+    list=_activeWithIncludedExecs().filter(function(e){return (e.emp_type||'').trim()===(filterValue||'');});
   } else if(type==='status_chart'){
     list=employees.filter(function(e){return e.status===(filterValue||'');});
   } else {
@@ -2155,7 +2168,8 @@ function _renderMultiColorCatChart(canvasId, chartRef, field, categories, colors
   if(!ctx) return null;
   ctx = ctx.getContext('2d');
   if(chartRef) chartRef.destroy();
-  var active = getActive();
+  // 대표이사/전무이사(직원 미등록자)도 포함해 총 인원(getTotalCount)과 집계를 맞춤
+  var active = _activeWithIncludedExecs();
   // 카테고리에 등록된 값만 집계 (대소문자 트림 후 비교)
   var labels = categories.filter(function(c){ return active.some(function(e){ return (e[field]||'').trim()===c; }); });
   if(!labels.length) labels = categories.slice();
