@@ -1997,6 +1997,13 @@ function renderInternStatus(){
     +'</tr>';
   }).join('');
 }
+// 카테고리 수에 맞춰 캔버스 높이를 동적으로 조정 (항목 레이블이 잘려서 생략되지 않도록)
+function _fitChartWrapHeight(canvasId,count,minPx){
+  var canvas=document.getElementById(canvasId);
+  var wrap=canvas&&canvas.parentElement;
+  if(!wrap)return;
+  wrap.style.height=Math.max(minPx,count*20+30)+'px';
+}
 function renderGradeChart(){
   const ctx=document.getElementById('gradeChart').getContext('2d');
   if(chartGrade)chartGrade.destroy();
@@ -2005,7 +2012,8 @@ function renderGradeChart(){
   const labels=GRADES.filter(g=>active.some(e=>e.grade===g)||extras.some(x=>x.grade===g));
   const data=labels.map(g=>active.filter(e=>e.grade===g).length+extras.filter(x=>x.grade===g).length);
   var grTotal=document.getElementById('total-grade');if(grTotal)grTotal.textContent='합계: '+getTotalCount()+'명';
-  chartGrade=new Chart(ctx,{type:'bar',plugins:[hrBarLabels],data:{labels,datasets:[{label:'인원',data,backgroundColor:labels.map(function(_,i){return ["#2563a8", "#2d7a3a", "#c17d11", "#b12c2c", "#0891b2", "#7c3aed", "#c2410c", "#0f766e", "#1d4ed8", "#be185d", "#4d7c0f", "#b45309"][i%12];}),borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',layout:{padding:{right:36}},plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{font:{size:10}},grid:{display:false}},y:{ticks:{font:{size:10}}}},onClick:function(_,els){if(els.length){var lbl=labels[els[0].index];openScardModal('grade',lbl,lbl+' 직급 인원');}}}});
+  _fitChartWrapHeight('gradeChart',labels.length,170);
+  chartGrade=new Chart(ctx,{type:'bar',plugins:[hrBarLabels],data:{labels,datasets:[{label:'인원',data,backgroundColor:labels.map(function(_,i){return ["#2563a8", "#2d7a3a", "#c17d11", "#b12c2c", "#0891b2", "#7c3aed", "#c2410c", "#0f766e", "#1d4ed8", "#be185d", "#4d7c0f", "#b45309"][i%12];}),borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',layout:{padding:{right:36}},plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{font:{size:10}},grid:{display:false}},y:{ticks:{font:{size:10},autoSkip:false}}},onClick:function(_,els){if(els.length){var lbl=labels[els[0].index];openScardModal('grade',lbl,lbl+' 직급 인원');}}}});
   document.getElementById('gradeChart').style.cursor='pointer';
 }
 function renderDivChart(){
@@ -2014,7 +2022,8 @@ function renderDivChart(){
   const active=getActive();
   var dvTotal=document.getElementById('total-div');if(dvTotal)dvTotal.textContent='합계: '+getTotalCount()+'명';
   const dc=divisions.map(d=>({name:d.name,cnt:active.filter(e=>e.div_id===d.id).length})).filter(x=>x.cnt>0).sort((a,b)=>b.cnt-a.cnt);
-  chartDiv=new Chart(ctx,{type:'bar',plugins:[hrBarLabels],data:{labels:dc.map(d=>d.name),datasets:[{label:'인원',data:dc.map(d=>d.cnt),backgroundColor:dc.map(function(_,i){return ["#2563a8", "#2d7a3a", "#c17d11", "#b12c2c", "#0891b2", "#7c3aed", "#c2410c", "#0f766e", "#1d4ed8", "#be185d", "#4d7c0f", "#b45309"][i%12];}),borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',layout:{padding:{right:36}},plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{font:{size:10}},grid:{display:false}},y:{ticks:{font:{size:10}}}},onClick:function(_,els){if(els.length){var d=dc[els[0].index];var divObj=divisions.find(function(x){return x.name===d.name;});if(divObj)openScardModal('div',divObj.id,d.name+' 인원');}}}});
+  _fitChartWrapHeight('divChart',dc.length,190);
+  chartDiv=new Chart(ctx,{type:'bar',plugins:[hrBarLabels],data:{labels:dc.map(d=>d.name),datasets:[{label:'인원',data:dc.map(d=>d.cnt),backgroundColor:dc.map(function(_,i){return ["#2563a8", "#2d7a3a", "#c17d11", "#b12c2c", "#0891b2", "#7c3aed", "#c2410c", "#0f766e", "#1d4ed8", "#be185d", "#4d7c0f", "#b45309"][i%12];}),borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',layout:{padding:{right:36}},plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{font:{size:10}},grid:{display:false}},y:{ticks:{font:{size:10},autoSkip:false}}},onClick:function(_,els){if(els.length){var d=dc[els[0].index];var divObj=divisions.find(function(x){return x.name===d.name;});if(divObj)openScardModal('div',divObj.id,d.name+' 인원');}}}});
   document.getElementById('divChart').style.cursor='pointer';
 }
 function renderStatusChart(){
@@ -2024,7 +2033,8 @@ function renderStatusChart(){
   if(stTotal)stTotal.textContent='합계: '+getTotalCount()+'명';
   var statusKeys=['normal','join','leave','transfer','leave_abs','dispatch'];
   var statusKorMap={normal:'재직',join:'입사',leave:'퇴사',transfer:'인사이동',leave_abs:'휴직',dispatch:'파견'};
-  chartStatus=new Chart(ctx,{type:'bar',plugins:[hrBarLabels],data:{labels:['재직','입사','퇴사','인사이동','휴직','파견'],datasets:[{label:'인원',data:[employees.filter(e=>e.status==='normal').length,employees.filter(e=>e.status==='join').length,employees.filter(e=>e.status==='leave').length,employees.filter(e=>e.status==='transfer').length,employees.filter(e=>e.status==='leave_abs').length,employees.filter(e=>e.status==='dispatch').length],backgroundColor:['#2563a8','#2d7a3a','#b12c2c','#c17d11','#0891b2','#7c3aed'],borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',layout:{padding:{right:36}},plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{font:{size:10}},grid:{display:false}},y:{ticks:{font:{size:10}}}},onClick:function(_,els){if(els.length){var key=statusKeys[els[0].index];var kor=statusKorMap[key];openScardModal('status_chart',key,kor+' 인원');}}}});
+  _fitChartWrapHeight('statusChart',6,190);
+  chartStatus=new Chart(ctx,{type:'bar',plugins:[hrBarLabels],data:{labels:['재직','입사','퇴사','인사이동','휴직','파견'],datasets:[{label:'인원',data:[employees.filter(e=>e.status==='normal').length,employees.filter(e=>e.status==='join').length,employees.filter(e=>e.status==='leave').length,employees.filter(e=>e.status==='transfer').length,employees.filter(e=>e.status==='leave_abs').length,employees.filter(e=>e.status==='dispatch').length],backgroundColor:['#2563a8','#2d7a3a','#b12c2c','#c17d11','#0891b2','#7c3aed'],borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',layout:{padding:{right:36}},plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{font:{size:10}},grid:{display:false}},y:{ticks:{font:{size:10},autoSkip:false}}},onClick:function(_,els){if(els.length){var key=statusKeys[els[0].index];var kor=statusKorMap[key];openScardModal('status_chart',key,kor+' 인원');}}}});
   document.getElementById('statusChart').style.cursor='pointer';
 }
 
@@ -2068,14 +2078,15 @@ function renderPositionChart(){
   var total=data.reduce(function(a,b){return a+b;},0);
   var el=document.getElementById('total-position');
   if(el)el.textContent='합계: '+total+'명';
+  _fitChartWrapHeight('positionChart',labels.length,140);
   chartPosition=new Chart(ctx,{type:'bar',plugins:[hrBarLabels],
     data:{labels:labels,datasets:[{label:'인원',data:data,
-      backgroundColor:labels.map(function(_,i){return ["#2563a8", "#2d7a3a", "#c17d11", "#b12c2c", "#0891b2", "#7c3aed", "#c2410c", "#0f766e", "#1d4ed8", "#be185d", "#4d7c0f", "#b45309"][i%12];}),borderRadius:4}]},  
+      backgroundColor:labels.map(function(_,i){return ["#2563a8", "#2d7a3a", "#c17d11", "#b12c2c", "#0891b2", "#7c3aed", "#c2410c", "#0f766e", "#1d4ed8", "#be185d", "#4d7c0f", "#b45309"][i%12];}),borderRadius:4}]},
     options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',
       layout:{padding:{right:36}},
       plugins:{legend:{display:false}},
       scales:{x:{beginAtZero:true,ticks:{font:{size:10},stepSize:1},grid:{display:false}},
-              y:{ticks:{font:{size:10}}}},
+              y:{ticks:{font:{size:10},autoSkip:false}}},
       onClick:function(_,els){if(els.length){var lbl=labels[els[0].index];openScardModal('position',lbl,lbl+' 인원');}}}});
   document.getElementById('positionChart').style.cursor='pointer';
 }
@@ -2101,7 +2112,7 @@ function renderCatChart(canvasId,chartRef,field,categories,color,totalId){
               y:{ticks:{font:{size:10}}}}}});
 }
 // ── 다색 카테고리 차트 공통 렌더 ──
-function _renderMultiColorCatChart(canvasId, chartRef, field, categories, colors, totalId){
+function _renderMultiColorCatChart(canvasId, chartRef, field, categories, colors, totalId, minH){
   var ctx = document.getElementById(canvasId);
   if(!ctx) return null;
   ctx = ctx.getContext('2d');
@@ -2117,13 +2128,14 @@ function _renderMultiColorCatChart(canvasId, chartRef, field, categories, colors
   if(unset > 0){ labels.push('미입력'); data.push(unset); bgColors.push('#c8d3df'); }
   var el = document.getElementById(totalId);
   if(el) el.textContent = '합계: ' + active.length + '명';
+  _fitChartWrapHeight(canvasId, labels.length, minH||140);
   var chart = new Chart(ctx, {
     type:'bar', plugins:[hrBarLabels],
     data:{ labels:labels, datasets:[{ label:'인원', data:data, backgroundColor:bgColors, borderRadius:4 }] },
     options:{ responsive:true, maintainAspectRatio:false, indexAxis:'y', layout:{ padding:{ right:40 } },
       plugins:{ legend:{ display:false } },
       scales:{ x:{ beginAtZero:true, ticks:{ font:{ size:10 }, stepSize:1 }, grid:{ display:false } },
-               y:{ ticks:{ font:{ size:10 } } } },
+               y:{ ticks:{ font:{ size:10 }, autoSkip:false } } },
       onClick:function(_,els){
         if(els.length){
           var lbl=labels[els[0].index];
@@ -2143,10 +2155,10 @@ var _WORKPLACE_COLORS = ['#1e3a5f','#2563a8','#3b82f6','#60a5fa','#0e7490','#089
 var _EMPTYPE_COLORS   = ['#166534','#15803d','#16a34a','#4ade80','#f97316'];
 
 function renderWorkplaceChart(){
-  chartWorkplace = _renderMultiColorCatChart('workplaceChart', chartWorkplace, 'workplace', WORKPLACES, _WORKPLACE_COLORS, 'total-workplace');
+  chartWorkplace = _renderMultiColorCatChart('workplaceChart', chartWorkplace, 'workplace', WORKPLACES, _WORKPLACE_COLORS, 'total-workplace', 170);
 }
 function renderEmpTypeChart(){
-  chartEmpType = _renderMultiColorCatChart('empTypeChart', chartEmpType, 'emp_type', EMP_TYPES, _EMPTYPE_COLORS, 'total-emptype');
+  chartEmpType = _renderMultiColorCatChart('empTypeChart', chartEmpType, 'emp_type', EMP_TYPES, _EMPTYPE_COLORS, 'total-emptype', 140);
 }
 
 function renderMatrix(){
@@ -4920,16 +4932,22 @@ async function simApplyNow(){
 }
 
 // ── 툴바 높이 → CSS 변수 (탭 sticky top 동기화) ──
+// 로그인 완료 후 사용자 이메일/뱃지 표시로 툴바가 2줄로 바뀌는 등 높이가
+// 나중에 변하는 경우에도 항상 정확히 따라가도록 ResizeObserver로 감시
 (function(){
-  function updateToolbarHeight(){
-    var tb=document.querySelector('.toolbar');
-    if(!tb)return;
+  function updateToolbarHeight(tb){
     document.documentElement.style.setProperty('--toolbar-h', tb.offsetHeight+'px');
   }
   document.addEventListener('DOMContentLoaded', function(){
-    updateToolbarHeight();
-    window.addEventListener('load', updateToolbarHeight);
-    window.addEventListener('resize', updateToolbarHeight);
+    var tb=document.querySelector('.toolbar');
+    if(!tb)return;
+    updateToolbarHeight(tb);
+    if(window.ResizeObserver){
+      new ResizeObserver(function(){updateToolbarHeight(tb);}).observe(tb);
+    } else {
+      window.addEventListener('load', function(){updateToolbarHeight(tb);});
+      window.addEventListener('resize', function(){updateToolbarHeight(tb);});
+    }
   });
 })();
 
