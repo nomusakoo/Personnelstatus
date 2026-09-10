@@ -47,13 +47,15 @@ async function _queryEventsForMonth(sb, table, year, month) {
   const mm = String(month).padStart(2, '0');
   const from = year + '-' + mm + '-01';
   const to = year + '-' + mm + '-31'; // 날짜가 문자열(YYYY-MM-DD)이라 31로 잡아도 문자열 비교상 안전한 상한
+  // time 기준 정렬은 여기서 하지 않는다 — 외부 연동 테이블(hr_exec_events)에는
+  // time 컬럼이 없을 수 있어 DB 쿼리가 실패할 수 있고, 어차피 최종 출력 직전
+  // formatExecCalendarText()에서 시간순으로 다시 정렬하므로 여기서는 불필요하다.
   const { data, error } = await sb
     .from(table)
     .select('*')
     .gte('date', from)
     .lte('date', to)
-    .order('date')
-    .order('time');
+    .order('date');
   if (error) throw error;
   return data || [];
 }
