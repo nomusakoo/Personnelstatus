@@ -21,7 +21,12 @@ async function htmlToPngBuffer(html, opts) {
   opts = opts || {};
   const width = opts.width || 900;
   const browser = await getBrowser();
-  const page = await browser.newPage({ viewport: { width: width, height: opts.height || 800 } });
+  // deviceScaleFactor:2 — 문서(document)로 전송해도 원본 해상도가 낮으면 폰에서
+  // 확대해 볼 때 흐려 보이므로, 2배 밀도로 렌더링해 텍스트를 더 선명하게 함
+  const page = await browser.newPage({
+    viewport: { width: width, height: opts.height || 800 },
+    deviceScaleFactor: 2,
+  });
   try {
     await page.setContent(html, { waitUntil: 'networkidle' });
     const bodyHeight = await page.evaluate(function () { return document.body.scrollHeight; });
