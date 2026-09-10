@@ -18,6 +18,10 @@ try {
 }
 
 const sb = createSupabaseClient(config.supabaseUrl, config.supabaseServiceRoleKey);
+// 외부 연동 임원일정(선택) — SUPABASE2_* 둘 다 설정된 경우에만 활성화
+const sb2 = (config.supabase2Url && config.supabase2ServiceRoleKey)
+  ? createSupabaseClient(config.supabase2Url, config.supabase2ServiceRoleKey)
+  : null;
 const bot = new Bot(config.telegramToken);
 
 bot.on('message', async function (ctx) {
@@ -43,7 +47,7 @@ bot.on('message', async function (ctx) {
       // 문서(document)로 보내면 원본 PNG 그대로 전달되어 화질이 유지됨
       await ctx.replyWithDocument(new InputFile(png, 'orgchart.png'));
     } else if (cmd.type === 'execCalendar') {
-      const png = await getExecCalendarImage(sb, cmd.month);
+      const png = await getExecCalendarImage(sb, cmd.month, sb2);
       await ctx.replyWithDocument(new InputFile(png, 'exec-calendar.png'));
     } else if (cmd.type === 'nameSearch') {
       const reply = await handleNameSearch(sb, repository, cmd.query);

@@ -23,11 +23,17 @@ function loadConfig(env) {
     .map(function (s) { return s.trim(); })
     .filter(Boolean);
 
+  // 외부 연동 임원일정(선택) — 둘 다 채워져 있을 때만 활성화
+  const supabase2Url = env.SUPABASE2_URL || null;
+  const supabase2ServiceRoleKey = env.SUPABASE2_SERVICE_ROLE_KEY || null;
+
   return {
     telegramToken: env.TELEGRAM_BOT_TOKEN,
     supabaseUrl: env.SUPABASE_URL,
     supabaseServiceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY,
     allowedIds: allowedIds,
+    supabase2Url: supabase2Url,
+    supabase2ServiceRoleKey: supabase2ServiceRoleKey,
   };
 }
 

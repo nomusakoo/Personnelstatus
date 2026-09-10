@@ -28,12 +28,14 @@ function renderExecCalendarHtml(year, month, events) {
         })
         .map(function (e) {
           const deadlineBadge = e.deadline ? '<span class="badge">⏰ 마감</span>' : '';
+          const externalBadge = e._external ? '<span class="badge ext">외부</span>' : '';
           const desc = e.description ? '<div class="desc">' + escapeHtml(e.description) + '</div>' : '';
           return (
             '<div class="event-row">' +
               '<span class="time">' + escapeHtml(e.time || '종일') + '</span>' +
               '<span class="title">' + escapeHtml(e.title) + '</span>' +
               deadlineBadge +
+              externalBadge +
               desc +
             '</div>'
           );
@@ -56,6 +58,7 @@ function renderExecCalendarHtml(year, month, events) {
       .time{flex:0 0 46px;color:#888;font-size:11px;}
       .title{font-weight:600;color:#222;}
       .badge{font-size:10px;color:#b12c2c;background:#fee2e2;padding:1px 6px;border-radius:8px;}
+      .badge.ext{color:#555;background:#eef1f5;}
       .desc{flex-basis:100%;font-size:11px;color:#888;padding-left:56px;}
     ` + '</style></head><body>' +
       '<h1>' + year + '년 ' + month + '월 임원일정</h1>' +

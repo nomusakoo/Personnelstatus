@@ -36,3 +36,13 @@ test('제목에 HTML 특수문자가 있어도 이스케이프됨', function () 
   const html = renderExecCalendarHtml(2026, 9, events);
   assert.doesNotMatch(html, /<b>강조<\/b>/);
 });
+
+test('외부 연동 일정(_external)은 "외부" 배지 표시, 자체 일정에는 안 붙음', function () {
+  const events = [
+    { date: '2026-09-05', time: '10:00', title: '자체 일정', description: '', deadline: false },
+    { date: '2026-09-05', time: '11:00', title: '외부 연동 일정', description: '', deadline: false, _external: true },
+  ];
+  const html = renderExecCalendarHtml(2026, 9, events);
+  const badgeCount = (html.match(/class="badge ext"/g) || []).length;
+  assert.equal(badgeCount, 1, '외부 일정 1건에만 배지가 붙어야 함');
+});

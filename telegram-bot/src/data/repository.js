@@ -43,12 +43,12 @@ async function searchExecutivesByName(sb, query) {
   return data || [];
 }
 
-async function getExecEventsForMonth(sb, year, month) {
+async function _queryEventsForMonth(sb, table, year, month) {
   const mm = String(month).padStart(2, '0');
   const from = year + '-' + mm + '-01';
   const to = year + '-' + mm + '-31'; // 날짜가 문자열(YYYY-MM-DD)이라 31로 잡아도 문자열 비교상 안전한 상한
   const { data, error } = await sb
-    .from('exec_events')
+    .from(table)
     .select('*')
     .gte('date', from)
     .lte('date', to)
@@ -58,10 +58,22 @@ async function getExecEventsForMonth(sb, year, month) {
   return data || [];
 }
 
+async function getExecEventsForMonth(sb, year, month) {
+  return _queryEventsForMonth(sb, 'exec_events', year, month);
+}
+
+// 웹앱과 동일하게, 별도 Supabase 프로젝트(sb2)의 hr_exec_events를 읽기 전용으로 연동.
+// sb2가 없으면(설정 안 함) 호출하지 않는다 — index.js/execCalendar.js에서 조건부로 호출.
+async function getExternalExecEventsForMonth(sb2, year, month) {
+  const rows = await _queryEventsForMonth(sb2, 'hr_exec_events', year, month);
+  return rows.map(function (r) { return Object.assign({}, r, { _external: true }); });
+}
+
 module.exports = {
   getOrgSnapshot: getOrgSnapshot,
   getDivisionsAndTeamsById: getDivisionsAndTeamsById,
   searchEmployeesByName: searchEmployeesByName,
   searchExecutivesByName: searchExecutivesByName,
   getExecEventsForMonth: getExecEventsForMonth,
+  getExternalExecEventsForMonth: getExternalExecEventsForMonth,
 };

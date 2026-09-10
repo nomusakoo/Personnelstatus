@@ -36,6 +36,7 @@ async function main() {
   const events = [
     { date: '2026-09-05', time: '10:00', title: '이사회', description: '', deadline: false },
     { date: '2026-09-05', time: '14:00', title: '임원 간담회 - 하반기 사업계획 보고', description: '회의실 A', deadline: true },
+    { date: '2026-09-05', time: '16:00', title: '외부 연동 그룹사 회의', description: '', deadline: false, _external: true },
     { date: '2026-09-20', time: '', title: '해외 바이어 미팅', description: '', deadline: false },
   ];
   const calHtml = renderExecCalendarHtml(2026, 9, events);
