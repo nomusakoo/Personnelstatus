@@ -162,6 +162,25 @@ table.org td,table.org th{border:1px solid #bdc8d8;padding:0;vertical-align:top;
 .ec-more:hover{text-decoration:underline;}
 /* 외부 연동 일정 칩 */
 .ec-chip.ec-chip-ext{cursor:default;opacity:.88;}
+/* 임원 일정: 목록형/월간달력 전환 */
+.ec-view-toggle{display:flex;gap:2px;}
+.ec-viewbtn.active{background:#1e3a5f;color:#fff;}
+.ec-list{border:1px solid #e5e7eb;border-radius:6px;overflow:hidden;}
+.ec-list-day{border-top:1px solid #f0f0f0;}
+.ec-list-day:first-child{border-top:none;}
+.ec-list-date{padding:8px 12px;background:#f8fafc;font-size:12px;font-weight:700;color:#1e3a5f;}
+.ec-list-date.today{background:#fffbe6;}
+.ec-list-date .dow-sun{color:#b12c2c;}
+.ec-list-date .dow-sat{color:#2563a8;}
+.ec-list-row{display:flex;align-items:center;gap:8px;padding:7px 14px 7px 24px;font-size:12.5px;cursor:pointer;border-top:1px solid #f5f5f5;}
+.ec-list-row:hover{background:#f0f7ff;}
+.ec-list-row.ext{cursor:default;}
+.ec-list-row.ext:hover{background:none;}
+.ec-list-row.dl{color:#b12c2c;}
+.ec-list-time{color:#888;font-size:11px;min-width:38px;}
+.ec-list-title{flex:1;font-weight:600;}
+.ec-list-badge{font-size:10px;color:#888;background:#eef1f5;padding:1px 6px;border-radius:8px;flex-shrink:0;}
+.ec-list-empty{padding:40px;text-align:center;color:#aaa;font-size:13px;}
 /* 붙여넣기 모달 */
 .ec-ptab-bar{display:flex;gap:4px;border-bottom:2px solid #e0e0e0;margin-bottom:14px;}
 .ec-ptab{padding:7px 16px;background:none;border:none;cursor:pointer;font-size:13px;font-weight:600;color:#888;border-bottom:2px solid transparent;font-family:inherit;margin-bottom:-2px;}
@@ -936,6 +955,10 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
         <button class="btn btn-g ec-navbtn" onclick="ecShiftMonth(1)">다음 달 →</button>
         <button class="btn btn-g ec-navbtn" onclick="ecGoToday()">이번 달</button>
         <span id="ecCountLabel" style="font-size:12px;color:#1e3a5f;font-weight:700;margin-left:4px;"></span>
+        <div class="ec-view-toggle">
+          <button class="btn btn-g ec-navbtn ec-viewbtn" id="ecViewListBtn" onclick="ecSetView('list')">📋 목록형</button>
+          <button class="btn btn-g ec-navbtn ec-viewbtn" id="ecViewCalBtn" onclick="ecSetView('calendar')">🗓 월간달력</button>
+        </div>
       </div>
       <div class="ec-actions">
         <button class="btn btn-s ec-navbtn" onclick="openExecEvt()">+ 임원 일정 추가</button>
@@ -949,10 +972,11 @@ code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-family:monospace;
       <div class="ec-legend-item"><div class="ec-legend-dot" style="background:#fee2e2;"></div>마감 표시</div>
       <span class="ec-hint">날짜 칸을 클릭해 일정을 추가할 수 있습니다.</span>
     </div>
-    <div class="ec-dow-row">
+    <div class="ec-dow-row" id="ecDowRow">
       <div class="ec-dow sun">일</div><div class="ec-dow">월</div><div class="ec-dow">화</div><div class="ec-dow">수</div><div class="ec-dow">목</div><div class="ec-dow">금</div><div class="ec-dow sat">토</div>
     </div>
     <div class="ec-grid" id="ecGrid"></div>
+    <div class="ec-list" id="ecList"></div>
   </div>
 </div>
 
@@ -1505,6 +1529,7 @@ let sb2=null; // 외부 프로젝트 supabase client (읽기 전용)
 let execEvents2=[]; // 외부 임원 일정
 let employees=[],executives=[],divisions=[],snapshots={},execEvents=[],dispatchEmps=[];
 let editingEmpId=null,editingExecId=null,viewSnap=null,execMonthOffset=0,execEditId=null,editingDispatchId=null;
+let ecViewMode='list'; // 임원 일정 보기 모드: 'list'(기본) | 'calendar'
 let execCollapsed=true;
 let chartGrade=null,chartDiv=null,chartStatus=null,chartPosition=null;
 let chartWorkplace=null,chartEmpType=null;
@@ -4215,6 +4240,7 @@ async function execEvtDelete(id){
 function ecGetYM(){var now=new Date();var d=new Date(now.getFullYear(),now.getMonth()+execMonthOffset,1);return{year:d.getFullYear(),month:d.getMonth()};}
 function ecShiftMonth(dir){execMonthOffset+=dir;renderExecCal();}
 function ecGoToday(){execMonthOffset=0;renderExecCal();}
+function ecSetView(mode){ecViewMode=mode;renderExecCal();}
 function renderExecCal(){
   if(!_requireDB())return;
   var ym=ecGetYM(),year=ym.year,month=ym.month;
@@ -4222,6 +4248,17 @@ function renderExecCal(){
   var cnt=execEvents.filter(function(e){return(e.date||'').startsWith(prefix);}).length;
   var lbl=document.getElementById('ecCountLabel');if(lbl)lbl.textContent=cnt+'건';
   var ml=document.getElementById('ecMonthLabel');if(ml)ml.textContent=year+'년 '+(month+1)+'월';
+
+  var listBtn=document.getElementById('ecViewListBtn'),calBtn=document.getElementById('ecViewCalBtn');
+  if(listBtn)listBtn.classList.toggle('active',ecViewMode==='list');
+  if(calBtn)calBtn.classList.toggle('active',ecViewMode==='calendar');
+  var dowRow=document.getElementById('ecDowRow'),grid=document.getElementById('ecGrid'),list=document.getElementById('ecList');
+  if(dowRow)dowRow.style.display=ecViewMode==='calendar'?'':'none';
+  if(grid)grid.style.display=ecViewMode==='calendar'?'':'none';
+  if(list)list.style.display=ecViewMode==='list'?'':'none';
+
+  if(ecViewMode==='list'){renderExecList(year,month,prefix);return;}
+
   var today=new Date();today.setHours(0,0,0,0);
   var firstDay=new Date(year,month,1);
   var lastDay=new Date(year,month+1,0);
@@ -4242,6 +4279,43 @@ function renderExecCal(){
     html+='<div class="ec-cell'+(other?' other':'')+(isToday?' today':'')+(dow===0?' sun':'')+(dow===6?' sat':'')+'" onclick="ecCellClick(\''+dateStr+'\',event)"><div class="ec-daynum">'+cd.getDate()+'</div>'+chips+more+'</div>';
   }
   document.getElementById('ecGrid').innerHTML=html;
+}
+// ── 목록형 보기 (기본) ──
+function renderExecList(year,month,prefix){
+  var wrap=document.getElementById('ecList');
+  if(!wrap)return;
+  var allEvts=execEvents.concat(execEvents2).filter(function(e){return(e.date||'').startsWith(prefix);});
+  if(!allEvts.length){
+    wrap.innerHTML='<div class="ec-list-empty">'+(month+1)+'월 일정이 없습니다.</div>';
+    return;
+  }
+  var byDate={};
+  allEvts.forEach(function(e){(byDate[e.date]=byDate[e.date]||[]).push(e);});
+  Object.keys(byDate).forEach(function(k){
+    byDate[k].sort(function(a,b){var ka=a.time?a.time:'99:99';var kb=b.time?b.time:'99:99';return ka<kb?-1:ka>kb?1:0;});
+  });
+  var today=new Date();today.setHours(0,0,0,0);
+  var todayStr=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
+  var DOW=['일','월','화','수','목','금','토'];
+  var dates=Object.keys(byDate).sort();
+  wrap.innerHTML=dates.map(function(dateStr){
+    var d=new Date(dateStr+'T00:00:00');
+    var dow=d.getDay();
+    var dowClass=dow===0?'dow-sun':dow===6?'dow-sat':'';
+    var rows=byDate[dateStr].map(function(e){
+      var clickable=!e._external;
+      var attr=clickable?' onclick="openExecEvt(\''+dateStr+'\',\''+e.id+'\')"':'';
+      return '<div class="ec-list-row'+(e.deadline?' dl':'')+(e._external?' ext':'')+'"'+attr+'>'
+        +'<span class="ec-list-time">'+(e.time?exEsc(e.time):'')+'</span>'
+        +'<span class="ec-list-title">'+(e.deadline?'⚑ ':'')+exEsc(e.title)+'</span>'
+        +(e._external?'<span class="ec-list-badge">외부</span>':'')
+      +'</div>';
+    }).join('');
+    return '<div class="ec-list-day">'
+      +'<div class="ec-list-date'+(dateStr===todayStr?' today':'')+'">'+(d.getMonth()+1)+'월 '+d.getDate()+'일 <span class="'+dowClass+'">('+DOW[dow]+')</span></div>'
+      +rows
+    +'</div>';
+  }).join('');
 }
 function ecCellClick(dateStr,event){
   if(event&&(event.target.closest('.ec-chip')||event.target.closest('.ec-more')))return;
