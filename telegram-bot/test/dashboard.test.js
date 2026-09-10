@@ -1,6 +1,12 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { matchDashboardTopic, formatDashboardText } = require('../src/commands/dashboard');
+const { matchDashboardTopicExact, matchDashboardTopic, formatDashboardText } = require('../src/commands/dashboard');
+
+test('matchDashboardTopicExact: 정확히 일치하는 별칭만 매칭, 부분일치/유사도는 적용 안 함', function () {
+  assert.deepEqual(matchDashboardTopicExact('총원'), { key: 'total', title: '총인원' });
+  assert.deepEqual(matchDashboardTopicExact('사업장'), null); // '사업장별'의 부분일치일 뿐, 정확히 일치하진 않음
+  assert.equal(matchDashboardTopicExact(''), null);
+});
 
 test('matchDashboardTopic: 정확한 키워드는 바로 매칭', function () {
   assert.deepEqual(matchDashboardTopic('총인원'), { key: 'total', title: '총인원' });

@@ -38,6 +38,28 @@ test('resolveTextQuery: 이름이 정확히 일치하면 조직명 오타 매칭
   assert.doesNotMatch(reply, /조직도/);
 });
 
+test('resolveTextQuery: "총원"/"총인원"은 우연히 비슷한 팀 이름(예: "총무팀")보다 대시보드 총인원이 우선함', async function () {
+  // 실제로 발생했던 문제: "총무팀"은 "총원"/"총인원"과 유사도가 30%를 넘어(레벤슈타인
+  // 기준) 조직명 검색(findOrgScope)의 유사도 매칭에 걸려버린다. 정확히 등록된 대시보드
+  // 키워드는 조직명 검색보다 먼저 확인해야 이런 오검색을 막을 수 있다.
+  const sb = makeMockSb({
+    divisions: [{ id: 'd1', name: '본부' }],
+    teams: [{ id: 't1', div_id: 'd1', name: '총무팀', center_name: '' }],
+    employees: [
+      { name: '홍길동', status: 'normal' },
+      { name: '김철수', status: 'normal' },
+    ],
+    executives: [],
+  });
+  const reply1 = await resolveTextQuery(sb, '총원');
+  assert.match(reply1, /현재 총 인원: 2명/);
+  assert.doesNotMatch(reply1, /조직도/);
+
+  const reply2 = await resolveTextQuery(sb, '총인원');
+  assert.match(reply2, /현재 총 인원: 2명/);
+  assert.doesNotMatch(reply2, /조직도/);
+});
+
 test('resolveTextQuery: 직급/직책이면 해당하는 사람 전체 명단을 반환', async function () {
   const sb = makeMockSb({
     divisions: [{ id: 'd1', name: '경영지원본부' }],

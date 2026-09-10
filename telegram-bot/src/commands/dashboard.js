@@ -18,16 +18,30 @@ const TOPICS = [
   { key: 'byEmpType', title: '근무직유형별 인원', aliases: ['근무직유형', '근무형태', '고용형태', '근무직', '근무직유형별'] },
 ];
 
+// query가 어떤 대시보드 키워드와 정확히 일치하면 그 topic을, 아니면 null을 반환.
+// 조직명 검색(findOrgScope)에는 오타 허용을 위한 유사도 매칭이 있어, "총원"/"총인원"처럼
+// 정확히 등록된 대시보드 키워드조차 우연히 어떤 본부/팀 이름과 비슷하다고 판단돼 조직도로
+// 잘못 빠지는 문제가 있었다(예: "총원"이 실제로는 무관한 "강원지점" 등으로 매칭). 정확히
+// 일치하는 대시보드 키워드는 애매할 게 없으므로, 호출부(resolve.js)에서 조직명 검색보다
+// 먼저 확인해 이런 충돌을 원천 차단한다.
+function matchDashboardTopicExact(query) {
+  const q = normalizeForMatch(query);
+  if (!q) return null;
+  for (const topic of TOPICS) {
+    if (topic.aliases.indexOf(q) !== -1) return { key: topic.key, title: topic.title };
+  }
+  return null;
+}
+
 // query가 대시보드 통계 키워드 중 하나에 해당하면 그 topic key를, 여러 개에 걸치면
 // {multiple:[...]}, 전혀 해당하지 않으면(=이름/조직명 검색으로 폴백) null을 반환.
 // 우선순위: 정확 일치 > 부분일치(양방향, 공백무시) > 편집거리 기반 오타 허용.
 function matchDashboardTopic(query) {
+  const exact = matchDashboardTopicExact(query);
+  if (exact) return exact;
+
   const q = normalizeForMatch(query);
   if (!q) return null;
-
-  for (const topic of TOPICS) {
-    if (topic.aliases.indexOf(q) !== -1) return { key: topic.key, title: topic.title };
-  }
 
   const substringMatches = TOPICS.filter(function (topic) {
     return topic.aliases.some(function (a) { return a.indexOf(q) !== -1 || q.indexOf(a) !== -1; });
@@ -133,6 +147,7 @@ function _formatCatCount(heading, active, field, categories) {
 
 module.exports = {
   TOPICS: TOPICS,
+  matchDashboardTopicExact: matchDashboardTopicExact,
   matchDashboardTopic: matchDashboardTopic,
   formatDashboardText: formatDashboardText,
 };
