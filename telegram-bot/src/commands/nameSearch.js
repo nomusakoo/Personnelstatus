@@ -1,5 +1,22 @@
+const { bestFuzzyMatches, normalizeForMatch } = require('../util');
+
 const RESULT_CAP = 15;
 const MIN_QUERY_LEN = 2;
+
+// 정확히 일치 > 부분일치 > (오타 등을 감안해 가장 유사한 것만) 순으로 넓혀가며 찾는다.
+// DB의 ilike는 정확한 부분일치만 가능해 오타를 허용할 수 없으므로, 후보 전체를 받아
+// 클라이언트에서 이 함수로 필터링한다. 비교는 공백/영문 대소문자를 구분하지 않는다.
+function _fuzzyMatchByName(items, query) {
+  const nq = normalizeForMatch(query);
+  const exact = items.filter(function (it) { return normalizeForMatch(it.name) === nq; });
+  if (exact.length) return exact;
+  const substring = items.filter(function (it) {
+    const name = normalizeForMatch(it.name);
+    return name && name.indexOf(nq) !== -1;
+  });
+  if (substring.length) return substring;
+  return bestFuzzyMatches(items, function (it) { return it.name; }, query);
+}
 
 function trimAndValidateQuery(text) {
   const q = (text || '').trim();
@@ -60,18 +77,18 @@ async function handleNameSearch(sb, repository, rawQuery) {
     return '이름을 2글자 이상 입력해 주세요.';
   }
 
-  const [employees, executives] = await Promise.all([
-    repository.searchEmployeesByName(sb, query),
-    repository.searchExecutivesByName(sb, query),
+  const [{ divisions, teams, employees: allEmployees }, allExecutives] = await Promise.all([
+    repository.getOrgSnapshot(sb),
+    repository.getAllExecutives(sb),
   ]);
 
-  let divById = {};
-  let teamById = {};
-  if (employees.length > 0) {
-    const lookup = await repository.getDivisionsAndTeamsById(sb);
-    divById = lookup.divById;
-    teamById = lookup.teamById;
-  }
+  const employees = _fuzzyMatchByName(allEmployees, query);
+  const executives = _fuzzyMatchByName(allExecutives, query);
+
+  const divById = {};
+  divisions.forEach(function (d) { divById[d.id] = d; });
+  const teamById = {};
+  teams.forEach(function (t) { teamById[t.id] = t; });
 
   return formatSearchReply(query, employees, executives, divById, teamById);
 }
@@ -80,5 +97,6 @@ module.exports = {
   trimAndValidateQuery: trimAndValidateQuery,
   formatSearchReply: formatSearchReply,
   handleNameSearch: handleNameSearch,
+  fuzzyMatchByName: _fuzzyMatchByName,
   RESULT_CAP: RESULT_CAP,
 };

@@ -17,32 +17,6 @@ async function getOrgSnapshot(sb) {
   };
 }
 
-async function getDivisionsAndTeamsById(sb) {
-  const [divRes, teamRes] = await Promise.all([
-    sb.from('divisions').select('*'),
-    sb.from('teams').select('*'),
-  ]);
-  if (divRes.error) throw divRes.error;
-  if (teamRes.error) throw teamRes.error;
-  const divById = {};
-  (divRes.data || []).forEach(function (d) { divById[d.id] = d; });
-  const teamById = {};
-  (teamRes.data || []).forEach(function (t) { teamById[t.id] = t; });
-  return { divById: divById, teamById: teamById };
-}
-
-async function searchEmployeesByName(sb, query) {
-  const { data, error } = await sb.from('employees').select('*').ilike('name', '%' + query + '%');
-  if (error) throw error;
-  return data || [];
-}
-
-async function searchExecutivesByName(sb, query) {
-  const { data, error } = await sb.from('executives').select('*').ilike('name', '%' + query + '%');
-  if (error) throw error;
-  return data || [];
-}
-
 async function getAllExecutives(sb) {
   const { data, error } = await sb.from('executives').select('*');
   if (error) throw error;
@@ -84,9 +58,6 @@ async function getExternalExecEventsForMonth(sb2, year, month) {
 
 module.exports = {
   getOrgSnapshot: getOrgSnapshot,
-  getDivisionsAndTeamsById: getDivisionsAndTeamsById,
-  searchEmployeesByName: searchEmployeesByName,
-  searchExecutivesByName: searchExecutivesByName,
   getAllExecutives: getAllExecutives,
   getExecEventsForMonth: getExecEventsForMonth,
   getExternalExecEventsForMonth: getExternalExecEventsForMonth,
