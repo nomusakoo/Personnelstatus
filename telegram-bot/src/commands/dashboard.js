@@ -1,5 +1,6 @@
 const repository = require('../data/repository');
 const { GRADES, WORKPLACES, EMP_TYPES } = require('../constants');
+const { levenshtein } = require('../util');
 
 // 대시보드 통계 항목의 키워드 사전. 사용자가 정확한 명칭을 모르거나 일부 단어만
 // 입력해도(예: "직급별", "직급현황"), 공백을 다르게 넣어도(예: "직급 별 인원") 매칭되도록
@@ -22,22 +23,6 @@ function _normalize(s) {
   return (s || '').replace(/\s+/g, '').trim();
 }
 
-// 표준 편집거리(레벤슈타인 거리) — 오타 1~2글자 정도는 허용하기 위함
-function _levenshtein(a, b) {
-  const m = a.length, n = b.length;
-  const dp = [];
-  for (let i = 0; i <= m; i++) dp.push([i]);
-  for (let j = 0; j <= n; j++) dp[0][j] = j;
-  for (let i = 1; i <= m; i++) {
-    for (let j = 1; j <= n; j++) {
-      dp[i][j] = a[i - 1] === b[j - 1]
-        ? dp[i - 1][j - 1]
-        : 1 + Math.min(dp[i - 1][j - 1], dp[i - 1][j], dp[i][j - 1]);
-    }
-  }
-  return dp[m][n];
-}
-
 // query가 대시보드 통계 키워드 중 하나에 해당하면 그 topic key를, 여러 개에 걸치면
 // {multiple:[...]}, 전혀 해당하지 않으면(=이름/조직명 검색으로 폴백) null을 반환.
 // 우선순위: 정확 일치 > 부분일치(양방향, 공백무시) > 편집거리 기반 오타 허용.
@@ -58,7 +43,7 @@ function matchDashboardTopic(query) {
   if (q.length >= 2) {
     const fuzzyMatches = TOPICS.filter(function (topic) {
       return topic.aliases.some(function (a) {
-        return Math.abs(a.length - q.length) <= 2 && _levenshtein(a, q) <= 1;
+        return Math.abs(a.length - q.length) <= 2 && levenshtein(a, q) <= 1;
       });
     });
     if (fuzzyMatches.length === 1) return { key: fuzzyMatches[0].key, title: fuzzyMatches[0].title };

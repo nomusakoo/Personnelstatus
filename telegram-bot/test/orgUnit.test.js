@@ -49,6 +49,13 @@ test('findOrgScope: 아무 것도 일치하지 않으면 null (이름 검색으�
   assert.equal(scope, null);
 });
 
+test('findOrgScope: 조직명에 오타가 있어도(부분일치 실패 시) 유사도로 매칭', function () {
+  // '인사노무팀' 오타: '노'→'로'
+  const scope = findOrgScope(divisions, teams, '인사로무팀');
+  assert.equal(scope.title, '인사노무팀');
+  assert.equal(scope.teams[0].id, 't1');
+});
+
 test('findOrgScope: 빈 문자열이면 null', function () {
   assert.equal(findOrgScope(divisions, teams, ''), null);
   assert.equal(findOrgScope(divisions, teams, '   '), null);

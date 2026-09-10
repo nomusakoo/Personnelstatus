@@ -1,14 +1,18 @@
 const repository = require('../data/repository');
 const { formatOrgChartText } = require('../render/orgChartText');
+const { bestFuzzyMatches } = require('../util');
 
-// 정확히 일치하는 게 하나면 그걸 쓰고, 없으면 부분일치로 넓혀서 찾는다.
+// 정확히 일치하는 게 있으면 그걸 쓰고, 없으면 부분일치로, 그마저 없으면(오타 등을
+// 감안해) 가장 유사한 것만 골라 매칭시킨다.
 function _matchByName(items, getName, query) {
   const exact = items.filter(function (it) { return getName(it) === query; });
   if (exact.length) return exact;
-  return items.filter(function (it) {
+  const substring = items.filter(function (it) {
     const name = getName(it);
     return name && name.indexOf(query) !== -1;
   });
+  if (substring.length) return substring;
+  return bestFuzzyMatches(items, getName, query);
 }
 
 // query가 본부/부문/팀 이름 중 하나에 해당하면 그 범위(divisions/teams/title)를 반환.
