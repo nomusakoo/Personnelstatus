@@ -34,3 +34,8 @@ test('빈 문자열은 unknown', function () {
 test('조직도라는 이름의 직원이 있어도 명령이 우선 (알려진 한계, 문서화됨)', function () {
   assert.deepEqual(classify('조직도'), { type: 'orgChart' });
 });
+
+test('/start, 도움말은 help로 분류', function () {
+  assert.deepEqual(classify('/start'), { type: 'help' });
+  assert.deepEqual(classify('도움말'), { type: 'help' });
+});
