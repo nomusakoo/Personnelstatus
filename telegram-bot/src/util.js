@@ -33,6 +33,12 @@ function chunkText(text, maxLen) {
   return chunks;
 }
 
+// 조직명/이름 비교 시 공백 유무나 영문 대소문자(예: "SM부문" vs "sm 부문") 때문에
+// 매칭이 실패하지 않도록 정규화한다.
+function normalizeForMatch(s) {
+  return (s || '').replace(/\s+/g, '').trim().toLowerCase();
+}
+
 // 표준 편집거리(레벤슈타인 거리) — 두 문자열을 서로 바꾸는 데 필요한 최소 삽입/삭제/치환 횟수
 function levenshtein(a, b) {
   const m = a.length, n = b.length;
@@ -67,11 +73,11 @@ const FUZZY_MATCH_THRESHOLD = 0.3;
 // 대상인 "인사노무팀"과 함께 걸려 나오는 문제가 생기므로, 최고 유사도만 취한다).
 // 최고 유사도가 FUZZY_MATCH_THRESHOLD 미만이면 빈 배열.
 function bestFuzzyMatches(items, getName, query) {
-  const q = (query || '').trim();
+  const q = normalizeForMatch(query);
   if (!q) return [];
   let best = 0;
   const scored = items.map(function (it) {
-    const name = (getName(it) || '').trim();
+    const name = normalizeForMatch(getName(it));
     const score = name ? similarityRatio(name, q) : 0;
     return { it: it, score: score };
   });
@@ -83,6 +89,7 @@ function bestFuzzyMatches(items, getName, query) {
 module.exports = {
   computeTenureLabel: computeTenureLabel,
   chunkText: chunkText,
+  normalizeForMatch: normalizeForMatch,
   levenshtein: levenshtein,
   similarityRatio: similarityRatio,
   bestFuzzyMatches: bestFuzzyMatches,

@@ -56,6 +56,27 @@ test('findOrgScope: 조직명에 오타가 있어도(부분일치 실패 시) �
   assert.equal(scope.teams[0].id, 't1');
 });
 
+test('findOrgScope: center_name에 공백이 섞여 있어도(예: "SM 부문") 매칭', function () {
+  const teamsWithSpace = [
+    { id: 't1', div_id: 'd1', name: '인사노무팀', sort_order: 0, center_name: '' },
+    { id: 't2', div_id: 'd1', name: '재무팀', sort_order: 1, center_name: 'SM 부문' },
+    { id: 't3', div_id: 'd1', name: '총무팀', sort_order: 2, center_name: 'SM 부문' },
+  ];
+  const scope = findOrgScope(divisions, teamsWithSpace, 'SM부문');
+  assert.equal(scope.title, 'SM 부문');
+  assert.equal(scope.teams.length, 2);
+});
+
+test('findOrgScope: center_name의 영문 대소문자가 달라도(예: "sm부문") 매칭', function () {
+  const teamsLower = [
+    { id: 't1', div_id: 'd1', name: '인사노무팀', sort_order: 0, center_name: '' },
+    { id: 't2', div_id: 'd1', name: '재무팀', sort_order: 1, center_name: 'sm부문' },
+  ];
+  const scope = findOrgScope(divisions, teamsLower, 'SM부문');
+  assert.equal(scope.title, 'sm부문');
+  assert.equal(scope.teams.length, 1);
+});
+
 test('findOrgScope: 빈 문자열이면 null', function () {
   assert.equal(findOrgScope(divisions, teams, ''), null);
   assert.equal(findOrgScope(divisions, teams, '   '), null);

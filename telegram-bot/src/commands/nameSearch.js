@@ -1,15 +1,19 @@
-const { bestFuzzyMatches } = require('../util');
+const { bestFuzzyMatches, normalizeForMatch } = require('../util');
 
 const RESULT_CAP = 15;
 const MIN_QUERY_LEN = 2;
 
 // 정확히 일치 > 부분일치 > (오타 등을 감안해 가장 유사한 것만) 순으로 넓혀가며 찾는다.
 // DB의 ilike는 정확한 부분일치만 가능해 오타를 허용할 수 없으므로, 후보 전체를 받아
-// 클라이언트에서 이 함수로 필터링한다.
+// 클라이언트에서 이 함수로 필터링한다. 비교는 공백/영문 대소문자를 구분하지 않는다.
 function _fuzzyMatchByName(items, query) {
-  const exact = items.filter(function (it) { return it.name === query; });
+  const nq = normalizeForMatch(query);
+  const exact = items.filter(function (it) { return normalizeForMatch(it.name) === nq; });
   if (exact.length) return exact;
-  const substring = items.filter(function (it) { return it.name && it.name.indexOf(query) !== -1; });
+  const substring = items.filter(function (it) {
+    const name = normalizeForMatch(it.name);
+    return name && name.indexOf(nq) !== -1;
+  });
   if (substring.length) return substring;
   return bestFuzzyMatches(items, function (it) { return it.name; }, query);
 }

@@ -1,6 +1,6 @@
 const repository = require('../data/repository');
 const { GRADES, WORKPLACES, EMP_TYPES } = require('../constants');
-const { levenshtein } = require('../util');
+const { levenshtein, normalizeForMatch } = require('../util');
 
 // 대시보드 통계 항목의 키워드 사전. 사용자가 정확한 명칭을 모르거나 일부 단어만
 // 입력해도(예: "직급별", "직급현황"), 공백을 다르게 넣어도(예: "직급 별 인원") 매칭되도록
@@ -19,15 +19,11 @@ const TOPICS = [
   { key: 'byEmpType', title: '근무직유형별 인원', aliases: ['근무직유형', '근무형태', '고용형태', '근무직', '근무직유형별'] },
 ];
 
-function _normalize(s) {
-  return (s || '').replace(/\s+/g, '').trim();
-}
-
 // query가 대시보드 통계 키워드 중 하나에 해당하면 그 topic key를, 여러 개에 걸치면
 // {multiple:[...]}, 전혀 해당하지 않으면(=이름/조직명 검색으로 폴백) null을 반환.
 // 우선순위: 정확 일치 > 부분일치(양방향, 공백무시) > 편집거리 기반 오타 허용.
 function matchDashboardTopic(query) {
-  const q = _normalize(query);
+  const q = normalizeForMatch(query);
   if (!q) return null;
 
   for (const topic of TOPICS) {

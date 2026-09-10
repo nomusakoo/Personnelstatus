@@ -1,6 +1,13 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { chunkText, computeTenureLabel, levenshtein, similarityRatio, bestFuzzyMatches } = require('../src/util');
+const { chunkText, computeTenureLabel, levenshtein, similarityRatio, bestFuzzyMatches, normalizeForMatch } = require('../src/util');
+
+test('normalizeForMatch: 공백 제거 + 영문 소문자화', function () {
+  assert.equal(normalizeForMatch('SM 부문'), 'sm부문');
+  assert.equal(normalizeForMatch('  sm부문  '), 'sm부문');
+  assert.equal(normalizeForMatch(''), '');
+  assert.equal(normalizeForMatch(null), '');
+});
 
 test('chunkText: 짧은 텍스트는 청크 1개', function () {
   const chunks = chunkText('한 줄\n또 한 줄', 100);
