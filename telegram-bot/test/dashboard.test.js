@@ -17,6 +17,16 @@ test('matchDashboardTopic: 일부 단어만 입력해도 매칭', function () {
   assert.deepEqual(matchDashboardTopic('파견자'), { key: 'dispatch', title: '파견' });
 });
 
+test('matchDashboardTopic: "총"/"총인원"/"총원"/"인원" 모두 total로 매칭 (다른 항목과 혼동 없음)', function () {
+  assert.deepEqual(matchDashboardTopic('총'), { key: 'total', title: '총인원' });
+  assert.deepEqual(matchDashboardTopic('총인원'), { key: 'total', title: '총인원' });
+  assert.deepEqual(matchDashboardTopic('총원'), { key: 'total', title: '총인원' });
+  // '인원'은 "직급별 인원"/"본부별 인원" 등 다른 항목의 별칭에도 부분문자열로 들어있어
+  // 그냥 부분일치만 적용하면 여러 항목에 걸려 모호해진다 — total의 "정확한" 별칭으로
+  // 등록해 두어 이런 경우에도 바로 total로 확정되도록 한다.
+  assert.deepEqual(matchDashboardTopic('인원'), { key: 'total', title: '총인원' });
+});
+
 test('matchDashboardTopic: 오타(편집거리 1)도 허용', function () {
   assert.deepEqual(matchDashboardTopic('퇴사쟈'), { key: 'leave', title: '이번달 퇴사' });
   assert.deepEqual(matchDashboardTopic('총인웜'), { key: 'total', title: '총인원' });
@@ -27,7 +37,7 @@ test('matchDashboardTopic: 대시보드 키워드가 아니면 null (이름/조�
   assert.equal(matchDashboardTopic(''), null);
 });
 
-test('formatDashboardText: total은 이름 중복 제거 + 대표이사/전무이사 포함', function () {
+test('formatDashboardText: total은 이름 중복 제거 + 대표이사/전무이사 포함, "현재 총 인원" 문구와 안내 병기', function () {
   const employees = [
     { name: '홍길동', status: 'normal' },
     { name: '김철수', status: 'normal' },
@@ -36,9 +46,12 @@ test('formatDashboardText: total은 이름 중복 제거 + 대표이사/전무�
   const executives = [
     { name: '이대표', title: '대표이사' },
     { name: '김철수', title: '전무이사' }, // 이미 직원으로 등록되어 있으므로 중복 카운트 안 함
+    { name: '박사외', title: '사외이사' }, // 사외이사는 총인원에서 제외
   ];
   const text = formatDashboardText('total', employees, [], executives);
-  assert.match(text, /총인원: 3명/); // 홍길동, 김철수, 이대표
+  assert.match(text, /현재 총 인원: 3명/); // 홍길동, 김철수, 이대표
+  assert.match(text, /\(등기임원 포함, 사외이사 제외\)/);
+  assert.doesNotMatch(text, /박사외/);
 });
 
 test('formatDashboardText: 상태별 카운트(입사/퇴사/인사이동/휴직/파견)', function () {
