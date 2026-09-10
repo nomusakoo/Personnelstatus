@@ -1,13 +1,14 @@
-const { Bot, InputFile } = require('grammy');
+const { Bot } = require('grammy');
 
 const { loadConfig } = require('./config');
 const { createSupabaseClient } = require('./data/supabaseClient');
 const { isAllowed } = require('./auth/whitelist');
 const { classify } = require('./commands/router');
 const { handleNameSearch } = require('./commands/nameSearch');
-const { getOrgChartImage } = require('./commands/orgChart');
-const { getExecCalendarImage } = require('./commands/execCalendar');
+const { getOrgChartText } = require('./commands/orgChart');
+const { getExecCalendarText } = require('./commands/execCalendar');
 const repository = require('./data/repository');
+const { chunkText } = require('./util');
 
 let config;
 try {
@@ -42,13 +43,15 @@ bot.on('message', async function (ctx) {
   const cmd = classify(text);
   try {
     if (cmd.type === 'orgChart') {
-      const png = await getOrgChartImage(sb);
-      // replyWithPhoto는 텔레그램이 JPEG로 재압축해 표/글자가 뭉개져 보임 —
-      // 문서(document)로 보내면 원본 PNG 그대로 전달되어 화질이 유지됨
-      await ctx.replyWithDocument(new InputFile(png, 'orgchart.png'));
+      const orgText = await getOrgChartText(sb);
+      for (const chunk of chunkText(orgText)) {
+        await ctx.reply(chunk);
+      }
     } else if (cmd.type === 'execCalendar') {
-      const png = await getExecCalendarImage(sb, cmd.month, sb2);
-      await ctx.replyWithDocument(new InputFile(png, 'exec-calendar.png'));
+      const calText = await getExecCalendarText(sb, cmd.month, sb2);
+      for (const chunk of chunkText(calText)) {
+        await ctx.reply(chunk);
+      }
     } else if (cmd.type === 'nameSearch') {
       const reply = await handleNameSearch(sb, repository, cmd.query);
       await ctx.reply(reply);
