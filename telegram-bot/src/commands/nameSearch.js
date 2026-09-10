@@ -69,34 +69,9 @@ function formatSearchReply(query, employees, executives, divById, teamById) {
   return reply;
 }
 
-// Supabase 조회 + 포맷팅까지 담당하는 오케스트레이션. 반환값은 순수 문자열이며,
-// 실제 텔레그램 전송(ctx.reply)은 호출부(index.js)에서 담당한다.
-async function handleNameSearch(sb, repository, rawQuery) {
-  const query = trimAndValidateQuery(rawQuery);
-  if (!query) {
-    return '이름을 2글자 이상 입력해 주세요.';
-  }
-
-  const [{ divisions, teams, employees: allEmployees }, allExecutives] = await Promise.all([
-    repository.getOrgSnapshot(sb),
-    repository.getAllExecutives(sb),
-  ]);
-
-  const employees = _fuzzyMatchByName(allEmployees, query);
-  const executives = _fuzzyMatchByName(allExecutives, query);
-
-  const divById = {};
-  divisions.forEach(function (d) { divById[d.id] = d; });
-  const teamById = {};
-  teams.forEach(function (t) { teamById[t.id] = t; });
-
-  return formatSearchReply(query, employees, executives, divById, teamById);
-}
-
 module.exports = {
   trimAndValidateQuery: trimAndValidateQuery,
   formatSearchReply: formatSearchReply,
-  handleNameSearch: handleNameSearch,
   fuzzyMatchByName: _fuzzyMatchByName,
   RESULT_CAP: RESULT_CAP,
 };

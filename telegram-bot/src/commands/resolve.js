@@ -1,0 +1,69 @@
+const repository = require('../data/repository');
+const { findOrgScope } = require('./orgUnit');
+const { formatOrgChartText } = require('../render/orgChartText');
+const { matchDashboardTopic, formatDashboardText } = require('./dashboard');
+const { trimAndValidateQuery, formatSearchReply, fuzzyMatchByName } = require('./nameSearch');
+const { normalizeForMatch } = require('../util');
+
+function _indexById(items) {
+  const byId = {};
+  items.forEach(function (it) { byId[it.id] = it; });
+  return byId;
+}
+
+// 조직도/임원일정처럼 고정 키워드가 아닌 나머지 모든 입력(이름/조직명/대시보드 키워드)을
+// 하나의 데이터 조회로 해결한다. 우선순위:
+//   1) 이름이 정확히 일치하는 직원/임원 — 있으면 최우선으로 그 사람만 보여준다.
+//      ("박상민"처럼 정확한 이름을 입력했는데 조직명 오타 매칭이나 다른 사람의
+//      유사 이름에 걸려 엉뚱한 결과가 먼저 나오는 걸 막기 위함.)
+//   2) 조직명(본부/부문 그룹/팀 내 부문/팀)
+//   3) 대시보드 통계 키워드
+//   4) 그 외에는 이름 부분일치/유사도 검색으로 폴백
+async function resolveTextQuery(sb, rawQuery) {
+  const query = trimAndValidateQuery(rawQuery);
+  if (!query) {
+    return '이름을 2글자 이상 입력해 주세요.';
+  }
+
+  const [{ divisions, teams, employees }, executives] = await Promise.all([
+    repository.getOrgSnapshot(sb),
+    repository.getAllExecutives(sb),
+  ]);
+  const divById = _indexById(divisions);
+  const teamById = _indexById(teams);
+
+  const nq = normalizeForMatch(query);
+  const exactEmployees = employees.filter(function (e) { return normalizeForMatch(e.name) === nq; });
+  const exactExecutives = executives.filter(function (x) { return normalizeForMatch(x.name) === nq; });
+  if (exactEmployees.length || exactExecutives.length) {
+    return formatSearchReply(query, exactEmployees, exactExecutives, divById, teamById);
+  }
+
+  const scope = findOrgScope(divisions, teams, query);
+  if (scope) {
+    if (scope.multiple) {
+      return (
+        "'" + query + "'에 해당하는 조직이 여러 개 있습니다: " + scope.multiple.join(', ') +
+        '\n조직명을 더 구체적으로 입력해 주세요.'
+      );
+    }
+    return formatOrgChartText(scope.divisions, scope.teams, employees, null, scope.title);
+  }
+
+  const dashMatch = matchDashboardTopic(query);
+  if (dashMatch) {
+    if (dashMatch.multiple) {
+      return (
+        "'" + query + "'에 해당하는 통계 항목이 여러 개 있습니다: " + dashMatch.multiple.join(', ') +
+        '\n항목명을 더 구체적으로 입력해 주세요.'
+      );
+    }
+    return formatDashboardText(dashMatch.key, employees, divisions, executives);
+  }
+
+  const matchedEmployees = fuzzyMatchByName(employees, query);
+  const matchedExecutives = fuzzyMatchByName(executives, query);
+  return formatSearchReply(query, matchedEmployees, matchedExecutives, divById, teamById);
+}
+
+module.exports = { resolveTextQuery: resolveTextQuery };

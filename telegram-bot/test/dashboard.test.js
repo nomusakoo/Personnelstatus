@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { matchDashboardTopic, formatDashboardText, getDashboardText } = require('../src/commands/dashboard');
+const { matchDashboardTopic, formatDashboardText } = require('../src/commands/dashboard');
 
 test('matchDashboardTopic: 정확한 키워드는 바로 매칭', function () {
   assert.deepEqual(matchDashboardTopic('총인원'), { key: 'total', title: '총인원' });
@@ -87,32 +87,3 @@ test('formatDashboardText: 직급별/직책별/본부별/사업장별/근무직�
   assert.match(etText, /계약직: 1명/);
 });
 
-function makeMockSb(dataByTable) {
-  return {
-    from: function (table) {
-      const builder = {
-        select: function () { return builder; },
-        order: function () { return builder; },
-        then: function (resolve) { return resolve({ data: dataByTable[table] || [], error: null }); },
-      };
-      return builder;
-    },
-  };
-}
-
-test('getDashboardText: 대시보드 키워드면 통계 텍스트 반환', async function () {
-  const sb = makeMockSb({
-    divisions: [],
-    teams: [],
-    employees: [{ name: '홍길동', status: 'join' }],
-    executives: [],
-  });
-  const text = await getDashboardText(sb, '입사자');
-  assert.match(text, /이번달 입사: 1명/);
-});
-
-test('getDashboardText: 대시보드 키워드가 아니면 null 반환 (폴백 신호)', async function () {
-  const sb = makeMockSb({ divisions: [], teams: [], employees: [], executives: [] });
-  const text = await getDashboardText(sb, '홍길동');
-  assert.equal(text, null);
-});
