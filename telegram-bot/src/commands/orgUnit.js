@@ -1,5 +1,4 @@
-const repository = require('../data/repository');
-const { formatOrgChartText } = require('../render/orgChartText');
+const { DIVISION_GROUPS } = require('../constants');
 const { bestFuzzyMatches, normalizeForMatch } = require('../util');
 
 // 정확히 일치하는 게 있으면 그걸 쓰고, 없으면 부분일치로, 그마저 없으면(오타 등을
@@ -17,10 +16,25 @@ function _matchByName(items, getName, query) {
   return bestFuzzyMatches(items, getName, query);
 }
 
-// query가 본부/부문/팀 이름 중 하나에 해당하면 그 범위(divisions/teams/title)를 반환.
+// DIVISION_GROUPS는 항목 수가 적고("SM부문"/"SC부문") 전부 "부문"으로 끝나 짧은 접두어만
+// 다르다 — 그래서 일반적인 오타 허용(유사도) 매칭을 적용하면 흔한 접미어 때문에
+// 서로를 오매칭하기 쉽다(예: 오타 없이 그냥 다른 부문을 뜻하는 입력도 걸릴 수 있음).
+// 이 그룹만은 정확 일치/부분일치까지만 허용하고 유사도 기반 매칭은 적용하지 않는다.
+function _matchDivisionGroup(query) {
+  const nq = normalizeForMatch(query);
+  const exact = DIVISION_GROUPS.filter(function (g) { return normalizeForMatch(g.name) === nq; });
+  if (exact.length) return exact;
+  return DIVISION_GROUPS.filter(function (g) {
+    const gn = normalizeForMatch(g.name);
+    return gn && gn.indexOf(nq) !== -1;
+  });
+}
+
+// query가 본부/부문(그룹)/팀 이름 중 하나에 해당하면 그 범위(divisions/teams/title)를 반환.
 // 여러 개에 걸치면 {multiple:[...]}, 아무 것도 안 걸리면 null(=이름 검색으로 폴백).
-// 우선순위: 본부(division) > 부문(center_name) > 팀(team) — 실제로는 명명 규칙이
-// 겹치지 않는 경우가 대부분이라 순서가 결과에 영향을 주는 일은 드물다.
+// 우선순위: 본부(division) > 본부 그룹(DIVISION_GROUPS, 예: SM부문) > 팀 내 부문(center_name)
+// > 팀(team) — 실제로는 명명 규칙이 겹치지 않는 경우가 대부분이라 순서가 결과에
+// 영향을 주는 일은 드물다.
 function findOrgScope(divisions, teams, query) {
   const q = (query || '').trim();
   if (!q) return null;
@@ -36,6 +50,21 @@ function findOrgScope(divisions, teams, query) {
   }
   if (divMatches.length > 1) {
     return { multiple: divMatches.map(function (d) { return d.name; }) };
+  }
+
+  const groupMatches = _matchDivisionGroup(q);
+  if (groupMatches.length === 1) {
+    const group = groupMatches[0];
+    const divs = divisions.filter(function (d) { return group.divisionNames.indexOf(d.name) !== -1; });
+    const divIds = divs.map(function (d) { return d.id; });
+    return {
+      title: group.name,
+      divisions: divs,
+      teams: teams.filter(function (t) { return divIds.indexOf(t.div_id) !== -1; }),
+    };
+  }
+  if (groupMatches.length > 1) {
+    return { multiple: groupMatches.map(function (g) { return g.name; }) };
   }
 
   const allCenterNames = [];
@@ -69,19 +98,4 @@ function findOrgScope(divisions, teams, query) {
   return null;
 }
 
-// query가 조직명이면 그 범위의 조직도 텍스트를, 여러 개 걸리면 안내 문구를,
-// 조직명이 아니면 null을 반환한다(null이면 호출부가 이름 검색으로 넘어가면 됨).
-async function getOrgUnitText(sb, query) {
-  const { divisions, teams, employees } = await repository.getOrgSnapshot(sb);
-  const scope = findOrgScope(divisions, teams, query);
-  if (!scope) return null;
-  if (scope.multiple) {
-    return (
-      "'" + query + "'에 해당하는 조직이 여러 개 있습니다: " + scope.multiple.join(', ') +
-      '\n조직명을 더 구체적으로 입력해 주세요.'
-    );
-  }
-  return formatOrgChartText(scope.divisions, scope.teams, employees, null, scope.title);
-}
-
-module.exports = { findOrgScope: findOrgScope, getOrgUnitText: getOrgUnitText };
+module.exports = { findOrgScope: findOrgScope };

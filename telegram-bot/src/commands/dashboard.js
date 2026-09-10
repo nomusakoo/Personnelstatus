@@ -1,4 +1,3 @@
-const repository = require('../data/repository');
 const { GRADES, WORKPLACES, EMP_TYPES } = require('../constants');
 const { levenshtein, normalizeForMatch } = require('../util');
 
@@ -131,27 +130,8 @@ function _formatCatCount(heading, active, field, categories) {
   return heading + ' (총 ' + total + '명)\n\n' + (lines.length ? lines.join('\n') : '데이터가 없습니다');
 }
 
-// query가 대시보드 키워드면 그 통계 텍스트를, 여러 개 걸리면 안내 문구를,
-// 아니면 null을 반환한다(null이면 호출부가 이름 검색으로 넘어가면 됨).
-async function getDashboardText(sb, query) {
-  const match = matchDashboardTopic(query);
-  if (!match) return null;
-  if (match.multiple) {
-    return (
-      "'" + query + "'에 해당하는 통계 항목이 여러 개 있습니다: " + match.multiple.join(', ') +
-      '\n항목명을 더 구체적으로 입력해 주세요.'
-    );
-  }
-  const [{ divisions, employees }, executives] = await Promise.all([
-    repository.getOrgSnapshot(sb),
-    repository.getAllExecutives(sb),
-  ]);
-  return formatDashboardText(match.key, employees, divisions, executives);
-}
-
 module.exports = {
   TOPICS: TOPICS,
   matchDashboardTopic: matchDashboardTopic,
   formatDashboardText: formatDashboardText,
-  getDashboardText: getDashboardText,
 };

@@ -4,13 +4,10 @@ const { loadConfig } = require('./config');
 const { createSupabaseClient } = require('./data/supabaseClient');
 const { isAllowed } = require('./auth/whitelist');
 const { classify } = require('./commands/router');
-const { handleNameSearch } = require('./commands/nameSearch');
+const { resolveTextQuery } = require('./commands/resolve');
 const { getOrgChartText } = require('./commands/orgChart');
 const { getExecCalendarText } = require('./commands/execCalendar');
-const { getOrgUnitText } = require('./commands/orgUnit');
-const { getDashboardText } = require('./commands/dashboard');
 const { mainKeyboard, buildHelpText } = require('./keyboard');
-const repository = require('./data/repository');
 const { chunkText } = require('./util');
 
 // 채팅창 하단 고정 메뉴(mainKeyboard)를 계속 보이게 하기 위해, 응답의 마지막 조각에만
@@ -64,19 +61,9 @@ bot.on('message', async function (ctx) {
       const calText = await getExecCalendarText(sb, cmd.month, sb2);
       await replyChunks(ctx, calText);
     } else if (cmd.type === 'nameSearch') {
-      // 우선순위: 조직명(본부/부문/팀) → 대시보드 통계 키워드 → 마지막으로 이름 검색
-      const orgUnitText = await getOrgUnitText(sb, cmd.query);
-      if (orgUnitText !== null) {
-        await replyChunks(ctx, orgUnitText);
-        return;
-      }
-      const dashboardText = await getDashboardText(sb, cmd.query);
-      if (dashboardText !== null) {
-        await replyChunks(ctx, dashboardText);
-        return;
-      }
-      const reply = await handleNameSearch(sb, repository, cmd.query);
-      await ctx.reply(reply, { reply_markup: mainKeyboard });
+      // 이름/조직명/대시보드 키워드 중 무엇에 해당하는지는 resolveTextQuery가 판단한다.
+      const reply = await resolveTextQuery(sb, cmd.query);
+      await replyChunks(ctx, reply);
     } else {
       await ctx.reply("이름을 입력하시거나 '조직도' / '임원일정'을 입력해 주세요.", { reply_markup: mainKeyboard });
     }

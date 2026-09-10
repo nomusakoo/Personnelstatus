@@ -1,0 +1,79 @@
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const { resolveTextQuery } = require('../src/commands/resolve');
+
+function makeMockSb(dataByTable) {
+  return {
+    from: function (table) {
+      const builder = {
+        select: function () { return builder; },
+        order: function () { return builder; },
+        then: function (resolve) { return resolve({ data: dataByTable[table] || [], error: null }); },
+      };
+      return builder;
+    },
+  };
+}
+
+test('resolveTextQuery: 짧은 쿼리는 DB 호출 없이 안내', async function () {
+  const sb = makeMockSb({});
+  const reply = await resolveTextQuery(sb, '홍');
+  assert.match(reply, /2글자 이상/);
+});
+
+test('resolveTextQuery: 이름이 정확히 일치하면 조직명 오타 매칭보다 우선함', async function () {
+  // '박상팀'이라는 팀이 있고 '박상민'과 유사도가 높아(약 67%) 조직명 검색이 먼저 실행되면
+  // 팀 정보가 잘못 나올 수 있다 — 이름이 정확히 일치하면 그쪽을 최우선으로 보여줘야 한다.
+  const sb = makeMockSb({
+    divisions: [{ id: 'd1', name: '본부' }],
+    teams: [{ id: 't1', div_id: 'd1', name: '박상팀', center_name: '' }],
+    employees: [
+      { name: '박상민', grade: '과장급', birth_year: 1990, div_id: 'd1', team_id: 't1', join_date: '2020-01-01', status: 'normal' },
+    ],
+    executives: [],
+  });
+  const reply = await resolveTextQuery(sb, '박상민');
+  assert.match(reply, /박상민/);
+  assert.match(reply, /직원/);
+  assert.doesNotMatch(reply, /조직도/);
+});
+
+test('resolveTextQuery: 조직명(본부)이면 그 범위의 조직도 텍스트를 반환', async function () {
+  const sb = makeMockSb({
+    divisions: [{ id: 'd1', name: '경영지원본부' }],
+    teams: [{ id: 't1', div_id: 'd1', name: '인사노무팀', center_name: '' }],
+    employees: [{ name: '홍길동', grade: '과장급', div_id: 'd1', team_id: 't1', join_date: '2020-01-01', status: 'normal' }],
+    executives: [],
+  });
+  const reply = await resolveTextQuery(sb, '경영지원본부');
+  assert.match(reply, /조직도 - 경영지원본부/);
+  assert.match(reply, /홍길동/);
+});
+
+test('resolveTextQuery: 대시보드 키워드면 통계 텍스트를 반환', async function () {
+  const sb = makeMockSb({
+    divisions: [],
+    teams: [],
+    employees: [{ name: '홍길동', status: 'join' }],
+    executives: [],
+  });
+  const reply = await resolveTextQuery(sb, '입사자');
+  assert.match(reply, /이번달 입사: 1명/);
+});
+
+test('resolveTextQuery: 조직명/대시보드 키워드가 아니면 이름 부분일치·유사도 검색으로 폴백', async function () {
+  const sb = makeMockSb({
+    divisions: [{ id: 'd1', name: '본부' }],
+    teams: [{ id: 't1', div_id: 'd1', name: '팀' }],
+    employees: [{ name: '홍길동', grade: '과장급', div_id: 'd1', team_id: 't1', join_date: '2020-01-01', status: 'normal' }],
+    executives: [],
+  });
+  const reply = await resolveTextQuery(sb, '길동');
+  assert.match(reply, /홍길동/);
+});
+
+test('resolveTextQuery: 아무 것도 매칭되지 않으면 안내 문구', async function () {
+  const sb = makeMockSb({ divisions: [], teams: [], employees: [], executives: [] });
+  const reply = await resolveTextQuery(sb, '없는사람');
+  assert.match(reply, /찾을 수 없습니다/);
+});
