@@ -7,6 +7,7 @@ const { classify } = require('./commands/router');
 const { handleNameSearch } = require('./commands/nameSearch');
 const { getOrgChartText } = require('./commands/orgChart');
 const { getExecCalendarText } = require('./commands/execCalendar');
+const { getOrgUnitText } = require('./commands/orgUnit');
 const repository = require('./data/repository');
 const { chunkText } = require('./util');
 
@@ -53,8 +54,15 @@ bot.on('message', async function (ctx) {
         await ctx.reply(chunk);
       }
     } else if (cmd.type === 'nameSearch') {
-      const reply = await handleNameSearch(sb, repository, cmd.query);
-      await ctx.reply(reply);
+      const orgUnitText = await getOrgUnitText(sb, cmd.query);
+      if (orgUnitText !== null) {
+        for (const chunk of chunkText(orgUnitText)) {
+          await ctx.reply(chunk);
+        }
+      } else {
+        const reply = await handleNameSearch(sb, repository, cmd.query);
+        await ctx.reply(reply);
+      }
     } else {
       await ctx.reply("이름을 입력하시거나 '조직도' / '임원일정'을 입력해 주세요.");
     }
