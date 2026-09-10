@@ -36,3 +36,17 @@ test('인원 없는 팀은 "(인원 없음)" 표시', function () {
   assert.match(text, /빈팀/);
   assert.match(text, /\(인원 없음\)/);
 });
+
+test('title이 주어지면 제목에 "조직도 - {title}"로 표시됨', function () {
+  const divisions = [{ id: 'd1', name: '본부', sort_order: 0 }];
+  const teams = [{ id: 't1', div_id: 'd1', name: '팀', sort_order: 0 }];
+  const text = formatOrgChartText(divisions, teams, [], new Date('2026-01-01'), '인사노무팀');
+  assert.match(text, /📊 조직도 - 인사노무팀 \(2026\.01\.01 기준\)/);
+});
+
+test('title 없으면 기존처럼 "조직도"로만 표시됨', function () {
+  const divisions = [{ id: 'd1', name: '본부', sort_order: 0 }];
+  const teams = [{ id: 't1', div_id: 'd1', name: '팀', sort_order: 0 }];
+  const text = formatOrgChartText(divisions, teams, [], new Date('2026-01-01'));
+  assert.match(text, /📊 조직도 \(2026\.01\.01 기준\)/);
+});

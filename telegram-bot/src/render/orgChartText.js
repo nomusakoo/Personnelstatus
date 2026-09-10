@@ -3,7 +3,8 @@ const { computeTenureLabel } = require('../util');
 
 // (divisions, teams, employees) -> 텔레그램 채팅에 바로 보낼 평문 텍스트.
 // 본부→팀→직급 순으로 묶어서 보여주며, 웹앱의 전체 매트릭스를 그대로 재현하진 않는다.
-function formatOrgChartText(divisions, teams, employees, referenceDate) {
+// title이 있으면 "조직도 - {title}"처럼 특정 조직 범위로 좁혀 보여준다는 걸 표시한다.
+function formatOrgChartText(divisions, teams, employees, referenceDate, title) {
   const activeEmployees = (employees || []).filter(function (e) { return e.status !== 'leave'; });
 
   const teamsByDiv = {};
@@ -25,7 +26,8 @@ function formatOrgChartText(divisions, teams, employees, referenceDate) {
 
   const now = referenceDate || new Date();
   const stamp = now.getFullYear() + '.' + String(now.getMonth() + 1).padStart(2, '0') + '.' + String(now.getDate()).padStart(2, '0');
-  const lines = ['📊 조직도 (' + stamp + ' 기준)', ''];
+  const heading = title ? '📊 조직도 - ' + title + ' (' + stamp + ' 기준)' : '📊 조직도 (' + stamp + ' 기준)';
+  const lines = [heading, ''];
 
   if (!sortedDivisions.length) {
     lines.push('조직 데이터가 없습니다');
