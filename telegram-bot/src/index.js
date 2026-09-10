@@ -39,10 +39,12 @@ bot.on('message', async function (ctx) {
   try {
     if (cmd.type === 'orgChart') {
       const png = await getOrgChartImage(sb);
-      await ctx.replyWithPhoto(new InputFile(png, 'orgchart.png'));
+      // replyWithPhoto는 텔레그램이 JPEG로 재압축해 표/글자가 뭉개져 보임 —
+      // 문서(document)로 보내면 원본 PNG 그대로 전달되어 화질이 유지됨
+      await ctx.replyWithDocument(new InputFile(png, 'orgchart.png'));
     } else if (cmd.type === 'execCalendar') {
       const png = await getExecCalendarImage(sb, cmd.month);
-      await ctx.replyWithPhoto(new InputFile(png, 'exec-calendar.png'));
+      await ctx.replyWithDocument(new InputFile(png, 'exec-calendar.png'));
     } else if (cmd.type === 'nameSearch') {
       const reply = await handleNameSearch(sb, repository, cmd.query);
       await ctx.reply(reply);
