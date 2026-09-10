@@ -8,8 +8,20 @@ const { handleNameSearch } = require('./commands/nameSearch');
 const { getOrgChartText } = require('./commands/orgChart');
 const { getExecCalendarText } = require('./commands/execCalendar');
 const { getOrgUnitText } = require('./commands/orgUnit');
+const { getDashboardText } = require('./commands/dashboard');
+const { mainKeyboard, buildHelpText } = require('./keyboard');
 const repository = require('./data/repository');
 const { chunkText } = require('./util');
+
+// 채팅창 하단 고정 메뉴(mainKeyboard)를 계속 보이게 하기 위해, 응답의 마지막 조각에만
+// reply_markup을 붙인다(모든 조각에 붙여도 되지만 중복이라 마지막에만 붙임).
+async function replyChunks(ctx, text) {
+  const chunks = chunkText(text);
+  for (let i = 0; i < chunks.length; i++) {
+    const isLast = i === chunks.length - 1;
+    await ctx.reply(chunks[i], isLast ? { reply_markup: mainKeyboard } : undefined);
+  }
+}
 
 let config;
 try {
@@ -37,34 +49,36 @@ bot.on('message', async function (ctx) {
   const text = ctx.message.text;
   if (!text) {
     // 사진/스티커 등 텍스트가 아닌 메시지
-    await ctx.reply("이름을 입력하시거나 '조직도' / '임원일정'을 입력해 주세요.");
+    await ctx.reply("이름을 입력하시거나 '조직도' / '임원일정'을 입력해 주세요.", { reply_markup: mainKeyboard });
     return;
   }
 
   const cmd = classify(text);
   try {
-    if (cmd.type === 'orgChart') {
+    if (cmd.type === 'help') {
+      await ctx.reply(buildHelpText(), { reply_markup: mainKeyboard });
+    } else if (cmd.type === 'orgChart') {
       const orgText = await getOrgChartText(sb);
-      for (const chunk of chunkText(orgText)) {
-        await ctx.reply(chunk);
-      }
+      await replyChunks(ctx, orgText);
     } else if (cmd.type === 'execCalendar') {
       const calText = await getExecCalendarText(sb, cmd.month, sb2);
-      for (const chunk of chunkText(calText)) {
-        await ctx.reply(chunk);
-      }
+      await replyChunks(ctx, calText);
     } else if (cmd.type === 'nameSearch') {
+      // 우선순위: 조직명(본부/부문/팀) → 대시보드 통계 키워드 → 마지막으로 이름 검색
       const orgUnitText = await getOrgUnitText(sb, cmd.query);
       if (orgUnitText !== null) {
-        for (const chunk of chunkText(orgUnitText)) {
-          await ctx.reply(chunk);
-        }
-      } else {
-        const reply = await handleNameSearch(sb, repository, cmd.query);
-        await ctx.reply(reply);
+        await replyChunks(ctx, orgUnitText);
+        return;
       }
+      const dashboardText = await getDashboardText(sb, cmd.query);
+      if (dashboardText !== null) {
+        await replyChunks(ctx, dashboardText);
+        return;
+      }
+      const reply = await handleNameSearch(sb, repository, cmd.query);
+      await ctx.reply(reply, { reply_markup: mainKeyboard });
     } else {
-      await ctx.reply("이름을 입력하시거나 '조직도' / '임원일정'을 입력해 주세요.");
+      await ctx.reply("이름을 입력하시거나 '조직도' / '임원일정'을 입력해 주세요.", { reply_markup: mainKeyboard });
     }
   } catch (err) {
     console.error('[bot] 명령 처리 오류:', err);

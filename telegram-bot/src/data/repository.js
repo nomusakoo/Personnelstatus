@@ -43,6 +43,12 @@ async function searchExecutivesByName(sb, query) {
   return data || [];
 }
 
+async function getAllExecutives(sb) {
+  const { data, error } = await sb.from('executives').select('*');
+  if (error) throw error;
+  return data || [];
+}
+
 async function _queryEventsForMonth(sb, table, year, month) {
   const mm = String(month).padStart(2, '0');
   const from = year + '-' + mm + '-01';
@@ -81,6 +87,7 @@ module.exports = {
   getDivisionsAndTeamsById: getDivisionsAndTeamsById,
   searchEmployeesByName: searchEmployeesByName,
   searchExecutivesByName: searchExecutivesByName,
+  getAllExecutives: getAllExecutives,
   getExecEventsForMonth: getExecEventsForMonth,
   getExternalExecEventsForMonth: getExternalExecEventsForMonth,
 };

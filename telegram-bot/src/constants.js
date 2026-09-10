@@ -5,4 +5,8 @@ const GRADES = [
   '영양보조', '기타',
 ];
 
-module.exports = { GRADES: GRADES };
+// 웹앱의 WORKPLACES/EMP_TYPES 배열과 동일 — 대시보드 사업장별/근무직유형별 집계 기준
+const WORKPLACES = ['본사', '지점', '여주', '밀양', '김제', '정읍', '의성', '해외', '지주파견'];
+const EMP_TYPES = ['정규직', '임원계약직', '계약직', '촉탁직', '인턴'];
+
+module.exports = { GRADES: GRADES, WORKPLACES: WORKPLACES, EMP_TYPES: EMP_TYPES };
