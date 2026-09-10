@@ -46,7 +46,12 @@ async function searchExecutivesByName(sb, query) {
 async function _queryEventsForMonth(sb, table, year, month) {
   const mm = String(month).padStart(2, '0');
   const from = year + '-' + mm + '-01';
-  const to = year + '-' + mm + '-31'; // 날짜가 문자열(YYYY-MM-DD)이라 31로 잡아도 문자열 비교상 안전한 상한
+  // 30/31일, 2월 등 달마다 마지막 날이 달라 고정값(예: 31)을 쓰면 존재하지 않는
+  // 날짜(예: "2026-09-31")로 쿼리해 Postgres가 22008 오류를 낸다. 다음 달 1일
+  // 미만(<)으로 비교해 실제 마지막 날짜 계산 없이 안전하게 그 달 전체를 포함한다.
+  const nextYear = month === 12 ? year + 1 : year;
+  const nextMonth = month === 12 ? 1 : month + 1;
+  const to = nextYear + '-' + String(nextMonth).padStart(2, '0') + '-01';
   // time 기준 정렬은 여기서 하지 않는다 — 외부 연동 테이블(hr_exec_events)에는
   // time 컬럼이 없을 수 있어 DB 쿼리가 실패할 수 있고, 어차피 최종 출력 직전
   // formatExecCalendarText()에서 시간순으로 다시 정렬하므로 여기서는 불필요하다.
@@ -54,7 +59,7 @@ async function _queryEventsForMonth(sb, table, year, month) {
     .from(table)
     .select('*')
     .gte('date', from)
-    .lte('date', to)
+    .lt('date', to)
     .order('date');
   if (error) throw error;
   return data || [];
