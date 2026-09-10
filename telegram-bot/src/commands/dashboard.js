@@ -5,7 +5,7 @@ const { levenshtein, normalizeForMatch } = require('../util');
 // 입력해도(예: "직급별", "직급현황"), 공백을 다르게 넣어도(예: "직급 별 인원") 매칭되도록
 // 여러 표현을 등록해 둔다. 오타는 matchDashboardTopic의 편집거리(레벤슈타인) 비교로 흡수한다.
 const TOPICS = [
-  { key: 'total', title: '총인원', aliases: ['총인원', '전체인원', '총원', '현재인원', '인원현황', '전체인원수'] },
+  { key: 'total', title: '총인원', aliases: ['총', '인원', '총인원', '전체인원', '총원', '현재인원', '인원현황', '전체인원수'] },
   { key: 'join', title: '이번달 입사', aliases: ['이번달입사', '이번달입사자', '입사자', '신규입사', '신규입사자', '입사현황'] },
   { key: 'leave', title: '이번달 퇴사', aliases: ['이번달퇴사', '이번달퇴사자', '퇴사자', '퇴사현황'] },
   { key: 'transfer', title: '인사이동', aliases: ['인사이동', '전보', '이동현황'] },
@@ -59,14 +59,15 @@ function formatDashboardText(topicKey, employees, divisions, executives) {
 
   switch (topicKey) {
     case 'total': {
-      // 웹앱 getTotalCount()와 동일하게 이름 기준 중복 제거 + 대표이사/전무이사(미등록 시)를 포함
+      // 웹앱 getTotalCount()와 동일하게 이름 기준 중복 제거 + 대표이사/전무이사 같은
+      // 등기임원(미등록 시)을 포함하고, 사외이사는 EXEC_INCLUDE_TITLES에 없어 제외된다.
       const EXEC_INCLUDE_TITLES = ['대표이사', '전무이사'];
       const seen = new Set();
       active.forEach(function (e) { seen.add(e.name); });
       executives.forEach(function (x) {
         if (EXEC_INCLUDE_TITLES.indexOf(x.title) !== -1 && x.name && !seen.has(x.name)) seen.add(x.name);
       });
-      return '👥 총인원: ' + seen.size + '명';
+      return '👥 현재 총 인원: ' + seen.size + '명 (등기임원 포함, 사외이사 제외)';
     }
     case 'join':
       return '🆕 이번달 입사: ' + _countByStatus(employees, 'join') + '명';
