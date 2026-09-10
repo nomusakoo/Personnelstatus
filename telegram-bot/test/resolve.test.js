@@ -38,6 +38,25 @@ test('resolveTextQuery: 이름이 정확히 일치하면 조직명 오타 매칭
   assert.doesNotMatch(reply, /조직도/);
 });
 
+test('resolveTextQuery: 직급/직책이면 해당하는 사람 전체 명단을 반환', async function () {
+  const sb = makeMockSb({
+    divisions: [{ id: 'd1', name: '경영지원본부' }],
+    teams: [{ id: 't1', div_id: 'd1', name: '인사노무팀', center_name: '' }],
+    employees: [
+      { name: '홍길동', grade: '과장급', position: '팀장', div_id: 'd1', team_id: 't1', status: 'normal' },
+      { name: '김철수', grade: '과장급', position: '', div_id: 'd1', team_id: 't1', status: 'normal' },
+    ],
+    executives: [{ name: '박사외', title: '사외이사' }],
+  });
+  const gradeReply = await resolveTextQuery(sb, '과장급');
+  assert.match(gradeReply, /'과장급' 검색 결과 \(총 2명\)/);
+  assert.match(gradeReply, /홍길동/);
+  assert.match(gradeReply, /김철수/);
+
+  const execReply = await resolveTextQuery(sb, '사외이사');
+  assert.match(execReply, /박사외/);
+});
+
 test('resolveTextQuery: 조직명(본부)이면 그 범위의 조직도 텍스트를 반환', async function () {
   const sb = makeMockSb({
     divisions: [{ id: 'd1', name: '경영지원본부' }],

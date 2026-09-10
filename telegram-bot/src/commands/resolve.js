@@ -2,6 +2,7 @@ const repository = require('../data/repository');
 const { findOrgScope } = require('./orgUnit');
 const { formatOrgChartText } = require('../render/orgChartText');
 const { matchDashboardTopic, formatDashboardText } = require('./dashboard');
+const { matchRole, formatRoleSearchText } = require('./roleSearch');
 const { trimAndValidateQuery, formatSearchReply, fuzzyMatchByName } = require('./nameSearch');
 const { normalizeForMatch } = require('../util');
 
@@ -11,14 +12,15 @@ function _indexById(items) {
   return byId;
 }
 
-// 조직도/임원일정처럼 고정 키워드가 아닌 나머지 모든 입력(이름/조직명/대시보드 키워드)을
-// 하나의 데이터 조회로 해결한다. 우선순위:
+// 조직도/임원일정처럼 고정 키워드가 아닌 나머지 모든 입력(이름/직급·직책/조직명/대시보드
+// 키워드)을 하나의 데이터 조회로 해결한다. 우선순위:
 //   1) 이름이 정확히 일치하는 직원/임원 — 있으면 최우선으로 그 사람만 보여준다.
 //      ("박상민"처럼 정확한 이름을 입력했는데 조직명 오타 매칭이나 다른 사람의
 //      유사 이름에 걸려 엉뚱한 결과가 먼저 나오는 걸 막기 위함.)
-//   2) 조직명(본부/부문 그룹/팀 내 부문/팀)
-//   3) 대시보드 통계 키워드
-//   4) 그 외에는 이름 부분일치/유사도 검색으로 폴백
+//   2) 직급(예: 과장급) 또는 직책(예: 팀장/본부장/사외이사) — 해당하는 사람 전체 명단
+//   3) 조직명(본부/부문 그룹/팀 내 부문/팀)
+//   4) 대시보드 통계 키워드
+//   5) 그 외에는 이름 부분일치/유사도 검색으로 폴백
 async function resolveTextQuery(sb, rawQuery) {
   const query = trimAndValidateQuery(rawQuery);
   if (!query) {
@@ -37,6 +39,11 @@ async function resolveTextQuery(sb, rawQuery) {
   const exactExecutives = executives.filter(function (x) { return normalizeForMatch(x.name) === nq; });
   if (exactEmployees.length || exactExecutives.length) {
     return formatSearchReply(query, exactEmployees, exactExecutives, divById, teamById);
+  }
+
+  const role = matchRole(query, employees, divisions, teams, executives);
+  if (role) {
+    return formatRoleSearchText(role, employees, divisions, teams, executives);
   }
 
   const scope = findOrgScope(divisions, teams, query);
