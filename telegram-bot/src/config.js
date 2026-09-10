@@ -1,0 +1,34 @@
+require('dotenv').config();
+
+const REQUIRED_VARS = [
+  'TELEGRAM_BOT_TOKEN',
+  'SUPABASE_URL',
+  'SUPABASE_SERVICE_ROLE_KEY',
+  'ALLOWED_TELEGRAM_IDS',
+];
+
+function loadConfig(env) {
+  env = env || process.env;
+  const missing = REQUIRED_VARS.filter(function (key) {
+    return !env[key];
+  });
+  if (missing.length) {
+    throw new Error(
+      '필수 환경변수가 누락되었습니다: ' + missing.join(', ') +
+      '\n.env 파일을 확인하세요 (.env.example 참고).'
+    );
+  }
+  const allowedIds = String(env.ALLOWED_TELEGRAM_IDS)
+    .split(',')
+    .map(function (s) { return s.trim(); })
+    .filter(Boolean);
+
+  return {
+    telegramToken: env.TELEGRAM_BOT_TOKEN,
+    supabaseUrl: env.SUPABASE_URL,
+    supabaseServiceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY,
+    allowedIds: allowedIds,
+  };
+}
+
+module.exports = { loadConfig: loadConfig, REQUIRED_VARS: REQUIRED_VARS };
