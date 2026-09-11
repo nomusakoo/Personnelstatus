@@ -7,6 +7,7 @@ const policies = [
   { id: 6, category: '복리후생', title: '경조금', content: '<p>경조금 안내</p>', sort_order: 0 },
   { id: 7, category: '복리후생', title: '경조휴가', content: '<p>경조휴가 안내</p>', sort_order: 1 },
   { id: 10, category: '복리후생', title: '가족돌봄휴가 및 가족돌봄휴직', content: '<p>가족돌봄 안내</p>', sort_order: 4 },
+  { id: 11, category: '복리후생', title: '출산관련 휴가 및 휴직', content: '<p>출산 안내</p>', sort_order: 5 },
   { id: 20, category: '파견현황', title: '농협경제지주 소속', content: '<p>농협경제지주 파견 목록</p>', sort_order: 0 },
   { id: 21, category: '파견현황', title: '해외법인 소속', content: '<p>해외법인 파견 목록</p>', sort_order: 1 },
 ];
@@ -38,6 +39,16 @@ test('matchPolicy: 부분일치로도 찾을 수 있음', function () {
 test('matchPolicy: 파견현황 소속 항목은 항목명으로 직접 찾을 수 있음', function () {
   assert.equal(matchPolicy('농협경제지주 소속', policies).item.id, 20);
   assert.equal(matchPolicy('해외법인 소속', policies).item.id, 21);
+});
+
+test('matchPolicy: 제목 중간의 연결어("및"/"관련")를 건너뛰고 일부 단어만 입력해도 매칭', function () {
+  // "출산관련 휴가 및 휴직"에서 "관련"과 "및"을 생략하고 "출산휴가"/"출산휴직"만
+  // 입력해도 찾아야 한다 — 단순 부분일치로는 "관련"이 중간에 끼어 있어 못 찾는다.
+  assert.equal(matchPolicy('출산휴가', policies).item.id, 11);
+  assert.equal(matchPolicy('출산휴직', policies).item.id, 11);
+  // "가족돌봄휴가 및 가족돌봄휴직"에서도 마찬가지
+  assert.equal(matchPolicy('가족돌봄휴가', policies).item.id, 10);
+  assert.equal(matchPolicy('가족돌봄휴직', policies).item.id, 10);
 });
 
 test('matchPolicy: 오타가 있어도 가장 유사한 항목만 매칭', function () {
