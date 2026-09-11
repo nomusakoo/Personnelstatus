@@ -1,4 +1,4 @@
-const { Bot } = require('grammy');
+const { Bot, InputFile } = require('grammy');
 
 const { loadConfig } = require('./config');
 const { createSupabaseClient } = require('./data/supabaseClient');
@@ -77,9 +77,16 @@ bot.on('message', async function (ctx) {
       await replyChunks(ctx, calText);
     } else if (cmd.type === 'nameSearch') {
       // 이름/조직명/대시보드 키워드 중 무엇에 해당하는지는 resolveTextQuery가 판단한다.
-      // 제도 항목에 표가 있으면 { html: '...' } 형태로 오므로 HTML parse_mode로 보낸다.
+      // 제도 항목에 표가 있으면 { html: '...' } 형태로, 데이터가 방대해 이미지로 내보내야
+      // 하는 항목(연도별 인력현황 등)은 { image, filename, caption } 형태로 온다.
+      // 이미지는 "사진"이 아니라 "문서"로 보내야 텔레그램이 재압축을 하지 않아 깨지지 않는다.
       const reply = await resolveTextQuery(sb, cmd.query, sb2);
-      if (reply && typeof reply === 'object' && reply.html) {
+      if (reply && typeof reply === 'object' && reply.image) {
+        await ctx.replyWithDocument(new InputFile(reply.image, reply.filename), {
+          caption: reply.caption,
+          reply_markup: mainKeyboard,
+        });
+      } else if (reply && typeof reply === 'object' && reply.html) {
         await replyChunksHtml(ctx, reply.html);
       } else {
         await replyChunks(ctx, reply);

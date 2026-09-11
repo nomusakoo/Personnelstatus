@@ -5,6 +5,7 @@ const { matchDashboardTopicExact, matchDashboardTopic, formatDashboardText } = r
 const { matchRole, formatRoleSearchText } = require('./roleSearch');
 const { matchPolicyExact, matchPolicy, formatPolicyText } = require('./policySearch');
 const { findPolicyDetailMatches, formatPolicyDetailMatches } = require('./policyDetailSearch');
+const { isImagePolicy, renderPolicyImageReply } = require('./policyImage');
 const { trimAndValidateQuery, formatSearchReply, fuzzyMatchByName } = require('./nameSearch');
 const { normalizeForMatch } = require('../util');
 
@@ -27,6 +28,8 @@ function _indexById(items) {
 //   4) 제도(경조휴가 등)와 "정확히" 일치 — sb2(외부 연동 프로젝트)의 hr_policies.
 //      "파견현황"처럼 대시보드 키워드와 겹치는 카테고리명은 검색 대상에서 뺐다(항목명만
 //      검색). 그래도 애매함을 줄이기 위해 조직명 검색보다 먼저 확인한다.
+//      "연도별 인력현황"처럼 데이터가 방대해 텍스트로는 알아보기 어려운 항목만
+//      예외적으로 이미지(PNG)로 보여준다(policyImage.js, isImagePolicy로 판단).
 //   5) 제도의 [상황+대상] 조합 상세 검색 (예: "본인결혼", "자녀 사망") — 여러 제도
 //      (경조휴가·경조금 등)에 걸친 그 행 하나만 찾아 묶어서 보여준다. 표 데이터
 //      기반이라 오검색 위험이 낮아 조직명 검색보다 먼저 확인한다.
@@ -67,6 +70,9 @@ async function resolveTextQuery(sb, rawQuery, sb2) {
 
   const exactPolicyMatch = matchPolicyExact(query, policies);
   if (exactPolicyMatch) {
+    if (exactPolicyMatch.item && isImagePolicy(exactPolicyMatch.item.title)) {
+      return renderPolicyImageReply(exactPolicyMatch.item);
+    }
     return formatPolicyText(query, exactPolicyMatch);
   }
 
@@ -99,6 +105,9 @@ async function resolveTextQuery(sb, rawQuery, sb2) {
 
   const policyMatch = matchPolicy(query, policies);
   if (policyMatch) {
+    if (policyMatch.item && isImagePolicy(policyMatch.item.title)) {
+      return renderPolicyImageReply(policyMatch.item);
+    }
     return formatPolicyText(query, policyMatch);
   }
 
