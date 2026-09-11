@@ -21,6 +21,37 @@ test('본부/팀/직급별로 그룹핑되어 텍스트로 출력됨', function 
   assert.match(text, /대리급 김철수/);
 });
 
+test('이름 옆에 "(연차, 출생년도 뒤 두 자리)"가 함께 표시됨', function () {
+  const divisions = [{ id: 'd1', name: '본부', sort_order: 0 }];
+  const teams = [{ id: 't1', div_id: 'd1', name: '팀', sort_order: 0 }];
+  const employees = [
+    { name: '홍길동', grade: '과장급', div_id: 'd1', team_id: 't1', join_date: '2020-01-01', birth_year: 1990, status: 'normal' },
+  ];
+  const text = formatOrgChartText(divisions, teams, employees, new Date('2026-01-01'));
+  assert.match(text, /과장급 홍길동 \(7년차, 90\)/);
+  assert.doesNotMatch(text, /1990/);
+});
+
+test('출생년도가 없으면 연차만 표시됨 (기존과 동일)', function () {
+  const divisions = [{ id: 'd1', name: '본부', sort_order: 0 }];
+  const teams = [{ id: 't1', div_id: 'd1', name: '팀', sort_order: 0 }];
+  const employees = [
+    { name: '홍길동', grade: '과장급', div_id: 'd1', team_id: 't1', join_date: '2020-01-01', status: 'normal' },
+  ];
+  const text = formatOrgChartText(divisions, teams, employees, new Date('2026-01-01'));
+  assert.match(text, /과장급 홍길동 \(7년차\)/);
+});
+
+test('입사일/출생년도가 모두 없으면 괄호 자체가 붙지 않음', function () {
+  const divisions = [{ id: 'd1', name: '본부', sort_order: 0 }];
+  const teams = [{ id: 't1', div_id: 'd1', name: '팀', sort_order: 0 }];
+  const employees = [
+    { name: '홍길동', grade: '과장급', div_id: 'd1', team_id: 't1', status: 'normal' },
+  ];
+  const text = formatOrgChartText(divisions, teams, employees, new Date('2026-01-01'));
+  assert.match(text, /- 과장급 홍길동$/m);
+});
+
 test('status leave인 직원은 제외', function () {
   const divisions = [{ id: 'd1', name: '본부', sort_order: 0 }];
   const teams = [{ id: 't1', div_id: 'd1', name: '팀', sort_order: 0 }];

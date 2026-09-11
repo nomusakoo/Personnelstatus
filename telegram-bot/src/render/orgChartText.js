@@ -1,6 +1,13 @@
 const { GRADES } = require('../constants');
 const { computeTenureLabel } = require('../util');
 
+// 출생년도를 "1990" 대신 뒤 두 자리 "90"만 표시한다.
+function _shortBirthYear(birthYear) {
+  if (!birthYear) return null;
+  const s = String(birthYear).trim();
+  return s.length > 2 ? s.slice(-2) : s;
+}
+
 // (divisions, teams, employees) -> 텔레그램 채팅에 바로 보낼 평문 텍스트.
 // 본부→팀→직급 순으로 묶어서 보여주며, 웹앱의 전체 매트릭스를 그대로 재현하진 않는다.
 // title이 있으면 "조직도 - {title}"처럼 특정 조직 범위로 좁혀 보여준다는 걸 표시한다.
@@ -55,7 +62,9 @@ function formatOrgChartText(divisions, teams, employees, referenceDate, title) {
         gradeLines.forEach(function (g) {
           byGrade[g].forEach(function (e) {
             const tenure = computeTenureLabel(e.join_date, referenceDate);
-            lines.push('    - ' + g + ' ' + e.name + (tenure ? ' (' + tenure + ')' : ''));
+            const parts = [tenure, _shortBirthYear(e.birth_year)].filter(Boolean);
+            const suffix = parts.length ? ' (' + parts.join(', ') + ')' : '';
+            lines.push('    - ' + g + ' ' + e.name + suffix);
           });
         });
       }
