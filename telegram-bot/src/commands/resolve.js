@@ -4,6 +4,7 @@ const { formatOrgChartText } = require('../render/orgChartText');
 const { matchDashboardTopicExact, matchDashboardTopic, formatDashboardText } = require('./dashboard');
 const { matchRole, formatRoleSearchText } = require('./roleSearch');
 const { matchPolicyExact, matchPolicy, formatPolicyText } = require('./policySearch');
+const { findPolicyDetailMatches, formatPolicyDetailMatches } = require('./policyDetailSearch');
 const { trimAndValidateQuery, formatSearchReply, fuzzyMatchByName } = require('./nameSearch');
 const { normalizeForMatch } = require('../util');
 
@@ -26,10 +27,13 @@ function _indexById(items) {
 //   4) 제도(경조휴가 등)와 "정확히" 일치 — sb2(외부 연동 프로젝트)의 hr_policies.
 //      "파견현황"처럼 대시보드 키워드와 겹치는 카테고리명은 검색 대상에서 뺐다(항목명만
 //      검색). 그래도 애매함을 줄이기 위해 조직명 검색보다 먼저 확인한다.
-//   5) 조직명(본부/부문 그룹/팀 내 부문/팀) — 부분일치·유사도 매칭 포함
-//   6) 대시보드 키워드의 부분일치/유사도 매칭 (3번의 정확 일치에서 못 찾은 나머지)
-//   7) 제도의 부분일치/유사도 매칭 (4번의 정확 일치에서 못 찾은 나머지)
-//   8) 그 외에는 이름 부분일치/유사도 검색으로 폴백
+//   5) 제도의 [상황+대상] 조합 상세 검색 (예: "본인결혼", "자녀 사망") — 여러 제도
+//      (경조휴가·경조금 등)에 걸친 그 행 하나만 찾아 묶어서 보여준다. 표 데이터
+//      기반이라 오검색 위험이 낮아 조직명 검색보다 먼저 확인한다.
+//   6) 조직명(본부/부문 그룹/팀 내 부문/팀) — 부분일치·유사도 매칭 포함
+//   7) 대시보드 키워드의 부분일치/유사도 매칭 (3번의 정확 일치에서 못 찾은 나머지)
+//   8) 제도의 부분일치/유사도 매칭 (4번의 정확 일치에서 못 찾은 나머지)
+//   9) 그 외에는 이름 부분일치/유사도 검색으로 폴백
 async function resolveTextQuery(sb, rawQuery, sb2) {
   const query = trimAndValidateQuery(rawQuery);
   if (!query) {
@@ -64,6 +68,11 @@ async function resolveTextQuery(sb, rawQuery, sb2) {
   const exactPolicyMatch = matchPolicyExact(query, policies);
   if (exactPolicyMatch) {
     return formatPolicyText(query, exactPolicyMatch);
+  }
+
+  const detailHits = findPolicyDetailMatches(query, policies);
+  if (detailHits) {
+    return formatPolicyDetailMatches(query, detailHits);
   }
 
   const scope = findOrgScope(divisions, teams, query);
