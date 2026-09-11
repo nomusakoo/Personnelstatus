@@ -146,8 +146,8 @@ test('resolveTextQuery: 제도 content에 표가 있으면 { html } 형태로 �
   });
   const reply = await resolveTextQuery(sb, '경조휴가', sb2);
   assert.equal(typeof reply, 'object');
-  assert.match(reply.html, /<pre>/);
-  assert.match(reply.html, /본인/);
+  assert.doesNotMatch(reply.html, /<pre>/);
+  assert.match(reply.html, /- 본인 7/);
 });
 
 test('resolveTextQuery: sb2를 안 넘겨도(외부 연동 미설정) 에러 없이 이름 검색으로 폴백', async function () {

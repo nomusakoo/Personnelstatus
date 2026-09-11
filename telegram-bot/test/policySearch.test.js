@@ -84,6 +84,6 @@ test('formatPolicyText: content에 표(<table>)가 있으면 { html } 형태로 
   const match = matchPolicyExact('경조사 휴가', withTable);
   const result = formatPolicyText('경조사 휴가', match);
   assert.equal(typeof result, 'object');
-  assert.match(result.html, /<pre>/);
+  assert.doesNotMatch(result.html, /<pre>/);
   assert.match(result.html, /본인/);
 });
