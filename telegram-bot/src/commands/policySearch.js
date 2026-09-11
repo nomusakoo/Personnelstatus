@@ -1,4 +1,5 @@
 const { bestFuzzyMatches, normalizeForMatch, htmlToPlainText } = require('../util');
+const { renderPolicyContentHtml } = require('../render/policyContentHtml');
 
 // 제도명에는 "및"/"관련"/"등"/"의" 같은 연결어가 자주 섞여 있는데(예: "출산관련 휴가
 // 및 휴직"), 사용자는 이런 연결어를 빼고 핵심 단어만 입력하는 경우가 많다(예:
@@ -51,7 +52,10 @@ function matchPolicy(query, policies) {
   return null;
 }
 
-// match({item} | {multiple}) → 안내 문구 또는 상세 내용 텍스트.
+// match({item} | {multiple}) → 안내 문구 또는 상세 내용.
+// content에 표(<table>)가 있으면 열이 맞춰진 고정폭 표로 보여줘야 알아보기 쉬워서
+// { html: '...' } 형태로 반환한다(호출부가 parse_mode:'HTML'로 보내야 함을 알 수 있게).
+// 표가 없는 단순 텍스트 항목은 기존처럼 평문 문자열을 그대로 반환한다.
 function formatPolicyText(query, match) {
   if (match.multiple) {
     return (
@@ -60,6 +64,9 @@ function formatPolicyText(query, match) {
     );
   }
   const item = match.item;
+  if (/<table\b/i.test(item.content || '')) {
+    return { html: renderPolicyContentHtml(item) };
+  }
   const body = htmlToPlainText(item.content);
   return '📋 ' + item.title + '\n\n' + (body || '내용이 없습니다.');
 }

@@ -70,3 +70,20 @@ test('formatPolicyText: 여러 개 걸리면 안내 문구', function () {
   assert.match(text, /경조금/);
   assert.match(text, /경조휴가/);
 });
+
+test('formatPolicyText: content에 표(<table>)가 있으면 { html } 형태로 반환 (HTML parse_mode 필요 신호)', function () {
+  const withTable = policies.concat([
+    {
+      id: 30,
+      category: '복리후생',
+      title: '경조사 휴가',
+      content: '<h2>결혼</h2><table><tbody><tr><td>본인</td><td style="text-align:right;">7</td></tr></tbody></table>',
+      sort_order: 6,
+    },
+  ]);
+  const match = matchPolicyExact('경조사 휴가', withTable);
+  const result = formatPolicyText('경조사 휴가', match);
+  assert.equal(typeof result, 'object');
+  assert.match(result.html, /<pre>/);
+  assert.match(result.html, /본인/);
+});
