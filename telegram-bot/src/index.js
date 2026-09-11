@@ -9,7 +9,7 @@ const { getOrgChartText } = require('./commands/orgChart');
 const { getExecCalendarText } = require('./commands/execCalendar');
 const { mainKeyboard, buildHelpText } = require('./keyboard');
 const repository = require('./data/repository');
-const { chunkText } = require('./util');
+const { chunkText, chunkBlocks } = require('./util');
 
 // 채팅창 하단 고정 메뉴(mainKeyboard)를 계속 보이게 하기 위해, 응답의 마지막 조각에만
 // reply_markup을 붙인다(모든 조각에 붙여도 되지만 중복이라 마지막에만 붙임).
@@ -18,6 +18,18 @@ async function replyChunks(ctx, text) {
   for (let i = 0; i < chunks.length; i++) {
     const isLast = i === chunks.length - 1;
     await ctx.reply(chunks[i], isLast ? { reply_markup: mainKeyboard } : undefined);
+  }
+}
+
+// 제도 조회처럼 <pre> 표가 들어간 HTML 메시지 전용 — 블록(빈 줄) 경계에서만 나눠
+// <pre>...</pre> 태그가 청크 사이에서 끊기지 않게 하고, parse_mode:'HTML'로 보낸다.
+async function replyChunksHtml(ctx, html) {
+  const chunks = chunkBlocks(html);
+  for (let i = 0; i < chunks.length; i++) {
+    const isLast = i === chunks.length - 1;
+    const opts = { parse_mode: 'HTML' };
+    if (isLast) opts.reply_markup = mainKeyboard;
+    await ctx.reply(chunks[i], opts);
   }
 }
 
@@ -65,8 +77,13 @@ bot.on('message', async function (ctx) {
       await replyChunks(ctx, calText);
     } else if (cmd.type === 'nameSearch') {
       // 이름/조직명/대시보드 키워드 중 무엇에 해당하는지는 resolveTextQuery가 판단한다.
+      // 제도 항목에 표가 있으면 { html: '...' } 형태로 오므로 HTML parse_mode로 보낸다.
       const reply = await resolveTextQuery(sb, cmd.query, sb2);
-      await replyChunks(ctx, reply);
+      if (reply && typeof reply === 'object' && reply.html) {
+        await replyChunksHtml(ctx, reply.html);
+      } else {
+        await replyChunks(ctx, reply);
+      }
     } else {
       await ctx.reply("이름을 입력하시거나 '조직도' / '임원일정'을 입력해 주세요.", { reply_markup: mainKeyboard });
     }

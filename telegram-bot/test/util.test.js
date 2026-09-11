@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { chunkText, computeTenureLabel, levenshtein, similarityRatio, bestFuzzyMatches, normalizeForMatch, htmlToPlainText } = require('../src/util');
+const { chunkText, chunkBlocks, computeTenureLabel, levenshtein, similarityRatio, bestFuzzyMatches, normalizeForMatch, htmlToPlainText } = require('../src/util');
 
 test('normalizeForMatch: 공백 제거 + 영문 소문자화', function () {
   assert.equal(normalizeForMatch('SM 부문'), 'sm부문');
@@ -25,6 +25,26 @@ test('chunkText: maxLen을 넘으면 줄 단위로 분리', function () {
   // 원본 줄이 순서대로 전부 보존되는지 확인
   const rejoined = chunks.join('\n');
   assert.equal(rejoined, text);
+});
+
+test('chunkBlocks: maxLen 이내면 청크 1개', function () {
+  const chunks = chunkBlocks('<b>A</b>\n\n<pre>표1</pre>', 100);
+  assert.equal(chunks.length, 1);
+});
+
+test('chunkBlocks: maxLen을 넘으면 블록("\\n\\n") 경계에서만 자름 — <pre> 블록이 쪼개지지 않음', function () {
+  const blocks = [];
+  for (let i = 0; i < 5; i++) blocks.push('<pre>표' + i + '\n내용' + i + '</pre>');
+  const text = blocks.join('\n\n');
+  const chunks = chunkBlocks(text, 40);
+  assert.ok(chunks.length > 1);
+  chunks.forEach(function (c) {
+    // 각 청크 안에서 <pre> 개수와 </pre> 개수가 같아야(태그가 안 끊겼어야) 함
+    const opens = (c.match(/<pre>/g) || []).length;
+    const closes = (c.match(/<\/pre>/g) || []).length;
+    assert.equal(opens, closes);
+  });
+  assert.equal(chunks.join('\n\n'), text);
 });
 
 test('computeTenureLabel: 입사일 기준 N년차 계산', function () {

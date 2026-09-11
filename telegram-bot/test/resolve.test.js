@@ -131,6 +131,25 @@ test('resolveTextQuery: sb2가 있으면 제도(hr_policies) 항목명으로 상
   assert.match(reply, /경조휴가 안내 내용/);
 });
 
+test('resolveTextQuery: 제도 content에 표가 있으면 { html } 형태로 반환 (조직도/이름 검색은 그대로 문자열)', async function () {
+  const sb = makeMockSb({ divisions: [], teams: [], employees: [], executives: [] });
+  const sb2 = makeMockSb({
+    hr_policies: [
+      {
+        id: 7,
+        category: '복리후생',
+        title: '경조휴가',
+        content: '<h2>결혼</h2><table><tbody><tr><td>본인</td><td style="text-align:right;">7</td></tr></tbody></table>',
+        sort_order: 1,
+      },
+    ],
+  });
+  const reply = await resolveTextQuery(sb, '경조휴가', sb2);
+  assert.equal(typeof reply, 'object');
+  assert.match(reply.html, /<pre>/);
+  assert.match(reply.html, /본인/);
+});
+
 test('resolveTextQuery: sb2를 안 넘겨도(외부 연동 미설정) 에러 없이 이름 검색으로 폴백', async function () {
   const sb = makeMockSb({ divisions: [], teams: [], employees: [], executives: [] });
   const reply = await resolveTextQuery(sb, '경조휴가'); // sb2 생략

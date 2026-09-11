@@ -33,6 +33,29 @@ function chunkText(text, maxLen) {
   return chunks;
 }
 
+// chunkText와 같은 목적이지만 줄 단위가 아니라 "블록"(기본 구분자 '\n\n') 단위로 나눈다.
+// 제도 조회처럼 HTML parse_mode로 보내는 메시지에 쓴다 — <pre>...</pre> 표 블록 하나가
+// 항상 하나의 블록 안에서 온전히 열리고 닫히도록(다음 청크로 쪼개져 태그가 깨지지
+// 않도록) 각 블록을 사이에 둔 채로만 자른다.
+function chunkBlocks(text, maxLen, separator) {
+  maxLen = maxLen || 3500;
+  separator = separator || '\n\n';
+  const blocks = String(text).split(separator);
+  const chunks = [];
+  let current = '';
+  blocks.forEach(function (block) {
+    const candidate = current ? current + separator + block : block;
+    if (candidate.length > maxLen && current) {
+      chunks.push(current);
+      current = block;
+    } else {
+      current = candidate;
+    }
+  });
+  if (current) chunks.push(current);
+  return chunks;
+}
+
 // 조직명/이름 비교 시 공백 유무나 영문 대소문자(예: "SM부문" vs "sm 부문") 때문에
 // 매칭이 실패하지 않도록 정규화한다.
 function normalizeForMatch(s) {
@@ -115,6 +138,7 @@ function htmlToPlainText(html) {
 module.exports = {
   computeTenureLabel: computeTenureLabel,
   chunkText: chunkText,
+  chunkBlocks: chunkBlocks,
   normalizeForMatch: normalizeForMatch,
   levenshtein: levenshtein,
   similarityRatio: similarityRatio,
