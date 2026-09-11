@@ -8,6 +8,7 @@ const { resolveTextQuery } = require('./commands/resolve');
 const { getOrgChartText } = require('./commands/orgChart');
 const { getExecCalendarText } = require('./commands/execCalendar');
 const { mainKeyboard, buildHelpText } = require('./keyboard');
+const repository = require('./data/repository');
 const { chunkText } = require('./util');
 
 // 채팅창 하단 고정 메뉴(mainKeyboard)를 계속 보이게 하기 위해, 응답의 마지막 조각에만
@@ -53,7 +54,9 @@ bot.on('message', async function (ctx) {
   const cmd = classify(text);
   try {
     if (cmd.type === 'help') {
-      await ctx.reply(buildHelpText(), { reply_markup: mainKeyboard });
+      // 제도 목록 조회 실패는 도움말 전체를 깨뜨리지 않도록 조용히 무시한다.
+      const policies = sb2 ? await repository.getHrPolicies(sb2).catch(function () { return []; }) : [];
+      await replyChunks(ctx, buildHelpText(policies));
     } else if (cmd.type === 'orgChart') {
       const orgText = await getOrgChartText(sb);
       await replyChunks(ctx, orgText);
