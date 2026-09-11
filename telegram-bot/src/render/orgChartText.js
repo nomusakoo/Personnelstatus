@@ -55,7 +55,9 @@ function formatOrgChartText(divisions, teams, employees, referenceDate, title) {
         gradeLines.forEach(function (g) {
           byGrade[g].forEach(function (e) {
             const tenure = computeTenureLabel(e.join_date, referenceDate);
-            lines.push('    - ' + g + ' ' + e.name + (tenure ? ' (' + tenure + ')' : ''));
+            const parts = [tenure, e.birth_year].filter(Boolean);
+            const suffix = parts.length ? ' (' + parts.join(', ') + ')' : '';
+            lines.push('    - ' + g + ' ' + e.name + suffix);
           });
         });
       }
