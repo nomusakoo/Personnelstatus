@@ -62,7 +62,7 @@ bot.on('message', async function (ctx) {
       await replyChunks(ctx, calText);
     } else if (cmd.type === 'nameSearch') {
       // 이름/조직명/대시보드 키워드 중 무엇에 해당하는지는 resolveTextQuery가 판단한다.
-      const reply = await resolveTextQuery(sb, cmd.query);
+      const reply = await resolveTextQuery(sb, cmd.query, sb2);
       await replyChunks(ctx, reply);
     } else {
       await ctx.reply("이름을 입력하시거나 '조직도' / '임원일정'을 입력해 주세요.", { reply_markup: mainKeyboard });

@@ -3,6 +3,7 @@ const { findOrgScope } = require('./orgUnit');
 const { formatOrgChartText } = require('../render/orgChartText');
 const { matchDashboardTopicExact, matchDashboardTopic, formatDashboardText } = require('./dashboard');
 const { matchRole, formatRoleSearchText } = require('./roleSearch');
+const { matchPolicyExact, matchPolicy, formatPolicyText } = require('./policySearch');
 const { trimAndValidateQuery, formatSearchReply, fuzzyMatchByName } = require('./nameSearch');
 const { normalizeForMatch } = require('../util');
 
@@ -22,18 +23,23 @@ function _indexById(items) {
 //      조직명 검색에는 오타 허용용 유사도 매칭이 있어서, 순서가 바뀌면 "총원"처럼 확실한
 //      키워드조차 우연히 비슷한 본부/팀 이름으로 잘못 빠질 수 있기 때문이다(실제로 발생했던
 //      문제: "총원"을 입력하면 무관한 "강원지점" 조직도가 나옴).
-//   4) 조직명(본부/부문 그룹/팀 내 부문/팀) — 부분일치·유사도 매칭 포함
-//   5) 대시보드 키워드의 부분일치/유사도 매칭 (3번의 정확 일치에서 못 찾은 나머지)
-//   6) 그 외에는 이름 부분일치/유사도 검색으로 폴백
-async function resolveTextQuery(sb, rawQuery) {
+//   4) 제도(경조휴가 등)와 "정확히" 일치 — sb2(외부 연동 프로젝트)의 hr_policies.
+//      "파견현황"처럼 대시보드 키워드와 겹치는 카테고리명은 검색 대상에서 뺐다(항목명만
+//      검색). 그래도 애매함을 줄이기 위해 조직명 검색보다 먼저 확인한다.
+//   5) 조직명(본부/부문 그룹/팀 내 부문/팀) — 부분일치·유사도 매칭 포함
+//   6) 대시보드 키워드의 부분일치/유사도 매칭 (3번의 정확 일치에서 못 찾은 나머지)
+//   7) 제도의 부분일치/유사도 매칭 (4번의 정확 일치에서 못 찾은 나머지)
+//   8) 그 외에는 이름 부분일치/유사도 검색으로 폴백
+async function resolveTextQuery(sb, rawQuery, sb2) {
   const query = trimAndValidateQuery(rawQuery);
   if (!query) {
     return '이름을 2글자 이상 입력해 주세요.';
   }
 
-  const [{ divisions, teams, employees }, executives] = await Promise.all([
+  const [{ divisions, teams, employees }, executives, policies] = await Promise.all([
     repository.getOrgSnapshot(sb),
     repository.getAllExecutives(sb),
+    sb2 ? repository.getHrPolicies(sb2) : Promise.resolve([]),
   ]);
   const divById = _indexById(divisions);
   const teamById = _indexById(teams);
@@ -53,6 +59,11 @@ async function resolveTextQuery(sb, rawQuery) {
   const exactDashMatch = matchDashboardTopicExact(query);
   if (exactDashMatch) {
     return formatDashboardText(exactDashMatch.key, employees, divisions, executives);
+  }
+
+  const exactPolicyMatch = matchPolicyExact(query, policies);
+  if (exactPolicyMatch) {
+    return formatPolicyText(query, exactPolicyMatch);
   }
 
   const scope = findOrgScope(divisions, teams, query);
@@ -75,6 +86,11 @@ async function resolveTextQuery(sb, rawQuery) {
       );
     }
     return formatDashboardText(dashMatch.key, employees, divisions, executives);
+  }
+
+  const policyMatch = matchPolicy(query, policies);
+  if (policyMatch) {
+    return formatPolicyText(query, policyMatch);
   }
 
   const matchedEmployees = fuzzyMatchByName(employees, query);

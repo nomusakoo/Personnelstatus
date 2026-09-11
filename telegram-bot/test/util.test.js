@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { chunkText, computeTenureLabel, levenshtein, similarityRatio, bestFuzzyMatches, normalizeForMatch } = require('../src/util');
+const { chunkText, computeTenureLabel, levenshtein, similarityRatio, bestFuzzyMatches, normalizeForMatch, htmlToPlainText } = require('../src/util');
 
 test('normalizeForMatch: 공백 제거 + 영문 소문자화', function () {
   assert.equal(normalizeForMatch('SM 부문'), 'sm부문');
@@ -61,4 +61,32 @@ test('bestFuzzyMatches: 임계값(30%) 미만이면 빈 배열', function () {
 test('bestFuzzyMatches: 유사도가 동점이면 둘 다 반환', function () {
   const items = [{ name: '홍길동' }, { name: '홍길둥' }];
   assert.deepEqual(bestFuzzyMatches(items, _byName, '홍길뒹'), [{ name: '홍길동' }, { name: '홍길둥' }]);
+});
+
+test('htmlToPlainText: 태그 제거 + 줄바꿈 보존', function () {
+  const html = '<!DOCTYPE html><html><head><title>제목</title></head><body><p>첫째 줄</p><p>둘째 줄</p></body></html>';
+  const text = htmlToPlainText(html);
+  assert.doesNotMatch(text, /<[^>]+>/);
+  assert.doesNotMatch(text, /제목/); // head 안 내용은 제외
+  assert.match(text, /첫째 줄\n\n둘째 줄|첫째 줄\n둘째 줄/);
+});
+
+test('htmlToPlainText: 리스트/줄바꿈 태그 처리 + HTML 엔티티 디코딩', function () {
+  const html = '<ul><li>항목A</li><li>항목B</li></ul>휴가&nbsp;신청은 팀장&amp;본부장 승인 필요';
+  const text = htmlToPlainText(html);
+  assert.match(text, /- 항목A/);
+  assert.match(text, /- 항목B/);
+  assert.match(text, /휴가 신청은 팀장&본부장 승인 필요/);
+});
+
+test('htmlToPlainText: 이미지 태그는 생략 문구로 대체 (base64 등 거대 데이터 방지)', function () {
+  const html = '<p>안내</p><img src="data:image/png;base64,AAAA"><p>끝</p>';
+  const text = htmlToPlainText(html);
+  assert.doesNotMatch(text, /base64/);
+  assert.match(text, /\[이미지 생략\]/);
+});
+
+test('htmlToPlainText: 빈 값이면 빈 문자열', function () {
+  assert.equal(htmlToPlainText(''), '');
+  assert.equal(htmlToPlainText(null), '');
 });
