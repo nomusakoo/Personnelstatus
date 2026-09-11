@@ -56,9 +56,18 @@ async function getExternalExecEventsForMonth(sb2, year, month) {
   return rows.map(function (r) { return Object.assign({}, r, { _external: true }); });
 }
 
+// 별도 Supabase 프로젝트(sb2)의 hr_policies(제도: 경조휴가, 인병휴가 등)를 읽기 전용으로
+// 조회. sb2가 없으면(설정 안 함) resolve.js에서 조건부로 호출하지 않는다.
+async function getHrPolicies(sb2) {
+  const { data, error } = await sb2.from('hr_policies').select('*').order('sort_order');
+  if (error) throw error;
+  return data || [];
+}
+
 module.exports = {
   getOrgSnapshot: getOrgSnapshot,
   getAllExecutives: getAllExecutives,
   getExecEventsForMonth: getExecEventsForMonth,
   getExternalExecEventsForMonth: getExternalExecEventsForMonth,
+  getHrPolicies: getHrPolicies,
 };

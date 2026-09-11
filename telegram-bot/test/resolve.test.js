@@ -118,3 +118,21 @@ test('resolveTextQuery: 아무 것도 매칭되지 않으면 안내 문구', asy
   const reply = await resolveTextQuery(sb, '없는사람');
   assert.match(reply, /찾을 수 없습니다/);
 });
+
+test('resolveTextQuery: sb2가 있으면 제도(hr_policies) 항목명으로 상세 내용을 반환', async function () {
+  const sb = makeMockSb({ divisions: [], teams: [], employees: [], executives: [] });
+  const sb2 = makeMockSb({
+    hr_policies: [
+      { id: 7, category: '복리후생', title: '경조휴가', content: '<p>경조휴가 안내 내용</p>', sort_order: 1 },
+    ],
+  });
+  const reply = await resolveTextQuery(sb, '경조휴가', sb2);
+  assert.match(reply, /📋 경조휴가/);
+  assert.match(reply, /경조휴가 안내 내용/);
+});
+
+test('resolveTextQuery: sb2를 안 넘겨도(외부 연동 미설정) 에러 없이 이름 검색으로 폴백', async function () {
+  const sb = makeMockSb({ divisions: [], teams: [], employees: [], executives: [] });
+  const reply = await resolveTextQuery(sb, '경조휴가'); // sb2 생략
+  assert.match(reply, /찾을 수 없습니다/);
+});

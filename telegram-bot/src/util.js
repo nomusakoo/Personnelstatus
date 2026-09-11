@@ -86,6 +86,32 @@ function bestFuzzyMatches(items, getName, query) {
   return scored.filter(function (s) { return s.score === best; }).map(function (s) { return s.it; });
 }
 
+// 제도(hr_policies) 테이블의 content가 통짜 HTML 문서(구글독스 등에서 내보낸 형태)라
+// 텔레그램 채팅에 그대로 보낼 수 없다. 태그를 벗겨 평문으로 바꾼다 — 별도 HTML 파서
+// 의존성 없이 정규식으로 처리하는 수준(표/복잡한 레이아웃은 완벽히 재현되지 않는다).
+function htmlToPlainText(html) {
+  if (!html) return '';
+  let text = String(html);
+  text = text.replace(/<head[\s\S]*?<\/head>/gi, '');
+  text = text.replace(/<(script|style)[\s\S]*?<\/\1>/gi, '');
+  text = text.replace(/<img[^>]*>/gi, '[이미지 생략]');
+  text = text.replace(/<br\s*\/?>/gi, '\n');
+  text = text.replace(/<\/(p|div|li|tr|h[1-6]|section|article|table)>/gi, '\n');
+  text = text.replace(/<li[^>]*>/gi, '- ');
+  text = text.replace(/<[^>]+>/g, '');
+  text = text
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/&apos;/gi, "'");
+  text = text.split('\n').map(function (l) { return l.trim(); }).join('\n');
+  text = text.replace(/\n{3,}/g, '\n\n');
+  return text.trim();
+}
+
 module.exports = {
   computeTenureLabel: computeTenureLabel,
   chunkText: chunkText,
@@ -93,5 +119,6 @@ module.exports = {
   levenshtein: levenshtein,
   similarityRatio: similarityRatio,
   bestFuzzyMatches: bestFuzzyMatches,
+  htmlToPlainText: htmlToPlainText,
   FUZZY_MATCH_THRESHOLD: FUZZY_MATCH_THRESHOLD,
 };
