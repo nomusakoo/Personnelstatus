@@ -1,16 +1,20 @@
-const { GRADES } = require('../constants');
+const { GRADES, EMP_TYPES } = require('../constants');
 const { normalizeForMatch } = require('../util');
 
-// query가 직급(GRADES) 또는 직책(직원의 position, 본부장/센터장처럼 미등록 리더의
-// head_title, 임원의 title)과 정확히 일치하면 그 종류와 정규화된 라벨을 반환한다.
-// 오타 허용(유사도) 매칭은 적용하지 않는다 — "과장급"/"대리급"처럼 접미어가 같은
-// 직급/직책끼리는 유사도가 높아 서로 오매칭되기 쉽기 때문이다(DIVISION_GROUPS와 같은 이유).
+// query가 직급(GRADES), 근무직유형(EMP_TYPES, 예: 인턴/계약직) 또는 직책(직원의 position,
+// 본부장/센터장처럼 미등록 리더의 head_title, 임원의 title)과 정확히 일치하면 그 종류와
+// 정규화된 라벨을 반환한다. 오타 허용(유사도) 매칭은 적용하지 않는다 — "과장급"/"대리급"처럼
+// 접미어가 같은 직급/직책끼리는 유사도가 높아 서로 오매칭되기 쉽기 때문이다(DIVISION_GROUPS와
+// 같은 이유).
 function matchRole(query, employees, divisions, teams, executives) {
   const nq = normalizeForMatch(query);
   if (!nq) return null;
 
   const gradeMatch = GRADES.filter(function (g) { return normalizeForMatch(g) === nq; });
   if (gradeMatch.length) return { type: 'grade', label: gradeMatch[0] };
+
+  const empTypeMatch = EMP_TYPES.filter(function (t) { return normalizeForMatch(t) === nq; });
+  if (empTypeMatch.length) return { type: 'empType', label: empTypeMatch[0] };
 
   const labels = new Set();
   (employees || []).forEach(function (e) {
@@ -35,6 +39,7 @@ function matchRole(query, employees, divisions, teams, executives) {
 
 // role({type,label})에 해당하는 사람 전체를 본부→팀별로 묶어 텍스트로 만든다.
 // - type==='grade': employees.grade가 일치하는 재직자만 (직급은 임원에게는 없는 개념)
+// - type==='empType': employees.emp_type이 일치하는 재직자만 (인턴/계약직 등 — 임원 개념 없음)
 // - type==='position': employees.position이 일치하는 재직자 + (직원으로 등록되지 않은)
 //   본부장/센터장 같은 리더 + executives.title이 일치하는 임원(사외이사 등, 본부/팀 소속 없음)
 function formatRoleSearchText(role, employees, divisions, teams, executives) {
@@ -47,6 +52,8 @@ function formatRoleSearchText(role, employees, divisions, teams, executives) {
 
   if (role.type === 'grade') {
     matched = active.filter(function (e) { return e.grade === label; });
+  } else if (role.type === 'empType') {
+    matched = active.filter(function (e) { return (e.emp_type || '').trim() === label; });
   } else {
     matched = active.filter(function (e) { return (e.position || '').trim() === label; });
     const matchedNames = new Set(matched.map(function (e) { return e.name; }));
