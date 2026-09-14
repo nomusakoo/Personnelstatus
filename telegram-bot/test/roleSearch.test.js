@@ -15,6 +15,8 @@ const employees = [
   { name: '김철수', grade: '과장급', position: '', div_id: 'd1', team_id: 't2', status: 'normal' },
   { name: '박영희', grade: '대리급', position: '팀장', div_id: 'd2', team_id: null, status: 'normal' },
   { name: '퇴사자', grade: '과장급', position: '팀장', div_id: 'd1', team_id: 't1', status: 'leave' },
+  { name: '인턴이', grade: '기타', emp_type: '인턴', div_id: 'd1', team_id: 't1', status: 'normal' },
+  { name: '인턴퇴사자', grade: '기타', emp_type: '인턴', div_id: 'd1', team_id: 't1', status: 'leave' },
 ];
 const executives = [{ name: '박사외', title: '사외이사' }];
 
@@ -38,6 +40,11 @@ test('matchRole: 임원 title(사외이사)도 직책으로 매칭', function ()
   assert.deepEqual(role, { type: 'position', label: '사외이사' });
 });
 
+test('matchRole: 근무직유형(EMP_TYPES)에 정확히 일치하면 empType 타입 반환', function () {
+  const role = matchRole('인턴', employees, divisions, teams, executives);
+  assert.deepEqual(role, { type: 'empType', label: '인턴' });
+});
+
 test('matchRole: 공백/대소문자가 달라도 매칭', function () {
   assert.deepEqual(matchRole('과장 급', employees, divisions, teams, executives), { type: 'grade', label: '과장급' });
 });
@@ -54,6 +61,13 @@ test('formatRoleSearchText: 직급 검색은 재직자만, 본부/팀별로 묶�
   assert.match(text, /인사노무팀: 홍길동/);
   assert.match(text, /재무팀: 김철수/);
   assert.doesNotMatch(text, /퇴사자/);
+});
+
+test('formatRoleSearchText: 근무직유형(인턴) 검색은 재직자만 표시', function () {
+  const text = formatRoleSearchText({ type: 'empType', label: '인턴' }, employees, divisions, teams, executives);
+  assert.match(text, /'인턴' 검색 결과 \(총 1명\)/);
+  assert.match(text, /인사노무팀: 인턴이/);
+  assert.doesNotMatch(text, /인턴퇴사자/);
 });
 
 test('formatRoleSearchText: 직책 검색은 미등록 리더도 포함(중복 없이)', function () {
