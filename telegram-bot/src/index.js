@@ -6,7 +6,8 @@ const { isAllowed } = require('./auth/whitelist');
 const { classify } = require('./commands/router');
 const { resolveTextQuery } = require('./commands/resolve');
 const { buildTopMenu, handleOrgCallback } = require('./commands/orgChartNav');
-const { getExecCalendarText } = require('./commands/execCalendar');
+const { getExecCalendarText, getExecCalendarTextForYearMonth } = require('./commands/execCalendar');
+const { buildExecCalendarMenu, resolveExecCalendarTarget } = require('./commands/execCalendarNav');
 const { mainKeyboard, buildHelpText } = require('./keyboard');
 const repository = require('./data/repository');
 const { chunkText, chunkBlocks } = require('./util');
@@ -76,8 +77,15 @@ bot.on('message', async function (ctx) {
       const menu = buildTopMenu(divisions);
       await ctx.reply(menu.text, { reply_markup: menu.keyboard });
     } else if (cmd.type === 'execCalendar') {
-      const calText = await getExecCalendarText(sb, cmd.month, sb2);
-      await replyChunks(ctx, calText);
+      if (cmd.month) {
+        // "임원일정 10월"처럼 달을 직접 지정한 경우는 기존처럼 바로 그 달을 보여준다.
+        const calText = await getExecCalendarText(sb, cmd.month, sb2);
+        await replyChunks(ctx, calText);
+      } else {
+        // 그냥 "임원일정"만 입력했으면 이번달/다음달 중 고를 수 있는 버튼을 먼저 보여준다.
+        const menu = buildExecCalendarMenu();
+        await ctx.reply(menu.text, { reply_markup: menu.keyboard });
+      }
     } else if (cmd.type === 'nameSearch') {
       // 이름/조직명/대시보드 키워드 중 무엇에 해당하는지는 resolveTextQuery가 판단한다.
       // 제도 항목에 표가 있으면 { html: '...' } 형태로, 데이터가 방대해 이미지로 내보내야
@@ -103,9 +111,26 @@ bot.on('message', async function (ctx) {
   }
 });
 
-// 조직도 메뉴의 인라인 버튼(본부/센터/팀 선택)을 눌렀을 때 오는 콜백. 메뉴 이동
-// (kind: 'menu')은 같은 메시지를 편집해 갈아끼우고, 실제 인원 결과(kind: 'result')는
-// 길이 제한 때문에 새 메시지로 보낸다 — 그래야 메뉴 버튼이 있는 메시지가 안 깨진다.
+// callback_data 하나를 실제 동작으로 바꾼다. "org"로 시작하면 조직도 메뉴/결과,
+// "exec:"로 시작하면 임원일정 이번달/다음달 결과 — 그 외(또는 유효하지 않은 상태)는 null.
+async function handleCallbackData(data) {
+  if (data.indexOf('org') === 0) {
+    const snapshot = await repository.getOrgSnapshot(sb);
+    return handleOrgCallback(data, snapshot);
+  }
+  if (data.indexOf('exec:') === 0) {
+    const target = resolveExecCalendarTarget(data);
+    if (!target) return null;
+    const text = await getExecCalendarTextForYearMonth(sb, target.year, target.month, sb2);
+    return { kind: 'result', text: text };
+  }
+  return null;
+}
+
+// 조직도/임원일정 메뉴의 인라인 버튼을 눌렀을 때 오는 콜백. 메뉴 이동(kind: 'menu',
+// 조직도의 본부/센터 목록)은 같은 메시지를 편집해 갈아끼우고, 실제 조회 결과
+// (kind: 'result', 인원 명단/임원일정)는 길이 제한 때문에 새 메시지로 보낸다 —
+// 그래야 메뉴 버튼이 있는 메시지가 안 깨진다.
 bot.on('callback_query:data', async function (ctx) {
   const userId = ctx.from && ctx.from.id;
   if (!isAllowed(userId, config.allowedIds)) {
@@ -114,16 +139,15 @@ bot.on('callback_query:data', async function (ctx) {
   }
 
   const data = ctx.callbackQuery.data;
-  if (!data || data.indexOf('org') !== 0) {
+  if (!data || (data.indexOf('org') !== 0 && data.indexOf('exec:') !== 0)) {
     await ctx.answerCallbackQuery();
     return;
   }
 
   try {
-    const snapshot = await repository.getOrgSnapshot(sb);
-    const result = handleOrgCallback(data, snapshot);
+    const result = await handleCallbackData(data);
     if (!result) {
-      await ctx.answerCallbackQuery({ text: "메뉴가 오래되었습니다. '조직도'를 다시 입력해 주세요.", show_alert: true });
+      await ctx.answerCallbackQuery({ text: '메뉴가 오래되었습니다. 다시 입력해 주세요.', show_alert: true });
       return;
     }
     if (result.kind === 'menu') {
@@ -139,7 +163,7 @@ bot.on('callback_query:data', async function (ctx) {
       await ctx.answerCallbackQuery();
       return;
     }
-    console.error('[bot] 조직도 버튼 처리 오류:', err);
+    console.error('[bot] 버튼 처리 오류:', err);
     await ctx.answerCallbackQuery({ text: '일시적인 오류가 발생했습니다.', show_alert: true });
   }
 });
