@@ -5,7 +5,7 @@ const { createSupabaseClient } = require('./data/supabaseClient');
 const { isAllowed } = require('./auth/whitelist');
 const { classify } = require('./commands/router');
 const { resolveTextQuery } = require('./commands/resolve');
-const { getOrgChartText } = require('./commands/orgChart');
+const { buildTopMenu, handleOrgCallback } = require('./commands/orgChartNav');
 const { getExecCalendarText } = require('./commands/execCalendar');
 const { mainKeyboard, buildHelpText } = require('./keyboard');
 const repository = require('./data/repository');
@@ -70,8 +70,11 @@ bot.on('message', async function (ctx) {
       const policies = sb2 ? await repository.getHrPolicies(sb2).catch(function () { return []; }) : [];
       await replyChunks(ctx, buildHelpText(policies));
     } else if (cmd.type === 'orgChart') {
-      const orgText = await getOrgChartText(sb);
-      await replyChunks(ctx, orgText);
+      // 예전에는 전체 조직도를 바로 텍스트로 보냈지만, 본부/센터/팀 단위로 눌러
+      // 들어가며 원하는 범위만 좁혀 볼 수 있도록 버튼 메뉴를 먼저 보여준다.
+      const { divisions } = await repository.getOrgSnapshot(sb);
+      const menu = buildTopMenu(divisions);
+      await ctx.reply(menu.text, { reply_markup: menu.keyboard });
     } else if (cmd.type === 'execCalendar') {
       const calText = await getExecCalendarText(sb, cmd.month, sb2);
       await replyChunks(ctx, calText);
@@ -97,6 +100,47 @@ bot.on('message', async function (ctx) {
   } catch (err) {
     console.error('[bot] 명령 처리 오류:', err);
     await ctx.reply('일시적인 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.');
+  }
+});
+
+// 조직도 메뉴의 인라인 버튼(본부/센터/팀 선택)을 눌렀을 때 오는 콜백. 메뉴 이동
+// (kind: 'menu')은 같은 메시지를 편집해 갈아끼우고, 실제 인원 결과(kind: 'result')는
+// 길이 제한 때문에 새 메시지로 보낸다 — 그래야 메뉴 버튼이 있는 메시지가 안 깨진다.
+bot.on('callback_query:data', async function (ctx) {
+  const userId = ctx.from && ctx.from.id;
+  if (!isAllowed(userId, config.allowedIds)) {
+    await ctx.answerCallbackQuery({ text: '이 봇을 사용할 권한이 없습니다.', show_alert: true });
+    return;
+  }
+
+  const data = ctx.callbackQuery.data;
+  if (!data || data.indexOf('org') !== 0) {
+    await ctx.answerCallbackQuery();
+    return;
+  }
+
+  try {
+    const snapshot = await repository.getOrgSnapshot(sb);
+    const result = handleOrgCallback(data, snapshot);
+    if (!result) {
+      await ctx.answerCallbackQuery({ text: "메뉴가 오래되었습니다. '조직도'를 다시 입력해 주세요.", show_alert: true });
+      return;
+    }
+    if (result.kind === 'menu') {
+      await ctx.editMessageText(result.text, { reply_markup: result.keyboard });
+    } else {
+      await replyChunks(ctx, result.text);
+    }
+    await ctx.answerCallbackQuery();
+  } catch (err) {
+    // 같은 버튼을 연달아 눌러 내용이 바뀌지 않았을 때 텔레그램이 던지는 오류는
+    // 무해하므로 조용히 무시한다.
+    if (err && /message is not modified/i.test(err.description || err.message || '')) {
+      await ctx.answerCallbackQuery();
+      return;
+    }
+    console.error('[bot] 조직도 버튼 처리 오류:', err);
+    await ctx.answerCallbackQuery({ text: '일시적인 오류가 발생했습니다.', show_alert: true });
   }
 });
 
