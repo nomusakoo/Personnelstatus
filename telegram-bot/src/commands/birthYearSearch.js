@@ -27,12 +27,24 @@ function matchBirthYearQuery(query, referenceDate) {
   return { year: year };
 }
 
+// employees.birth_year가 "1987"처럼 4자리로 들어있을 수도, "87"처럼 뒤 2자리만
+// 들어있을 수도 있어(등록한 사람에 따라 다를 수 있음) 둘 다 찾아낸다 — targetYear(예:
+// 1987)와 그 뒤 2자리("87", 앞에 0이 있으면 "05"뿐 아니라 "5"도 함께) 중 하나와
+// 문자열로 같으면 매칭시킨다.
+function _birthYearMatches(rawBirthYear, targetYear) {
+  const v = String(rawBirthYear == null ? '' : rawBirthYear).trim();
+  if (!v) return false;
+  if (v === String(targetYear)) return true;
+  const yy = targetYear % 100;
+  return v === String(yy) || v === String(yy).padStart(2, '0');
+}
+
 // year(예: 1970)에 해당하는 재직자만 본부/팀별로 "이름(직급)" 형태로 묶어서 보여준다.
 // 직급/근무직유형 검색(roleSearch.js)과 달리 매칭된 사람마다 직급이 다를 수 있어
 // 이름 옆에 직급을 함께 표시한다.
 function formatBirthYearSearchText(year, employees, divisions, teams) {
   const active = (employees || []).filter(function (e) { return e.status !== 'leave'; });
-  const matched = active.filter(function (e) { return String(e.birth_year || '').trim() === String(year); });
+  const matched = active.filter(function (e) { return _birthYearMatches(e.birth_year, year); });
 
   const label = year + '년생';
   if (!matched.length) {
