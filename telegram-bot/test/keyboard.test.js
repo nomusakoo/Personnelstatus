@@ -6,6 +6,7 @@ test('buildHelpText: 유형별 섹션(이름/직급·직책/조직/임원일정/
   const text = buildHelpText();
   assert.match(text, /▪ 이름 검색/);
   assert.match(text, /▪ 직급\/직책 검색/);
+  assert.match(text, /▪ 출생연도 검색/);
   assert.match(text, /▪ 조직 검색/);
   assert.match(text, /▪ 임원일정/);
   assert.match(text, /▪ 대시보드 통계/);

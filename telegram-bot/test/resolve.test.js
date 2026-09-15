@@ -60,6 +60,22 @@ test('resolveTextQuery: "총원"/"총인원"은 우연히 비슷한 팀 이름(�
   assert.doesNotMatch(reply2, /조직도/);
 });
 
+test('resolveTextQuery: 출생연도(예: "70")를 입력하면 그 해에 태어난 재직자 명단을 반환', async function () {
+  const sb = makeMockSb({
+    divisions: [{ id: 'd1', name: '경영지원본부' }],
+    teams: [{ id: 't1', div_id: 'd1', name: '인사노무팀', center_name: '' }],
+    employees: [
+      { name: '홍길동', grade: '과장급', birth_year: 1970, div_id: 'd1', team_id: 't1', status: 'normal' },
+      { name: '김철수', grade: '대리급', birth_year: 1985, div_id: 'd1', team_id: 't1', status: 'normal' },
+    ],
+    executives: [],
+  });
+  const reply = await resolveTextQuery(sb, '70년생');
+  assert.match(reply, /'1970년생' 검색 결과 \(총 1명\)/);
+  assert.match(reply, /홍길동\(과장급\)/);
+  assert.doesNotMatch(reply, /김철수/);
+});
+
 test('resolveTextQuery: 직급/직책이면 해당하는 사람 전체 명단을 반환', async function () {
   const sb = makeMockSb({
     divisions: [{ id: 'd1', name: '경영지원본부' }],
