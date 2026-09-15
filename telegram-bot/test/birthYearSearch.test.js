@@ -61,3 +61,24 @@ test('formatBirthYearSearchText: 해당하는 사람이 없으면 안내 문구'
   const text = formatBirthYearSearchText(1955, employees, divisions, teams);
   assert.match(text, /찾을 수 없습니다/);
 });
+
+test('formatBirthYearSearchText: birth_year가 "87"처럼 뒤 2자리로만 저장돼 있어도 찾아냄', function () {
+  const emps = [
+    { name: '이짧은', grade: '과장급', birth_year: '87', div_id: 'd1', team_id: 't1', status: 'normal' },
+    { name: '김긴것', grade: '대리급', birth_year: 1987, div_id: 'd1', team_id: 't1', status: 'normal' },
+    { name: '박다른해', grade: '사원급', birth_year: '88', div_id: 'd1', team_id: 't1', status: 'normal' },
+  ];
+  const text = formatBirthYearSearchText(1987, emps, divisions, teams);
+  assert.match(text, /'1987년생' 검색 결과 \(총 2명\)/);
+  assert.match(text, /이짧은\(과장급\)/);
+  assert.match(text, /김긴것\(대리급\)/);
+  assert.doesNotMatch(text, /박다른해/);
+});
+
+test('formatBirthYearSearchText: 앞자리 0이 있는 2자리(예: "05")도 앞에 0 없이 저장돼 있으면 찾아냄', function () {
+  const emps = [
+    { name: '영오년생', grade: '사원급', birth_year: '5', div_id: 'd1', team_id: 't1', status: 'normal' },
+  ];
+  const text = formatBirthYearSearchText(2005, emps, divisions, teams);
+  assert.match(text, /영오년생\(사원급\)/);
+});
