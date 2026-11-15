@@ -52,7 +52,15 @@ const bot = new Bot(config.telegramToken);
 bot.on('message', async function (ctx) {
   const userId = ctx.from && ctx.from.id;
   if (!isAllowed(userId, config.allowedIds)) {
-    // 화이트리스트에 없는 발신자 — 어떤 명령이 있는지 힌트를 주지 않고 거부만 안내
+    // 화이트리스트에 없는 발신자 — 어떤 명령이 있는지 힌트를 주지 않고 거부만 안내.
+    // 운영자가 새로 등록할 사람의 ID를 서버 로그(pm2 logs)에서 바로 확인할 수 있도록
+    // 누가 시도했는지는 콘솔에만 남긴다(본인에게는 노출하지 않음).
+    const from = ctx.from || {};
+    console.log(
+      '[bot] 화이트리스트 미등록 사용자 시도 — id:', userId,
+      'username:', from.username || '(없음)',
+      'name:', [from.first_name, from.last_name].filter(Boolean).join(' ') || '(없음)'
+    );
     await ctx.reply('이 봇을 사용할 권한이 없습니다.');
     return;
   }
