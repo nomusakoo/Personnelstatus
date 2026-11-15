@@ -53,6 +53,9 @@ bot.on('message', async function (ctx) {
   const userId = ctx.from && ctx.from.id;
   if (!isAllowed(userId, config.allowedIds)) {
     // 화이트리스트에 없는 발신자 — 어떤 명령이 있는지 힌트를 주지 않고 거부만 안내
+    // 등록 요청 처리용 기록(pm2 out log): 시각, ID, 이름, 사용자명, 메시지 앞 30자
+    const f = ctx.from || {};
+    console.log('[거부]', new Date().toISOString(), userId, f.first_name || '', f.last_name || '', '@' + (f.username || '-'), (ctx.message && ctx.message.text || '').slice(0, 30));
     await ctx.reply('이 봇을 사용할 권한이 없습니다.');
     return;
   }
