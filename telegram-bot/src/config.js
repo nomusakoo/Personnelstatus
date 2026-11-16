@@ -23,6 +23,12 @@ function loadConfig(env) {
     .map(function (s) { return s.trim(); })
     .filter(Boolean);
 
+  // 운영자(선택, 2026-11-16) — 권한 요청 알림을 받고 승인/거절 버튼을 누를 수 있는 사람
+  const adminIds = String(env.ADMIN_TELEGRAM_IDS || '')
+    .split(',')
+    .map(function (s) { return s.trim(); })
+    .filter(Boolean);
+
   // 외부 연동 임원일정(선택) — 둘 다 채워져 있을 때만 활성화
   const supabase2Url = env.SUPABASE2_URL || null;
   const supabase2ServiceRoleKey = env.SUPABASE2_SERVICE_ROLE_KEY || null;
@@ -32,6 +38,7 @@ function loadConfig(env) {
     supabaseUrl: env.SUPABASE_URL,
     supabaseServiceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY,
     allowedIds: allowedIds,
+    adminIds: adminIds,
     supabase2Url: supabase2Url,
     supabase2ServiceRoleKey: supabase2ServiceRoleKey,
   };

@@ -1,8 +1,34 @@
-const { Bot, InputFile } = require('grammy');
+const { Bot, InputFile, InlineKeyboard } = require('grammy');
 
 const { loadConfig } = require('./config');
 const { createSupabaseClient } = require('./data/supabaseClient');
-const { isAllowed } = require('./auth/whitelist');
+const { isAllowed: isListed } = require('./auth/whitelist');
+const { createApprovals } = require('./auth/approvals');
+
+// .env 허용 목록 또는 운영자가 버튼으로 승인한 사람이면 허용 (2026-11-16)
+const approvals = createApprovals();
+function isAllowed(userId, allowedIds) {
+  return isListed(userId, allowedIds) || approvals.isApproved(userId);
+}
+function isAdmin(userId) {
+  return userId != null && config.adminIds.indexOf(String(userId)) !== -1;
+}
+function escHtml(s) {
+  return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+// 운영자에게 권한 요청 알림 (버튼: 승인/거절)
+async function notifyAdmins(api, userId, info) {
+  const who = `<b>${escHtml(info.name)}</b> (${info.username ? '@' + escHtml(info.username) : '사용자명 없음'}` +
+    `${info.tgName ? ', 텔레그램 이름 ' + escHtml(info.tgName) : ''}, ID ${userId})`;
+  const kb = new InlineKeyboard().text('✅ 승인', 'apv:' + userId).text('❌ 거절', 'rej:' + userId);
+  for (const adminId of config.adminIds) {
+    try {
+      await api.sendMessage(adminId, '🔔 권한 요청: ' + who, { parse_mode: 'HTML', reply_markup: kb });
+    } catch (err) {
+      console.error('[bot] 운영자 알림 실패:', adminId, err && (err.description || err.message));
+    }
+  }
+}
 const { classify } = require('./commands/router');
 const { resolveTextQuery } = require('./commands/resolve');
 const { buildTopMenu, handleOrgCallback } = require('./commands/orgChartNav');
@@ -58,8 +84,17 @@ bot.on('message', async function (ctx) {
     console.log('[거부]', new Date().toISOString(), userId, f.first_name || '', f.last_name || '', '@' + (f.username || '-'), (ctx.message && ctx.message.text || '').slice(0, 30));
     // 등록 흐름 안내 (2026-11-16): 성명만 보낸 경우엔 접수 안내, 그 밖엔 성명 요청
     const sent = (ctx.message && ctx.message.text || '').trim();
-    if (/^[가-힣]{2,5}$/.test(sent)) {
-      await ctx.reply(`${sent}님, 확인했습니다. 관리자 승인 후 사용하실 수 있습니다.`);
+    if (approvals.isRejected(userId)) {
+      // 거절된 사람: 알림 없이 같은 안내만 (운영자에게 다시 묻지 않음)
+      await ctx.reply('관리자 승인 후 사용하실 수 있습니다.');
+    } else if (/^[가-힣]{2,5}$/.test(sent)) {
+      const tgName = [f.first_name, f.last_name].filter(Boolean).join(' ');
+      if (approvals.request(userId, { name: sent, username: f.username || '', tgName: tgName })) {
+        await notifyAdmins(ctx.api, userId, { name: sent, username: f.username || '', tgName: tgName });
+      }
+      await ctx.reply(`${approvals.get(userId).name}님, 확인했습니다. 관리자 승인 후 사용하실 수 있습니다.`);
+    } else if (approvals.isPending(userId)) {
+      await ctx.reply('관리자 승인을 기다리고 있습니다. 승인되면 이 대화창으로 알려드리겠습니다.');
     } else {
       await ctx.reply('인증을 위해 성명을 1회 보내주세요 (예: 홍길동)');
     }
@@ -142,6 +177,37 @@ async function handleCallbackData(data) {
 // 그래야 메뉴 버튼이 있는 메시지가 안 깨진다.
 bot.on('callback_query:data', async function (ctx) {
   const userId = ctx.from && ctx.from.id;
+  const cbData = ctx.callbackQuery.data || '';
+
+  // 권한 요청 승인/거절 버튼 — 운영자만 (2026-11-16)
+  const m = /^(apv|rej):(\d+)$/.exec(cbData);
+  if (m) {
+    if (!isAdmin(userId)) {
+      await ctx.answerCallbackQuery({ text: '운영자만 누를 수 있습니다.', show_alert: true });
+      return;
+    }
+    const approve = m[1] === 'apv';
+    const done = approvals.decide(m[2], approve, userId);
+    if (!done) {
+      const cur = approvals.get(m[2]);
+      const st = approvals.isApproved(m[2]) ? '이미 승인됨' : approvals.isRejected(m[2]) ? '이미 거절됨' : '요청을 찾지 못함';
+      await ctx.answerCallbackQuery({ text: `${cur ? cur.name + ' — ' : ''}${st}`, show_alert: true });
+      return;
+    }
+    const label = `${approve ? '✅' : '❌'} ${escHtml(done.name)} (ID ${m[2]}) ${approve ? '승인함' : '거절함'}`;
+    try { await ctx.editMessageText(label, { parse_mode: 'HTML' }); } catch (_) { /* 메시지 편집 실패는 무시 */ }
+    console.log('[승인]', new Date().toISOString(), approve ? 'approve' : 'reject', m[2], done.name, 'by', userId);
+    if (approve) {
+      try {
+        await ctx.api.sendMessage(m[2], "승인되었습니다. 이제 이름을 입력하시거나 '조직도' / '임원일정'을 입력해 주세요.", { reply_markup: mainKeyboard });
+      } catch (err) {
+        console.error('[bot] 승인 안내 실패:', m[2], err && (err.description || err.message));
+      }
+    }
+    await ctx.answerCallbackQuery({ text: approve ? '승인했습니다' : '거절했습니다' });
+    return;
+  }
+
   if (!isAllowed(userId, config.allowedIds)) {
     await ctx.answerCallbackQuery({ text: '인증을 위해 성명을 1회 보내주세요 (예: 홍길동)', show_alert: true });
     return;
