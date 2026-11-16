@@ -52,8 +52,8 @@ const bot = new Bot(config.telegramToken);
 bot.on('message', async function (ctx) {
   const userId = ctx.from && ctx.from.id;
   if (!isAllowed(userId, config.allowedIds)) {
-    // 화이트리스트에 없는 발신자 — 어떤 명령이 있는지 힌트를 주지 않고 거부만 안내
-    // 등록 요청 처리용 기록(pm2 out log): 시각, ID, 이름, 사용자명, 메시지 앞 30자
+    // 화이트리스트에 없는 발신자 — 어떤 명령이 있는지 힌트를 주지 않고 성명만 요청.
+    // 등록 요청 처리용 기록(pm2 out log, 본인에게는 노출하지 않음): 시각, ID, 이름, 사용자명, 메시지 앞 30자(=보낸 성명)
     const f = ctx.from || {};
     console.log('[거부]', new Date().toISOString(), userId, f.first_name || '', f.last_name || '', '@' + (f.username || '-'), (ctx.message && ctx.message.text || '').slice(0, 30));
     // 등록 흐름 안내 (2026-11-16): 성명만 보낸 경우엔 접수 안내, 그 밖엔 성명 요청
