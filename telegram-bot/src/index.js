@@ -56,7 +56,13 @@ bot.on('message', async function (ctx) {
     // 등록 요청 처리용 기록(pm2 out log): 시각, ID, 이름, 사용자명, 메시지 앞 30자
     const f = ctx.from || {};
     console.log('[거부]', new Date().toISOString(), userId, f.first_name || '', f.last_name || '', '@' + (f.username || '-'), (ctx.message && ctx.message.text || '').slice(0, 30));
-    await ctx.reply('이 봇을 사용할 권한이 없습니다.');
+    // 등록 흐름 안내 (2026-11-16): 성명만 보낸 경우엔 접수 안내, 그 밖엔 성명 요청
+    const sent = (ctx.message && ctx.message.text || '').trim();
+    if (/^[가-힣]{2,5}$/.test(sent)) {
+      await ctx.reply(`${sent}님, 확인했습니다. 관리자 승인 후 사용하실 수 있습니다.`);
+    } else {
+      await ctx.reply('인증을 위해 성명을 1회 보내주세요 (예: 홍길동)');
+    }
     return;
   }
 
@@ -137,7 +143,7 @@ async function handleCallbackData(data) {
 bot.on('callback_query:data', async function (ctx) {
   const userId = ctx.from && ctx.from.id;
   if (!isAllowed(userId, config.allowedIds)) {
-    await ctx.answerCallbackQuery({ text: '이 봇을 사용할 권한이 없습니다.', show_alert: true });
+    await ctx.answerCallbackQuery({ text: '인증을 위해 성명을 1회 보내주세요 (예: 홍길동)', show_alert: true });
     return;
   }
 
